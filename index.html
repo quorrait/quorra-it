@@ -657,18 +657,20 @@
                 e.preventDefault();
                 setSending(true);
                 setError(false);
-                const data = new FormData();
-                data.append("access_key", "7e90cbd7-2b63-4f71-9df9-e91b6d3cdfe5");
-                data.append("name", form.name);
-                data.append("company", form.company);
-                data.append("email", form.email);
-                data.append("message", form.message);
                 try {
                     const res = await fetch("https://api.web3forms.com/submit", {
                         method: "POST",
-                        body: data,
-                        headers: { "Accept": "application/json" }
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify({
+                            access_key: "7e90cbd7-2b63-4f71-9df9-e91b6d3cdfe5",
+                            name: form.name,
+                            company: form.company,
+                            email: form.email,
+                            message: form.message
+                        })
                     });
+                    const json = await res.json();
+                    console.log("Web3Forms response:", JSON.stringify(json));
                     if (res.ok) { setSubmitted(true); } else { setError(true); }
                 } catch { setError(true); } finally { setSending(false); }
             };
