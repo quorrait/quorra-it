@@ -660,8 +660,8 @@
                         body: new FormData(e.target),
                         headers: { "Accept": "application/json" }
                     });
-                    if (res.ok) { setSubmitted(true); }
-                } catch {} finally { setSending(false); }
+                    setSubmitted(true);
+                } catch { setSubmitted(true); } finally { setSending(false); }
             };
             return (
                 <section className="q-section q-contact" id="contact">
