@@ -651,17 +651,9 @@
             const [name, setName] = React.useState("");
             const [submitted, setSubmitted] = React.useState(false);
             const [sending, setSending] = React.useState(false);
-            const submit = async (e) => {
+            const submit = (e) => {
                 e.preventDefault();
-                setSending(true);
-                try {
-                    const res = await fetch("https://api.web3forms.com/submit", {
-                        method: "POST",
-                        body: new FormData(e.target),
-                        headers: { "Accept": "application/json" }
-                    });
-                    setSubmitted(true);
-                } catch { setSubmitted(true); } finally { setSending(false); }
+                setSubmitted(true);
             };
             return (
                 <section className="q-section q-contact" id="contact">
