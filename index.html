@@ -608,7 +608,7 @@
             {
                 title: "Managed IT",
                 summary: "The quiet infrastructure behind a business that just works.",
-                items: ["Helpdesk & remote support", "Endpoint management & patching", "Backup, recovery & continuity", "Microsoft 365 / Google Workspace"],
+                items: ["Helpdesk + remote support", "Endpoint management + patching", "Backup, recovery + continuity", "Microsoft 365 / Google Workspace"],
             },
             {
                 title: "Cybersecurity",
@@ -648,6 +648,21 @@
         }
 
         function Contact() {
+            const [name, setName] = React.useState("");
+            const [submitted, setSubmitted] = React.useState(false);
+            const [sending, setSending] = React.useState(false);
+            const submit = async (e) => {
+                e.preventDefault();
+                setSending(true);
+                try {
+                    const res = await fetch("https://api.web3forms.com/submit", {
+                        method: "POST",
+                        body: new FormData(e.target),
+                        headers: { "Accept": "application/json" }
+                    });
+                    if (res.ok) { setSubmitted(true); }
+                } catch {} finally { setSending(false); }
+            };
             return (
                 <section className="q-section q-contact" id="contact">
                     <div className="q-contact-grid">
@@ -663,21 +678,29 @@
                             </dl>
                         </div>
                         <div className="q-contact-right">
-                            <form className="q-form" action="https://api.web3forms.com/submit" method="POST">
-                                <input type="hidden" name="access_key" value="7e90cbd7-2b63-4f71-9df9-e91b6d3cdfe5" />
-                                <input type="hidden" name="redirect" value="https://quorrait.com?submitted=1" />
-                                <input type="hidden" name="subject" value="New enquiry from quorrait.com" />
-                                <div className="q-form-row">
-                                    <label className="q-field"><span>Your name</span><input required type="text" name="name" placeholder="Alex Rivera" /></label>
-                                    <label className="q-field"><span>Company</span><input required type="text" name="company" placeholder="Rivera & Co." /></label>
+                            {submitted ? (
+                                <div className="q-contact-thanks">
+                                    <img src={LOGO_SRC} alt="Quorra" style={{height: "40px", width: "auto"}} />
+                                    <h3>Thank you, {name || "friend"}.</h3>
+                                    <p>We'll reply within 1–2 business days — usually much sooner. If it's urgent, our emergency line is always open.</p>
+                                    <button className="q-btn q-btn-ghost" onClick={() => setSubmitted(false)}>Send another</button>
                                 </div>
-                                <label className="q-field"><span>Email address</span><input required type="email" name="email" placeholder="alex@rivera.com" /></label>
-                                <label className="q-field"><span>What's on your mind?</span><textarea rows={4} name="message" placeholder="We're tired of our current MSP not answering tickets for three days…" /></label>
-                                <div className="q-form-foot">
-                                    <span className="q-form-note">Usually reply within 1–2 business days.</span>
-                                    <button type="submit" className="q-btn q-btn-primary">Send enquiry →</button>
-                                </div>
-                            </form>
+                            ) : (
+                                <form className="q-form" onSubmit={submit}>
+                                    <input type="hidden" name="access_key" value="7e90cbd7-2b63-4f71-9df9-e91b6d3cdfe5" />
+                                    <input type="hidden" name="subject" value="New enquiry from quorrait.com" />
+                                    <div className="q-form-row">
+                                        <label className="q-field"><span>Your name</span><input required type="text" name="name" placeholder="Alex Rivera" onChange={(e) => setName(e.target.value)} /></label>
+                                        <label className="q-field"><span>Company</span><input required type="text" name="company" placeholder="Rivera and Co." /></label>
+                                    </div>
+                                    <label className="q-field"><span>Email address</span><input required type="email" name="email" placeholder="alex@rivera.com" /></label>
+                                    <label className="q-field"><span>What's on your mind?</span><textarea rows={4} name="message" placeholder="We're tired of our current MSP not answering tickets for three days…" /></label>
+                                    <div className="q-form-foot">
+                                        <span className="q-form-note">Usually reply within 1–2 business days.</span>
+                                        <button type="submit" className="q-btn q-btn-primary" disabled={sending}>{sending ? "Sending…" : "Send enquiry →"}</button>
+                                    </div>
+                                </form>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -692,7 +715,7 @@
                             <img src={LOGO_SRC} alt="Quorra IT" style={{height: "32px", width: "auto"}} />
                             <div>
                                 <div className="q-footer-name">Quorra IT</div>
-                                <div className="q-footer-tag">Cybersecurity & Managed IT</div>
+                                <div className="q-footer-tag">Cybersecurity + Managed IT</div>
                             </div>
                         </div>
                         <div className="q-footer-cols">
