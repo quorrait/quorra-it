@@ -684,49 +684,6 @@
             );
         }
 
-            return (
-                <section className="q-section q-contact" id="contact">
-                    <div className="q-contact-grid">
-                        <div className="q-contact-left">
-                            <span className="q-eyebrow">Contact</span>
-                            <h2 className="q-contact-title">Let's fix what isn't working.</h2>
-                            <p className="q-contact-body">Every engagement starts with a 30-minute call, no pressure. We'll tell you honestly whether we're the right fit.</p>
-                            <dl className="q-contact-details">
-                                <div><dt>Email</dt><dd><a href="mailto:support@quorrait.com">support@quorrait.com</a></dd></div>
-                                <div><dt>Phone</dt><dd><a href="tel:+19168669705">(916) 866-9705</a></dd></div>
-                                <div><dt>Hours</dt><dd>Mon–Fri, 8am–6pm PT</dd></div>
-                                <div><dt>Emergency</dt><dd>24/7 on-call line</dd></div>
-                            </dl>
-                        </div>
-                        <div className="q-contact-right">
-                            {submitted ? (
-                                <div className="q-contact-thanks">
-                                    <img src={LOGO_SRC} alt="Quorra" style={{height: "40px", width: "auto"}} />
-                                    <h3>Thank you, {form.name || "friend"}.</h3>
-                                    <p>We'll reply within one business day — usually much sooner. If it's urgent, our emergency line is always open.</p>
-                                    <button className="q-btn q-btn-ghost" onClick={() => { setSubmitted(false); setForm({ name: "", company: "", email: "", message: "" }); }}>Send another</button>
-                                </div>
-                            ) : (
-                                <form className="q-form" onSubmit={submit}>
-                                    <div className="q-form-row">
-                                        <label className="q-field"><span>Your name</span><input required type="text" value={form.name} onChange={update("name")} placeholder="Alex Rivera" /></label>
-                                        <label className="q-field"><span>Company</span><input required type="text" value={form.company} onChange={update("company")} placeholder="Rivera & Co." /></label>
-                                    </div>
-                                    <label className="q-field"><span>Email address</span><input required type="email" value={form.email} onChange={update("email")} placeholder="alex@rivera.com" /></label>
-                                    <label className="q-field"><span>What's on your mind?</span><textarea rows={4} value={form.message} onChange={update("message")} placeholder="We're tired of our current MSP not answering tickets for three days…" /></label>
-                                    {error && <p style={{color:"red",fontSize:"13px",margin:"0"}}>Something went wrong. Please email us directly at support@quorrait.com</p>}
-                                    <div className="q-form-foot">
-                                        <span className="q-form-note">Usually reply within 1–2 business days.</span>
-                                        <button type="submit" className="q-btn q-btn-primary" disabled={sending}>{sending ? "Sending…" : "Send enquiry →"}</button>
-                                    </div>
-                                </form>
-                            )}
-                        </div>
-                    </div>
-                </section>
-            );
-        }
-
         function Footer() {
             return (
                 <footer className="q-footer">
