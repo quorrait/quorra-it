@@ -657,22 +657,19 @@
                 e.preventDefault();
                 setSending(true);
                 setError(false);
+                const data = new FormData();
+                data.append("name", form.name);
+                data.append("company", form.company);
+                data.append("email", form.email);
+                data.append("message", form.message);
                 try {
                     const res = await fetch("https://formspree.io/f/mqenkwbd", {
                         method: "POST",
-                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-                        body: JSON.stringify(form)
+                        body: data,
+                        headers: { "Accept": "application/json" }
                     });
-                    if (res.ok) {
-                        setSubmitted(true);
-                    } else {
-                        setError(true);
-                    }
-                } catch {
-                    setError(true);
-                } finally {
-                    setSending(false);
-                }
+                    if (res.ok) { setSubmitted(true); } else { setError(true); }
+                } catch { setError(true); } finally { setSending(false); }
             };
 
             return (
@@ -694,7 +691,7 @@
                                 <div className="q-contact-thanks">
                                     <img src={LOGO_SRC} alt="Quorra" style={{height: "40px", width: "auto"}} />
                                     <h3>Thank you, {form.name || "friend"}.</h3>
-                                    <p>We'll reply within 1-2 business day usually much sooner. If it's urgent, our emergency line is always open.</p>
+                                    <p>We'll reply within one business day — usually much sooner. If it's urgent, our emergency line is always open.</p>
                                     <button className="q-btn q-btn-ghost" onClick={() => { setSubmitted(false); setForm({ name: "", company: "", email: "", message: "" }); }}>Send another</button>
                                 </div>
                             ) : (
@@ -705,7 +702,7 @@
                                     </div>
                                     <label className="q-field"><span>Email address</span><input required type="email" value={form.email} onChange={update("email")} placeholder="alex@rivera.com" /></label>
                                     <label className="q-field"><span>What's on your mind?</span><textarea rows={4} value={form.message} onChange={update("message")} placeholder="We're tired of our current MSP not answering tickets for three days…" /></label>
-                                    {error && <p style={{color: "red", fontSize: "13px", margin: "0"}}>Something went wrong. Please try again or email us directly.</p>}
+                                    {error && <p style={{color:"red",fontSize:"13px",margin:"0"}}>Something went wrong. Please email us directly at support@quorrait.com</p>}
                                     <div className="q-form-foot">
                                         <span className="q-form-note">Usually reply within 1–2 business days.</span>
                                         <button type="submit" className="q-btn q-btn-primary" disabled={sending}>{sending ? "Sending…" : "Send enquiry →"}</button>
