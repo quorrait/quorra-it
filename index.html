@@ -650,8 +650,30 @@
         function Contact() {
             const [form, setForm] = React.useState({ name: "", company: "", email: "", message: "" });
             const [submitted, setSubmitted] = React.useState(false);
+            const [error, setError] = React.useState(false);
+            const [sending, setSending] = React.useState(false);
             const update = (k) => (e) => setForm({ ...form, [k]: e.target.value });
-            const submit = (e) => { e.preventDefault(); setSubmitted(true); };
+            const submit = async (e) => {
+                e.preventDefault();
+                setSending(true);
+                setError(false);
+                try {
+                    const res = await fetch("https://formspree.io/f/mqenkwbd", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+                        body: JSON.stringify(form)
+                    });
+                    if (res.ok) {
+                        setSubmitted(true);
+                    } else {
+                        setError(true);
+                    }
+                } catch {
+                    setError(true);
+                } finally {
+                    setSending(false);
+                }
+            };
 
             return (
                 <section className="q-section q-contact" id="contact">
@@ -681,10 +703,12 @@
                                         <label className="q-field"><span>Your name</span><input required type="text" value={form.name} onChange={update("name")} placeholder="Alex Rivera" /></label>
                                         <label className="q-field"><span>Company</span><input required type="text" value={form.company} onChange={update("company")} placeholder="Rivera & Co." /></label>
                                     </div>
+                                    <label className="q-field"><span>Email address</span><input required type="email" value={form.email} onChange={update("email")} placeholder="alex@rivera.com" /></label>
                                     <label className="q-field"><span>What's on your mind?</span><textarea rows={4} value={form.message} onChange={update("message")} placeholder="We're tired of our current MSP not answering tickets for three days…" /></label>
+                                    {error && <p style={{color: "red", fontSize: "13px", margin: "0"}}>Something went wrong. Please try again or email us directly.</p>}
                                     <div className="q-form-foot">
                                         <span className="q-form-note">Usually reply within 1–2 business days.</span>
-                                        <button type="submit" className="q-btn q-btn-primary">Send enquiry →</button>
+                                        <button type="submit" className="q-btn q-btn-primary" disabled={sending}>{sending ? "Sending…" : "Send enquiry →"}</button>
                                     </div>
                                 </form>
                             )}
