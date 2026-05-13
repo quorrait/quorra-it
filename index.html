@@ -651,10 +651,28 @@
             const [name, setName] = React.useState("");
             const [submitted, setSubmitted] = React.useState(false);
             const [sending, setSending] = React.useState(false);
-            const submit = (e) => {
-                e.preventDefault();
-                setSubmitted(true);
-            };
+const submit = async (e) => {
+    e.preventDefault();
+    setSending(true);
+    try {
+        const data = new FormData(e.target);
+        const res = await fetch("https://api.web3forms.com/submit", {
+            method: "POST",
+            headers: { "Accept": "application/json" },
+            body: data,
+        });
+        const json = await res.json();
+        if (json.success) {
+            setSubmitted(true);
+        } else {
+            alert("Something went wrong: " + (json.message || "unknown error"));
+        }
+    } catch (err) {
+        alert("Network error — please email us directly at support@quorrait.com");
+    } finally {
+        setSending(false);
+    }
+};
             return (
                 <section className="q-section q-contact" id="contact">
                     <div className="q-contact-grid">
