@@ -5,7 +5,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Quorra IT</title>
-    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbsAAAFYCAYAAADKuVIyAADWfElEQVR4nOz9d7xk2VnfC3+ftdYOFU7sOEkRSeQsMMaAhAIGLGRjbOzX77UNL0FCBGUsJEABJFBGIILNy174+jpgTDAYLAmQBMKAsI2RDEIJIU3onk4nVdhhhfvH2ruqTnfPSNMjeub0rO/nc7r61Km8a6/fejIkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUSiQx7oF5BIHG3Uyv/98r/3dmYJELr/B5BDj/GJE/rnk8UV9/h0Sw4/V1h9zYnEDYx5oF9AInF0UQuhulJnLhMi4UoBDCBOoa5R7DwQxF/1cVefWrEU1NXn8oAjCV7ioUESu0SimrmaSFxFfCAK0OWKGKLQXKvU3KNISf/Y8b9+IXEKx8c1BBOJG5LkxkwkfgrAA" />
+    <link rel="icon" type="image/png" href="data:image/png;base64,PASTE_YOUR_FULL_FAVICON_BASE64_HERE" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -21,10 +21,6 @@
             --q-rule-soft: rgba(244, 241, 234, 0.08);
             --q-card: #1D1B16;
             --q-accent: #1CAADE;
-            --q-hi-bg: #F4F1EA;
-            --q-hi-fg: #15140F;
-            --q-hi-fg-muted: rgba(21, 20, 15, 0.65);
-            --q-hi-rule: rgba(21, 20, 15, 0.14);
             --q-sans: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
             --q-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
             --q-display: "Inter", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
@@ -57,7 +53,6 @@
             color: var(--q-ink-3);
         }
 
-        /* Nav */
         .q-nav {
             position: sticky;
             top: 0;
@@ -84,11 +79,7 @@
             color: var(--q-ink);
         }
 
-        .q-brand-logo {
-            height: 36px;
-            width: auto;
-            display: block;
-        }
+        .q-brand-logo { height: 36px; width: auto; display: block; }
 
         .q-nav-links {
             list-style: none;
@@ -99,15 +90,9 @@
             justify-self: center;
         }
 
-        .q-nav-links a {
-            font-size: 13.5px;
-            color: var(--q-ink-2);
-            transition: color 0.2s;
-        }
-
+        .q-nav-links a { font-size: 13.5px; color: var(--q-ink-2); transition: color 0.2s; }
         .q-nav-links a:hover { color: var(--q-ink); }
 
-        /* Buttons */
         .q-btn {
             display: inline-flex;
             align-items: center;
@@ -128,10 +113,7 @@
         .q-btn-primary:hover { background: var(--q-accent); color: #fff; }
         .q-btn-ghost { background: transparent; border-color: var(--q-rule); color: var(--q-ink); }
         .q-btn-ghost:hover { border-color: var(--q-ink); }
-        .q-btn-outline { background: transparent; border-color: var(--q-ink); color: var(--q-ink); }
-        .q-btn-outline:hover { background: var(--q-ink); color: var(--q-bg); }
 
-        /* Hero */
         .q-hero {
             max-width: var(--q-max);
             margin: 0 auto;
@@ -155,17 +137,9 @@
 
         .q-hero-title .q-it { color: var(--q-ink); }
 
-        .q-hero-sub {
-            max-width: 48ch;
-            font-size: 18px;
-            line-height: 1.5;
-            color: var(--q-ink-2);
-            margin: 0;
-        }
-
+        .q-hero-sub { max-width: 48ch; font-size: 18px; line-height: 1.5; color: var(--q-ink-2); margin: 0; }
         .q-hero-cta { display: flex; gap: 12px; margin-top: 8px; }
 
-        /* Section scaffolding */
         .q-section {
             max-width: var(--q-max);
             margin: 0 auto;
@@ -193,28 +167,9 @@
             color: var(--q-ink);
         }
 
-        /* Our Stack */
-        .q-stack {
-            border-top: 1px solid var(--q-rule);
-            padding: 56px var(--q-gutter);
-            max-width: var(--q-max);
-            margin: 0 auto;
-        }
-
-        .q-stack-head {
-            display: grid;
-            grid-template-columns: 160px 1fr;
-            gap: 40px;
-            align-items: center;
-            margin-bottom: 36px;
-        }
-
-        .q-stack-logos {
-            display: flex;
-            gap: 14px;
-            flex-wrap: wrap;
-            align-items: center;
-        }
+        .q-stack { border-top: 1px solid var(--q-rule); padding: 56px var(--q-gutter); max-width: var(--q-max); margin: 0 auto; }
+        .q-stack-head { display: grid; grid-template-columns: 160px 1fr; gap: 40px; align-items: center; margin-bottom: 36px; }
+        .q-stack-logos { display: flex; gap: 14px; flex-wrap: wrap; align-items: center; }
 
         .q-stack-logo {
             display: flex;
@@ -231,35 +186,10 @@
             transition: border-color 0.2s, transform 0.2s;
         }
 
-        .q-stack-logo:hover {
-            border-color: var(--q-accent);
-            transform: translateY(-2px);
-        }
+        .q-stack-logo:hover { border-color: var(--q-accent); transform: translateY(-2px); }
+        .q-stack-logo img { width: 48px; height: 48px; object-fit: contain; display: block; }
+        .q-stack-logo img.white-logo { filter: brightness(0) invert(1); width: 80px; height: auto; }
 
-        .q-stack-logo img {
-            width: 48px;
-            height: 48px;
-            object-fit: contain;
-            display: block;
-        }
-
-        .q-stack-logo img.white-logo {
-            filter: brightness(0) invert(1);
-            width: 80px;
-            height: auto;
-        }
-
-        .q-stack-logo-name {
-            font-size: 10px;
-            font-weight: 500;
-            color: var(--q-ink-3);
-            white-space: nowrap;
-            text-align: center;
-            font-family: var(--q-mono);
-            letter-spacing: 0.03em;
-        }
-
-        /* Services */
         .q-service-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
 
         .q-service-card {
@@ -274,10 +204,7 @@
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
-        .q-service-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 20px 40px -24px rgba(0, 0, 0, 0.4);
-        }
+        .q-service-card:hover { transform: translateY(-2px); box-shadow: 0 20px 40px -24px rgba(0,0,0,0.4); }
 
         .q-service-header {
             display: flex;
@@ -287,27 +214,11 @@
             border-bottom: 1px solid var(--q-rule-soft);
         }
 
-        .q-service-name {
-            font-family: var(--q-display);
-            font-weight: 500;
-            font-size: 32px;
-            letter-spacing: -0.02em;
-            margin: 0;
-            color: var(--q-ink);
-        }
-
+        .q-service-name { font-family: var(--q-display); font-weight: 500; font-size: 32px; letter-spacing: -0.02em; margin: 0; color: var(--q-ink); }
         .q-service-summary { font-size: 16px; line-height: 1.5; color: var(--q-ink-2); margin: 0; max-width: 38ch; }
         .q-service-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; flex: 1; }
 
-        .q-service-list li {
-            display: flex;
-            gap: 12px;
-            padding: 12px 0;
-            font-size: 14.5px;
-            color: var(--q-ink-2);
-            border-bottom: 1px solid var(--q-rule-soft);
-        }
-
+        .q-service-list li { display: flex; gap: 12px; padding: 12px 0; font-size: 14.5px; color: var(--q-ink-2); border-bottom: 1px solid var(--q-rule-soft); }
         .q-service-list li:last-child { border-bottom: 0; }
         .q-service-dash { color: var(--q-accent); font-family: var(--q-mono); }
 
@@ -323,7 +234,6 @@
 
         .q-service-link:hover { color: var(--q-accent); border-color: var(--q-accent); }
 
-        /* Contact */
         .q-contact { padding-bottom: 96px; }
         .q-contact-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 80px; align-items: start; }
 
@@ -348,15 +258,7 @@
             border-top: 1px solid var(--q-rule);
         }
 
-        .q-contact-details dt {
-            font-family: var(--q-mono);
-            font-size: 10.5px;
-            letter-spacing: 0.08em;
-            text-transform: uppercase;
-            color: var(--q-ink-3);
-            margin-bottom: 6px;
-        }
-
+        .q-contact-details dt { font-family: var(--q-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--q-ink-3); margin-bottom: 6px; }
         .q-contact-details dd { margin: 0; font-size: 14.5px; color: var(--q-ink); line-height: 1.5; }
         .q-contact-details a { border-bottom: 1px solid var(--q-rule); }
         .q-contact-details a:hover { border-color: var(--q-ink); }
@@ -373,18 +275,9 @@
 
         .q-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
         .q-field { display: flex; flex-direction: column; gap: 6px; }
+        .q-field > span { font-family: var(--q-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--q-ink-3); }
 
-        .q-field > span {
-            font-family: var(--q-mono);
-            font-size: 10.5px;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
-            color: var(--q-ink-3);
-        }
-
-        .q-field input,
-        .q-field select,
-        .q-field textarea {
+        .q-field input, .q-field textarea {
             font-family: var(--q-sans);
             font-size: 15px;
             color: var(--q-ink);
@@ -398,24 +291,8 @@
             resize: vertical;
         }
 
-        .q-field input:focus,
-        .q-field select:focus,
-        .q-field textarea:focus { border-bottom-color: var(--q-ink); }
-
-        .q-field input::placeholder,
-        .q-field textarea::placeholder { color: var(--q-ink-3); }
-
-        .q-field select {
-            appearance: none;
-            -webkit-appearance: none;
-            background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='%238A847A' d='M0 0h10L5 6z'/></svg>");
-            background-repeat: no-repeat;
-            background-position: right 2px center;
-            padding-right: 24px;
-            cursor: pointer;
-        }
-
-        .q-field select option { background: var(--q-card); color: var(--q-ink); }
+        .q-field input:focus, .q-field textarea:focus { border-bottom-color: var(--q-ink); }
+        .q-field input::placeholder, .q-field textarea::placeholder { color: var(--q-ink-3); }
 
         .q-form-foot {
             display: flex;
@@ -440,18 +317,9 @@
             gap: 16px;
         }
 
-        .q-contact-thanks h3 {
-            font-family: var(--q-display);
-            font-size: 32px;
-            font-weight: 500;
-            margin: 8px 0 0;
-            letter-spacing: -0.02em;
-            color: var(--q-ink);
-        }
-
+        .q-contact-thanks h3 { font-family: var(--q-display); font-size: 32px; font-weight: 500; margin: 8px 0 0; letter-spacing: -0.02em; color: var(--q-ink); }
         .q-contact-thanks p { color: var(--q-ink-2); margin: 0; max-width: 40ch; }
 
-        /* Footer */
         .q-footer {
             border-top: 1px solid var(--q-rule);
             padding: 64px var(--q-gutter) 32px;
@@ -459,46 +327,140 @@
             margin: 0 auto;
         }
 
-        .q-footer-top {
-            display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 80px;
-            padding-bottom: 48px;
-            border-bottom: 1px solid var(--q-rule-soft);
-        }
-
+        .q-footer-top { display: grid; grid-template-columns: 1fr 2fr; gap: 80px; padding-bottom: 48px; border-bottom: 1px solid var(--q-rule-soft); }
         .q-footer-brand { display: flex; gap: 14px; align-items: flex-start; }
         .q-footer-name { font-weight: 500; font-size: 20px; letter-spacing: -0.01em; color: var(--q-ink); }
         .q-footer-tag { font-size: 13px; color: var(--q-ink-3); margin-top: 2px; }
         .q-footer-cols { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+        .q-footer-cols h4 { font-family: var(--q-mono); font-size: 10.5px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--q-ink-3); margin: 0 0 16px; }
+        .q-footer-cols ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+        .q-footer-cols li, .q-footer-cols a { font-size: 13.5px; color: var(--q-ink-2); }
+        .q-footer-cols a:hover { color: var(--q-ink); }
+        .q-footer-bottom { padding-top: 24px; display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--q-ink-3); font-family: var(--q-mono); align-items: center; }
+        .q-footer-sep { opacity: 0.5; }
 
-        .q-footer-cols h4 {
+        .q-footer-link {
+            background: none;
+            border: none;
+            padding: 0;
+            font-family: var(--q-mono);
+            font-size: 12px;
+            color: var(--q-ink-3);
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        .q-footer-link:hover { color: var(--q-ink); }
+
+        /* ── Modal ── */
+        .q-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            animation: q-fade-in 0.18s ease;
+        }
+
+        @keyframes q-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes q-slide-up { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+
+        .q-modal {
+            background: var(--q-card);
+            border: 1px solid var(--q-rule);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 680px;
+            max-height: 82vh;
+            display: flex;
+            flex-direction: column;
+            animation: q-slide-up 0.22s ease;
+            overflow: hidden;
+        }
+
+        .q-modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 28px 32px 20px;
+            border-bottom: 1px solid var(--q-rule-soft);
+            flex-shrink: 0;
+        }
+
+        .q-modal-header h2 {
+            font-family: var(--q-display);
+            font-weight: 500;
+            font-size: 22px;
+            letter-spacing: -0.02em;
+            margin: 0;
+            color: var(--q-ink);
+        }
+
+        .q-modal-close {
+            background: none;
+            border: 1px solid var(--q-rule);
+            color: var(--q-ink-3);
+            width: 36px;
+            height: 36px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 20px;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: border-color 0.2s, color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .q-modal-close:hover { border-color: var(--q-ink); color: var(--q-ink); }
+
+        .q-modal-body {
+            overflow-y: auto;
+            padding: 28px 32px 40px;
+            flex: 1;
+        }
+
+        .q-modal-body::-webkit-scrollbar { width: 4px; }
+        .q-modal-body::-webkit-scrollbar-track { background: transparent; }
+        .q-modal-body::-webkit-scrollbar-thumb { background: var(--q-rule); border-radius: 2px; }
+
+        .q-modal-meta {
+            font-family: var(--q-mono);
+            font-size: 10.5px;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            color: var(--q-ink-3);
+            margin: 0 0 32px;
+            display: block;
+        }
+
+        .q-modal-body h3 {
             font-family: var(--q-mono);
             font-size: 10.5px;
             font-weight: 500;
             letter-spacing: 0.08em;
             text-transform: uppercase;
-            color: var(--q-ink-3);
-            margin: 0 0 16px;
+            color: var(--q-ink);
+            margin: 32px 0 10px;
         }
 
-        .q-footer-cols ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-        .q-footer-cols li, .q-footer-cols a { font-size: 13.5px; color: var(--q-ink-2); }
-        .q-footer-cols a:hover { color: var(--q-ink); }
+        .q-modal-body h3:first-of-type { margin-top: 0; }
 
-        .q-footer-bottom {
-            padding-top: 24px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            font-size: 12px;
-            color: var(--q-ink-3);
-            font-family: var(--q-mono);
+        .q-modal-body p {
+            font-size: 14px;
+            line-height: 1.75;
+            color: var(--q-ink-2);
+            margin: 0 0 12px;
         }
 
-        .q-footer-sep { opacity: 0.5; }
+        .q-modal-body a { color: var(--q-accent); border-bottom: 1px solid rgba(28,170,222,0.3); transition: border-color 0.2s; }
+        .q-modal-body a:hover { border-color: var(--q-accent); }
 
-        /* Responsive */
         @media (max-width: 960px) {
             .q-nav-links { display: none; }
             .q-hero { padding: 100px var(--q-gutter) 80px; }
@@ -509,6 +471,9 @@
             .q-footer-top { grid-template-columns: 1fr; gap: 32px; }
             .q-footer-cols { grid-template-columns: repeat(2, 1fr); gap: 20px; }
             .q-form-row { grid-template-columns: 1fr; }
+            .q-modal { max-height: 90vh; }
+            .q-modal-header { padding: 20px 20px 16px; }
+            .q-modal-body { padding: 20px 20px 32px; }
         }
     </style>
 
@@ -521,7 +486,111 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const LOGO_SRC = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAbsAAAFYCAYAAADKuVIyAADWfElEQVR4nOz9d7xk2VnfC3+ftdYOFU7sOEkRSeQsMMaAhAIGLGRjbOzX77UNL0FCBGUsJEABJFBGIILNy174+jpgTDAYLAmQBMKAsI2RDEIJIU3onk4nVdhhhfvH2ruqTnfPSNMjeub0rO/nc7r61Km8a6/fejIkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUQikUgkEolEIpFIJBKJRCKRSCQSiUSiQx7oF5BIHG3Uyv/98r/3dmYJELr/B5BDj/GJE/rnk8UV9/h0Sw4/V1h9zYnEDYx5oF9AInF0UQuhulJnLhMi4UoBDCBOoa5R7DwQxF/1cVefWrEU1NXn8oAjCV7ioUESu0SimrmaSFxFfCAK0OWKGKLQXKvU3KNISf/Y8b9+IXEKx8c1BBOJG5LkxkwkfgrAA";
+
+        // ─── IMPORTANT: paste your full base64 string here (from your original file) ──
+        const LOGO_SRC = "PASTE_YOUR_FULL_BASE64_HERE";
+        // ──────────────────────────────────────────────────────────────────────────────
+
+        // ── Modal content ─────────────────────────────────────────────────────────────
+
+        function PrivacyContent() {
+            return (
+                <>
+                    <span className="q-modal-meta">Effective date: January 1, 2026 · Quorra IT LLC</span>
+
+                    <h3>What we collect</h3>
+                    <p>When you submit our contact form we collect your name, company name, email address, and any message you choose to include. We do not collect payment information, and we do not use tracking cookies or analytics scripts on this site.</p>
+
+                    <h3>How we use it</h3>
+                    <p>Your information is used solely to respond to your enquiry and, if you become a client, to manage the business relationship. We do not sell, rent, or share your information with third parties for marketing purposes.</p>
+
+                    <h3>Third-party services</h3>
+                    <p>Form submissions are processed by <a href="https://web3forms.com" target="_blank" rel="noopener">Web3Forms</a>. Submitted data is transmitted to their servers to deliver the message to us. Please review Web3Forms' own privacy policy for details on how they handle data in transit.</p>
+
+                    <h3>Data retention</h3>
+                    <p>Enquiry emails are retained in our inbox for as long as needed to manage the business relationship, and deleted when no longer required. If you would like your data removed, email us at <a href="mailto:support@quorrait.com">support@quorrait.com</a> and we will action it within 30 days.</p>
+
+                    <h3>Security</h3>
+                    <p>We take reasonable technical and organisational measures to protect your information. All data is transmitted over HTTPS. Our email is hosted on Cloudflare with two-factor authentication enforced.</p>
+
+                    <h3>Your rights</h3>
+                    <p>You have the right to request access to, correction of, or deletion of any personal data we hold about you. Contact us at <a href="mailto:support@quorrait.com">support@quorrait.com</a> to exercise these rights.</p>
+
+                    <h3>Changes</h3>
+                    <p>We may update this policy from time to time. The effective date above will reflect the most recent revision. Continued use of the site after changes constitutes acceptance.</p>
+
+                    <h3>Contact</h3>
+                    <p>Questions about this policy? Email <a href="mailto:support@quorrait.com">support@quorrait.com</a> or call <a href="tel:+19168669705">(916) 866-9705</a>.</p>
+                </>
+            );
+        }
+
+        function TermsContent() {
+            return (
+                <>
+                    <span className="q-modal-meta">Effective date: January 1, 2026 · Quorra IT LLC</span>
+
+                    <h3>Acceptance</h3>
+                    <p>By accessing this website or engaging Quorra IT LLC ("Quorra IT", "we", "us") for services, you agree to these Terms of Service. If you do not agree, please do not use this site or our services.</p>
+
+                    <h3>Services</h3>
+                    <p>Quorra IT provides managed IT and cybersecurity services to small businesses in the greater Sacramento area. The specific scope, pricing, and terms of any engagement are governed by a separate written service agreement signed by both parties. Nothing on this website constitutes a binding service offer.</p>
+
+                    <h3>No warranties</h3>
+                    <p>This website and its content are provided "as is" without warranty of any kind, express or implied. We do not warrant that the site will be uninterrupted, error-free, or free of viruses or other harmful components.</p>
+
+                    <h3>Limitation of liability</h3>
+                    <p>To the fullest extent permitted by law, Quorra IT LLC shall not be liable for any indirect, incidental, special, consequential, or punitive damages arising out of your use of, or inability to use, this website. Our total liability for any claim arising out of this website shall not exceed one hundred dollars ($100).</p>
+
+                    <h3>Intellectual property</h3>
+                    <p>All content on this site — including text, graphics, logos, and code — is the property of Quorra IT LLC or its licensors and is protected by applicable copyright laws. You may not reproduce or redistribute any content without prior written permission.</p>
+
+                    <h3>Third-party links</h3>
+                    <p>This site may reference third-party vendors and services. We are not responsible for the content, privacy practices, or availability of any third-party websites.</p>
+
+                    <h3>Governing law</h3>
+                    <p>These terms are governed by the laws of the State of California, without regard to its conflict-of-law provisions. Any dispute shall be resolved in the courts of Placer County, California.</p>
+
+                    <h3>Changes</h3>
+                    <p>We reserve the right to update these terms at any time. The effective date above will reflect the most recent revision. Your continued use of the site constitutes acceptance of any changes.</p>
+
+                    <h3>Contact</h3>
+                    <p>Questions? Email <a href="mailto:support@quorrait.com">support@quorrait.com</a> or call <a href="tel:+19168669705">(916) 866-9705</a>.</p>
+                </>
+            );
+        }
+
+        // ── Modal component ───────────────────────────────────────────────────────────
+
+        function Modal({ title, children, onClose }) {
+            React.useEffect(() => {
+                const prev = document.body.style.overflow;
+                document.body.style.overflow = "hidden";
+                const onKey = (e) => { if (e.key === "Escape") onClose(); };
+                window.addEventListener("keydown", onKey);
+                return () => {
+                    document.body.style.overflow = prev;
+                    window.removeEventListener("keydown", onKey);
+                };
+            }, [onClose]);
+
+            return (
+                <div
+                    className="q-modal-backdrop"
+                    onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+                >
+                    <div className="q-modal" role="dialog" aria-modal="true" aria-label={title}>
+                        <div className="q-modal-header">
+                            <h2>{title}</h2>
+                            <button className="q-modal-close" onClick={onClose} aria-label="Close">×</button>
+                        </div>
+                        <div className="q-modal-body">{children}</div>
+                    </div>
+                </div>
+            );
+        }
+
+        // ── Nav ───────────────────────────────────────────────────────────────────────
 
         function Nav() {
             return (
@@ -538,6 +607,8 @@
             );
         }
 
+        // ── Hero ──────────────────────────────────────────────────────────────────────
+
         function Hero() {
             return (
                 <section className="q-hero" id="top">
@@ -550,6 +621,8 @@
                 </section>
             );
         }
+
+        // ── Stack ─────────────────────────────────────────────────────────────────────
 
         const VENDORS = [
             { name: "Microsoft 365", url: "https://www.google.com/s2/favicons?domain=microsoft.com&sz=64" },
@@ -579,6 +652,8 @@
                 </div>
             );
         }
+
+        // ── Services ──────────────────────────────────────────────────────────────────
 
         const SERVICES = [
             {
@@ -622,6 +697,8 @@
                 </section>
             );
         }
+
+        // ── Contact ───────────────────────────────────────────────────────────────────
 
         function Contact() {
             const [name, setName] = React.useState("");
@@ -675,11 +752,9 @@
                                 </div>
                             ) : (
                                 <form className="q-form" onSubmit={submit}>
-                                    {/* Web3Forms required fields */}
                                     <input type="hidden" name="access_key" value="7e90cbd7-2b63-4f71-9df9-e91b6d3cdfe5" />
                                     <input type="hidden" name="subject" value="New enquiry from quorrait.com" />
                                     <input type="hidden" name="from_name" value="Quorra IT Website" />
-                                    {/* Honeypot — stays unchecked for real users, bots fill it in */}
                                     <input type="checkbox" name="botcheck" style={{display: "none"}} />
 
                                     <div className="q-form-row">
@@ -714,7 +789,9 @@
             );
         }
 
-        function Footer() {
+        // ── Footer ────────────────────────────────────────────────────────────────────
+
+        function Footer({ onPrivacy, onTerms }) {
             return (
                 <footer className="q-footer">
                     <div className="q-footer-top">
@@ -747,15 +824,20 @@
                     <div className="q-footer-bottom">
                         <span>© 2026 Quorra IT LLC</span>
                         <span className="q-footer-sep">·</span>
-                        <a href="#">Privacy</a>
+                        <button className="q-footer-link" onClick={onPrivacy}>Privacy</button>
                         <span className="q-footer-sep">·</span>
-                        <a href="#">Terms</a>
+                        <button className="q-footer-link" onClick={onTerms}>Terms</button>
                     </div>
                 </footer>
             );
         }
 
+        // ── App ───────────────────────────────────────────────────────────────────────
+
         function App() {
+            const [modal, setModal] = React.useState(null); // null | "privacy" | "terms"
+            const close = React.useCallback(() => setModal(null), []);
+
             return (
                 <div>
                     <Nav />
@@ -763,7 +845,18 @@
                     <Contact />
                     <Stack />
                     <Services />
-                    <Footer />
+                    <Footer onPrivacy={() => setModal("privacy")} onTerms={() => setModal("terms")} />
+
+                    {modal === "privacy" && (
+                        <Modal title="Privacy Policy" onClose={close}>
+                            <PrivacyContent />
+                        </Modal>
+                    )}
+                    {modal === "terms" && (
+                        <Modal title="Terms of Service" onClose={close}>
+                            <TermsContent />
+                        </Modal>
+                    )}
                 </div>
             );
         }
