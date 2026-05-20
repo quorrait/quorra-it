@@ -273,27 +273,27 @@
         ];
 
         function Services() {
-            return (
-                <section className="q-section" id="services">
-                    <div className="q-section-head">
-                        <span className="q-eyebrow">Services</span>
-                        <h2 className="q-section-title">What we do.</h2>
-                        <div>
-                    <div className="q-service-grid">
-                        {SERVICES.map((s) => (
-                            <article key={s.title} className="q-service-card">
-                                <header className="q-service-header"><h3 className="q-service-name">{s.title}</h3></header>
-                                <p className="q-service-summary">{s.summary}</p>
-                                <ul className="q-service-list">
-                                    {s.items.map((item,i) => (<li key={i}><span className="q-service-dash" aria-hidden>—</span><span>{item}</span></li>))}
-                                </ul>
-                                <a href="#contact" className="q-service-link">Discuss {s.title.toLowerCase()} →</a>
-                            </article>
-                        ))}
-                    </div>
-                </section>
-            );
-        }
+    return (
+        <section className="q-section" id="services">
+            <div className="q-section-head">
+                <span className="q-eyebrow">Services</span>
+                <h2 className="q-section-title">What we do.</h2>
+            </div>
+            <div className="q-service-grid">
+                {SERVICES.map((s) => (
+                    <article key={s.title} className="q-service-card">
+                        <header className="q-service-header"><h3 className="q-service-name">{s.title}</h3></header>
+                        <p className="q-service-summary">{s.summary}</p>
+                        <ul className="q-service-list">
+                            {s.items.map((item,i) => (<li key={i}><span className="q-service-dash" aria-hidden>—</span><span>{item}</span></li>))}
+                        </ul>
+                        <a href="#contact" className="q-service-link">Discuss {s.title.toLowerCase()} →</a>
+                    </article>
+                ))}
+            </div>
+        </section>
+    );
+}
 
         function Contact() {
             const [name, setName] = React.useState("");
