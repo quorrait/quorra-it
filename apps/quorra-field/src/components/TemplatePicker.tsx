@@ -8,7 +8,7 @@ export default function TemplatePicker({ kind, onPick }: { kind: TemplateKind; o
   if (list.length === 0) return null;
   return (
     <select className="select" value="" onChange={(e) => { const t = list.find((x) => x.id === e.target.value); if (t) onPick(t); }} aria-label="Use a template">
-      <option value="">Start from a template...</option>
+      <option value="">Use a template</option>
       {list.map((t) => <option key={t.id} value={t.id}>{t.name}{t.trade ? ` · ${t.trade}` : ""}</option>)}
     </select>
   );

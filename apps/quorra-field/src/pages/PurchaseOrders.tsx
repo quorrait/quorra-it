@@ -20,7 +20,7 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
   return (
     <Sheet title={po ? `PO #${po.number}` : "New purchase order"} onClose={onClose}>
       <div className="stack">
-        <Field label="Vendor"><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="Ferguson, Home Depot..." /></Field>
+        <Field label="Vendor"><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. Ferguson, Home Depot" /></Field>
         <Field label="For job (optional)">
           <select className="select" value={jobId} onChange={(e) => setJobId(e.target.value)}>
             <option value="">No job</option>

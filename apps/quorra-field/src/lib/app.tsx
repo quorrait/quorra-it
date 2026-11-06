@@ -194,6 +194,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     void refresh();
+    // Live accounts receive website leads and quote answers while the app is open.
+    if (!hasSupabase) return;
+    const t = setInterval(() => void refresh(), 60_000);
+    return () => clearInterval(t);
   }, [refresh]);
 
   // Who is using the app. Real accounts: match the login email to a team member (no match = the account owner).

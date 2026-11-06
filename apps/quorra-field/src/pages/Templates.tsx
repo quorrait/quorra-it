@@ -20,7 +20,7 @@ function TemplateForm({ tpl, kind, onClose }: { tpl?: DocTemplate; kind: Templat
   return (
     <Sheet title={tpl ? "Edit template" : kind === "estimate" ? "New estimate / invoice template" : "New job template"} onClose={onClose}>
       <div className="stack">
-        <Field label="Template name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Water heater swap" /></Field>
+        <Field label="Template name"><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Water heater replacement" /></Field>
         <Field label={kind === "estimate" ? "Default title" : "Default job title"}><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
         {kind === "estimate" && <LineItemsEditor rows={rows} setRows={setRows} />}
         {kind === "job" && (

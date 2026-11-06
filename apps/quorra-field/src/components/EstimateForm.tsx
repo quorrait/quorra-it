@@ -78,7 +78,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
           <Field label="Valid until"><input className="input" type="date" value={valid} onChange={(e) => setValid(e.target.value)} /></Field>
         </div>
         <Field label="Notes for the customer">
-          <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Scope, warranty, payment terms..." />
+          <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Scope of work, warranty and payment terms" />
         </Field>
         <div className="totals" style={{ marginTop: 0 }}>
           <div className="t muted"><span>Subtotal</span><span className="num">{money(totals.subtotal)}</span></div>

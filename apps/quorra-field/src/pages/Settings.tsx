@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth, useData } from "../lib/app";
-import { Field, Icon, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
 
 export function More() {
@@ -46,6 +47,7 @@ export default function Settings() {
   const [params, setParams] = useSearchParams();
   const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0" });
   const [busy, setBusy] = useState<string | null>(null);
+  const [demoForm, setDemoForm] = useState(false);
 
 
   async function uploadLogo(file: File) {
@@ -84,7 +86,7 @@ export default function Settings() {
       await refresh();
       if (done) toast(done);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Something went wrong");
+      toast(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(null);
     }
@@ -110,6 +112,30 @@ export default function Settings() {
         </div>
         <Field label="Default sales tax %"><input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} /></Field>
         <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0 }); }, "Saved")}>Save</button>
+      </div>
+
+      <div className="card stack">
+        <div className="card-title" style={{ margin: 0 }}>Website lead form</div>
+        <p className="small muted">Add this form to your website. Every submission appears under Leads as a new lead.</p>
+        {leadFormUrl(business.lead_key) ? (
+          <>
+            <label className="field"><span>Embed code (paste into your website)</span>
+              <textarea className="textarea" readOnly rows={4} value={`<iframe src="${leadFormUrl(business.lead_key)}" title="Request service" style="width:100%;max-width:600px;height:640px;border:0"></iframe>`} onFocus={(e) => e.currentTarget.select()} />
+            </label>
+            <label className="field"><span>Or share this link</span>
+              <input className="input" readOnly value={leadFormUrl(business.lead_key)} onFocus={(e) => e.currentTarget.select()} />
+            </label>
+            <div className="row wrap">
+              <button className="btn" onClick={() => { void navigator.clipboard?.writeText(`<iframe src="${leadFormUrl(business.lead_key)}" title="Request service" style="width:100%;max-width:600px;height:640px;border:0"></iframe>`); toast("Embed code copied"); }}>Copy embed code</button>
+              <a className="btn" href={leadFormUrl(business.lead_key)} target="_blank" rel="noopener">Preview form</a>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="notice">The hosted form is available on live accounts. In this demo you can try the form to see how a request arrives as a lead.</div>
+            <div><button className="btn" onClick={() => setDemoForm(true)}>Try the lead form</button></div>
+          </>
+        )}
       </div>
 
       <div className="card stack">
@@ -149,6 +175,24 @@ export default function Settings() {
           {store.mode === "demo" && <button className="btn danger grow" onClick={() => { if (confirm("Reset all demo data?")) resetDemo(); }}>Reset demo data</button>}
         </div>
       </div>
+      {demoForm && (
+        <Sheet title="Request service" onClose={() => setDemoForm(false)}>
+          <form className="stack" onSubmit={async (e) => {
+            e.preventDefault();
+            const d = Object.fromEntries(new FormData(e.currentTarget).entries()) as Record<string, string>;
+            if (!d.name?.trim() || (!d.phone?.trim() && !d.email?.trim())) return toast("Enter a name and a phone number or email");
+            await store.saveRow("leads", { name: d.name.trim(), phone: d.phone ?? "", email: d.email ?? "", address: d.address ?? "", source: "Website form", service: d.service ?? "", value_cents: 0, stage: "new", notes: d.message ?? "", customer_id: null, estimate_id: null, job_id: null, created_at: new Date().toISOString() });
+            await refresh(); setDemoForm(false); toast("Request received. Check Leads.");
+          }}>
+            <Field label="Full name *"><input className="input" name="name" /></Field>
+            <div className="grid2 stack-sm"><Field label="Phone"><input className="input" name="phone" type="tel" /></Field><Field label="Email"><input className="input" name="email" type="email" /></Field></div>
+            <Field label="Service address"><input className="input" name="address" /></Field>
+            <Field label="Service requested"><input className="input" name="service" placeholder="e.g. AC repair, water heater replacement" /></Field>
+            <Field label="Additional details"><textarea className="textarea" name="message" /></Field>
+            <button className="btn primary block" type="submit">Request service</button>
+          </form>
+        </Sheet>
+      )}
     </div>
   );
 }

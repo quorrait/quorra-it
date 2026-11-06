@@ -33,7 +33,7 @@ export const LIBRARY: LibPack[] = [
       { kind: "estimate", name: "Capacitor replacement", title: "AC capacitor replacement", notes: "90-day parts and labor warranty.", hours: 1, items: [{ description: "Diagnostic / service call", qty: 1, price: 129 }, { description: "Capacitor", qty: 1, price: 85 }, { description: "HVAC technician labor (hr)", qty: 1, price: 125 }] },
       { kind: "estimate", name: "AC system replacement", title: "Replace AC condenser (3-ton)", notes: "Includes haul-away and 10-year parts warranty.", hours: 8, items: [{ description: "3-ton AC condenser", qty: 1, price: 3200 }, { description: "HVAC technician labor (hr)", qty: 8, price: 125 }, { description: "Refrigerant R-410A (lb)", qty: 4, price: 75 }] },
       { kind: "job", name: "AC tune-up visit", title: "AC tune-up", notes: "Check coils, filter, refrigerant pressure, thermostat.", hours: 1.5, items: [] },
-      { kind: "job", name: "No-cool service call", title: "AC not cooling", notes: "Diagnose and quote on site.", hours: 2, items: [] },
+      { kind: "job", name: "No-cooling service call", title: "AC not cooling", notes: "Diagnose and quote on site.", hours: 2, items: [] },
     ],
   },
   {
@@ -56,9 +56,9 @@ export const LIBRARY: LibPack[] = [
     templates: [
       { kind: "estimate", name: "Water heater replacement (40 gal)", title: "Water heater replacement (40 gal gas)", notes: "Includes permit, haul-away of old unit, 6-year tank warranty.", hours: 4, items: [{ description: "Water heater 40 gal (gas)", qty: 1, price: 1150 }, { description: "Plumber labor (hr)", qty: 3, price: 135 }, { description: "Supply line / shutoff valve", qty: 2, price: 45 }] },
       { kind: "estimate", name: "Drain clearing", title: "Clear clogged drain", notes: "No-clear, no-charge on drain cleaning.", hours: 1.5, items: [{ description: "Service call / diagnostic", qty: 1, price: 119 }, { description: "Drain cleaning (fixture)", qty: 1, price: 175 }] },
-      { kind: "estimate", name: "Toilet install", title: "Toilet replacement", notes: "", hours: 2, items: [{ description: "Toilet (standard)", qty: 1, price: 285 }, { description: "Plumber labor (hr)", qty: 1.5, price: 135 }] },
-      { kind: "job", name: "Water heater swap", title: "Water heater replacement", notes: "Confirm gas/electric and shutoff location.", hours: 4, items: [] },
-      { kind: "job", name: "Leak call", title: "Leak repair", notes: "Locate leak, shut off water, quote repair.", hours: 2, items: [] },
+      { kind: "estimate", name: "Toilet installation", title: "Toilet replacement", notes: "", hours: 2, items: [{ description: "Toilet (standard)", qty: 1, price: 285 }, { description: "Plumber labor (hr)", qty: 1.5, price: 135 }] },
+      { kind: "job", name: "Water heater replacement", title: "Water heater replacement", notes: "Confirm gas/electric and shutoff location.", hours: 4, items: [] },
+      { kind: "job", name: "Leak repair visit", title: "Leak repair", notes: "Locate leak, shut off water, quote repair.", hours: 2, items: [] },
     ],
   },
   {
@@ -82,7 +82,7 @@ export const LIBRARY: LibPack[] = [
       { kind: "estimate", name: "Panel upgrade", title: "Panel upgrade 100A to 200A", notes: "Includes permit, inspection and utility coordination.", hours: 8, items: [{ description: "Panel upgrade 100A to 200A", qty: 1, price: 2800 }, { description: "Permit and inspection", qty: 1, price: 250 }] },
       { kind: "estimate", name: "EV charger", title: "EV charger install", notes: "Customer supplies charger unless listed.", hours: 3, items: [{ description: "EV charger install (240V)", qty: 1, price: 950 }] },
       { kind: "estimate", name: "Recessed lighting (6)", title: "Install 6 recessed lights", notes: "", hours: 3, items: [{ description: "Recessed LED light", qty: 6, price: 75 }, { description: "Electrician labor (hr)", qty: 3, price: 130 }] },
-      { kind: "job", name: "Troubleshooting call", title: "Electrical troubleshooting", notes: "Dead outlets / tripping breaker.", hours: 2, items: [] },
+      { kind: "job", name: "Electrical troubleshooting visit", title: "Electrical troubleshooting", notes: "Dead outlets / tripping breaker.", hours: 2, items: [] },
       { kind: "job", name: "Panel upgrade day", title: "Panel upgrade", notes: "Power off required. Notify customer.", hours: 8, items: [] },
     ],
   },
@@ -107,8 +107,8 @@ export const LIBRARY: LibPack[] = [
       { kind: "estimate", name: "Interior paint room", title: "Interior painting (per room)", notes: "Walls and ceiling, two coats. Furniture moved and covered.", hours: 8, items: [{ description: "Interior paint (per room)", qty: 1, price: 650 }] },
       { kind: "estimate", name: "Drywall repair", title: "Drywall patch and paint", notes: "", hours: 3, items: [{ description: "Drywall patch and paint", qty: 1, price: 275 }] },
       { kind: "estimate", name: "Small remodel", title: "Remodel scope", notes: "Allowance items listed. Change orders in writing.", hours: 16, items: [{ description: "Demolition and haul-away", qty: 1, price: 450 }, { description: "Carpenter labor (hr)", qty: 16, price: 95 }, { description: "Permit allowance", qty: 1, price: 300 }] },
-      { kind: "job", name: "Site walk", title: "Site walkthrough and measure", notes: "Photos, measurements, scope notes.", hours: 1, items: [] },
-      { kind: "job", name: "Full work day", title: "Construction day", notes: "", hours: 8, items: [] },
+      { kind: "job", name: "Site walkthrough", title: "Site walkthrough and measure", notes: "Photos, measurements, scope notes.", hours: 1, items: [] },
+      { kind: "job", name: "Full-day work order", title: "Construction day", notes: "", hours: 8, items: [] },
     ],
   },
 ];

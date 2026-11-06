@@ -24,7 +24,7 @@ export default function Login() {
         if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in.");
       }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Something went wrong");
+      setErr(e instanceof Error ? e.message : "Something went wrong. Please try again.");
     } finally {
       setBusy(false);
     }

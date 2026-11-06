@@ -6,7 +6,7 @@ import { type Store, uid } from "./store";
 import { addDays, startOfDay } from "./dates";
 import { invoiceTotals, amountPaid } from "./money";
 
-const KEY = "quorra-field-demo-v3";
+const KEY = "quorra-field-demo-v4";
 
 interface DB {
   business: Business;
@@ -196,15 +196,15 @@ function seed(): DB {
     ["Kevin Tran", "Website", "AC replacement, 2-story home", 980000, "new", 0],
     ["Hillcrest HOA", "Referral", "Annual backflow testing (12 units)", 240000, "contacted", -3],
     ["Nina Patel", "Yelp", "Panel upgrade + EV charger", 540000, "contacted", -5],
-    ["Oakridge Dental", "Referral", "Maintenance plan, 3 rooftop units", 360000, "quoted", -7],
-    ["Sam Whitfield", "Nextdoor", "Whole-house repipe", 1150000, "quoted", -9],
-    ["Linda Brooks", "Google", "Water heater replacement", 189000, "won", -12],
-    ["Mike Duran", "Yelp", "Mini-split for garage", 410000, "won", -14],
-    ["Pete Hanley", "Nextdoor", "Sewer line camera inspection", 45000, "lost", -10],
+    ["Oakridge Dental", "Referral", "Maintenance plan, 3 rooftop units", 360000, "send_quote", -7],
+    ["Sam Whitfield", "Nextdoor", "Whole-house repipe", 1150000, "quote_sent", -9],
+    ["Linda Brooks", "Google", "Water heater replacement", 189000, "work_order", -12],
+    ["Mike Duran", "Yelp", "Mini-split for garage", 410000, "work_order", -14],
+    ["Pete Hanley", "Nextdoor", "Sewer line camera inspection", 45000, "declined", -10],
   ];
   const leads: Lead[] = leadSeed.map(([name, source, service, value_cents, stage, ago], n) => ({
     id: uid(), name, phone: "(916) 555-02" + String(10 + n * 7), email: name.split(" ")[0].toLowerCase() + "@example.com",
-    address: "", source, service, value_cents, stage, notes: "", customer_id: null, created_at: rel(ago, 11),
+    address: "", source, service, value_cents, stage, notes: stage === "declined" ? "Declined: Price too high" : "", customer_id: null, estimate_id: null, job_id: null, created_at: rel(ago, 11),
   }));
 
   const planSeed: [number, string, string, number, number, number, ServicePlan["status"]][] = [

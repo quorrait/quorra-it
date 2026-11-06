@@ -1,58 +1,46 @@
 import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
 import { moneyShort } from "../lib/money";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { fmtDate, fmtTime } from "../lib/dates";
+import { Field, Icon, JobBadge, Sheet, Spinner, useToast } from "../components/ui";
 import { centsToStr, strToCents } from "../components/LineItems";
 import EstimateForm from "../components/EstimateForm";
+import JobForm from "../components/JobForm";
 import type { Lead, LeadStage } from "../lib/types";
 
-const STAGES: [LeadStage, string][] = [
-  ["new", "New"], ["contacted", "Contacted"], ["quoted", "Quoted"], ["won", "Won"], ["lost", "Lost"],
-];
-const SOURCES = ["Google", "Referral", "Yelp", "Facebook", "Nextdoor", "Website", "Repeat customer", "Other"];
+export const STAGE_LABEL: Record<LeadStage, string> = {
+  new: "New", contacted: "Contacted", send_quote: "Send quote", quote_sent: "Quote sent", work_order: "Work order", declined: "Declined",
+};
+const PIPELINE: LeadStage[] = ["new", "contacted", "send_quote", "quote_sent"];
+const SOURCES = ["Website form", "Google", "Referral", "Yelp", "Facebook", "Nextdoor", "Repeat customer", "Other"];
+const REASONS = ["Price too high", "Went with someone else", "Not ready yet", "No response", "Out of service area", "Other"];
 
-function LeadForm({ lead, onClose }: { lead?: Lead; onClose(): void }) {
-  const { store, customers, refresh } = useData();
+type Tab = "pipeline" | "work" | "declined";
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+
+function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): void; onBuildQuote?(l: Lead): void }) {
+  const { store, refresh } = useData();
   const toast = useToast();
   const [f, setF] = useState({
     name: lead?.name ?? "", phone: lead?.phone ?? "", email: lead?.email ?? "", address: lead?.address ?? "",
-    source: lead?.source ?? "Google", service: lead?.service ?? "", value: centsToStr(lead?.value_cents ?? 0),
-    stage: lead?.stage ?? ("new" as LeadStage), notes: lead?.notes ?? "",
+    source: lead?.source ?? "Google", service: lead?.service ?? "", value: centsToStr(lead?.value_cents ?? 0), notes: lead?.notes ?? "",
   });
-  const [estimating, setEstimating] = useState<{ customerId: string; title: string } | null>(null);
-  const [busy, setBusy] = useState(false);
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
 
-  async function save(stage = f.stage, customer_id = lead?.customer_id ?? null) {
+  async function save() {
     if (!f.name.trim()) { toast("Add a name"); return null; }
-    setBusy(true);
-    try {
-      const saved = await store.saveRow("leads", {
-        id: lead?.id, name: f.name.trim(), phone: f.phone, email: f.email, address: f.address, source: f.source,
-        service: f.service, value_cents: strToCents(f.value), stage, notes: f.notes, customer_id,
-        created_at: lead?.created_at ?? new Date().toISOString(),
-      });
-      await refresh();
-      return saved;
-    } catch (e) { toast(e instanceof Error ? e.message : "Could not save"); return null; }
-    finally { setBusy(false); }
+    const saved = await store.saveRow("leads", {
+      id: lead?.id, name: f.name.trim(), phone: f.phone, email: f.email, address: f.address, source: f.source, service: f.service,
+      value_cents: strToCents(f.value), stage: lead?.stage ?? "new", notes: f.notes, customer_id: lead?.customer_id ?? null,
+      estimate_id: lead?.estimate_id ?? null, job_id: lead?.job_id ?? null, created_at: lead?.created_at ?? new Date().toISOString(),
+    });
+    await refresh();
+    return saved;
   }
-
-  async function makeEstimate() {
-    let cid = lead?.customer_id ?? customers.find((c) => c.name.toLowerCase() === f.name.trim().toLowerCase())?.id;
-    if (!f.name.trim()) return toast("Add a name");
-    if (!cid) {
-      const c = await store.saveCustomer({ name: f.name.trim(), phone: f.phone, email: f.email, address: f.address, notes: "" });
-      cid = c.id;
-    }
-    const saved = await save(f.stage === "new" || f.stage === "contacted" ? "quoted" : f.stage, cid);
-    if (saved) setEstimating({ customerId: cid, title: f.service });
-  }
-
-  if (estimating) return <EstimateForm customerId={estimating.customerId} title={estimating.title} onClose={onClose} />;
 
   return (
-    <Sheet title={lead ? "Lead" : "New lead"} onClose={onClose}>
+    <Sheet title={lead ? lead.name : "New lead"} onClose={onClose}>
       <div className="stack">
         <Field label="Name"><input className="input" value={f.name} onChange={set("name")} /></Field>
         <div className="grid2 stack-sm">
@@ -60,19 +48,16 @@ function LeadForm({ lead, onClose }: { lead?: Lead; onClose(): void }) {
           <Field label="Email"><input className="input" type="email" value={f.email} onChange={set("email")} /></Field>
         </div>
         <Field label="Address"><input className="input" value={f.address} onChange={set("address")} /></Field>
-        <Field label="What do they need?"><input className="input" value={f.service} onChange={set("service")} placeholder="AC replacement, panel upgrade..." /></Field>
+        <Field label="Service requested"><input className="input" value={f.service} onChange={set("service")} placeholder="e.g. AC replacement, panel upgrade" /></Field>
         <div className="grid2 stack-sm">
           <Field label="Est. value ($)"><input className="input" inputMode="decimal" value={f.value} onChange={set("value")} /></Field>
-          <Field label="Source">
-            <select className="select" value={f.source} onChange={set("source")}>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select>
-          </Field>
+          <Field label="Source"><select className="select" value={f.source} onChange={set("source")}>{SOURCES.map((s) => <option key={s}>{s}</option>)}</select></Field>
         </div>
-        <Field label="Stage">
-          <select className="select" value={f.stage} onChange={set("stage")}>{STAGES.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
-        </Field>
         <Field label="Notes"><textarea className="textarea" value={f.notes} onChange={set("notes")} /></Field>
-        <button className="btn primary block" disabled={busy} onClick={async () => { if (await save()) { toast("Lead saved"); onClose(); } }}>Save lead</button>
-        <button className="btn block" disabled={busy} onClick={makeEstimate}>Create estimate</button>
+        <button className="btn primary block" onClick={async () => { if (await save()) { toast("Lead saved"); onClose(); } }}>Save lead</button>
+        {lead && !lead.estimate_id && lead.stage !== "work_order" && onBuildQuote && (
+          <button className="btn block" onClick={async () => { const s = await save(); if (s) { onClose(); onBuildQuote(s); } }}>Build quote</button>
+        )}
         {lead && <button className="btn danger block" onClick={async () => { if (confirm("Delete this lead?")) { await store.deleteRow("leads", lead.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
@@ -80,66 +65,178 @@ function LeadForm({ lead, onClose }: { lead?: Lead; onClose(): void }) {
 }
 
 export default function Leads() {
-  const { loading, leads, store, refresh } = useData();
+  const { loading, leads, jobs, estimates, customers, store, refresh } = useData();
+  const toast = useToast();
+  const nav = useNavigate();
+  const [tab, setTab] = useState<Tab>("pipeline");
   const [edit, setEdit] = useState<Lead | "new" | null>(null);
   const [over, setOver] = useState<LeadStage | null>(null);
+  const [quote, setQuote] = useState<{ lead: Lead; customerId: string } | null>(null);
+  const [schedule, setSchedule] = useState<{ lead: Lead; customerId: string } | null>(null);
+  const [decline, setDecline] = useState<Lead | null>(null);
 
   if (loading) return <Spinner />;
 
-  async function move(id: string, stage: LeadStage) {
-    const l = leads.find((x) => x.id === id);
-    if (!l || l.stage === stage) return;
-    await store.saveRow("leads", { ...l, stage });
-    await refresh();
+  const patch = async (l: Lead, p: Partial<Lead>) => { await store.saveRow("leads", { ...l, ...p }); await refresh(); };
+
+  /** A lead becomes a customer the first time we build a quote or a job for them. */
+  async function customerFor(l: Lead): Promise<string> {
+    if (l.customer_id && customers.some((c) => c.id === l.customer_id)) return l.customer_id;
+    let c = customers.find((x) => norm(x.name) === norm(l.name));
+    if (!c) c = await store.saveCustomer({ name: l.name, phone: l.phone, email: l.email, address: l.address, notes: "" });
+    await store.saveRow("leads", { ...l, customer_id: c.id });
+    await refresh(); // so the new customer is available in the forms that open next
+    return c.id;
   }
 
-  const open = leads.filter((l) => !["won", "lost"].includes(l.stage));
-  const won = leads.filter((l) => l.stage === "won");
-  const lost = leads.filter((l) => l.stage === "lost");
-  const rate = won.length + lost.length ? Math.round((won.length / (won.length + lost.length)) * 100) : null;
+  async function move(l: Lead, stage: LeadStage) {
+    if (l.stage === stage) return;
+    if (stage === "send_quote") {
+      if (l.estimate_id && estimates.some((e) => e.id === l.estimate_id)) return patch(l, { stage });
+      return setQuote({ lead: l, customerId: await customerFor(l) });
+    }
+    if (stage === "quote_sent") {
+      const est = estimates.find((e) => e.id === l.estimate_id);
+      if (est && est.status === "draft") await store.saveRow("estimates", { ...est, status: "sent" });
+      return patch(l, { stage });
+    }
+    if (stage === "work_order") return setSchedule({ lead: l, customerId: await customerFor(l) });
+    if (stage === "declined") return setDecline(l);
+    return patch(l, { stage });
+  }
+
+  const pipeline = leads.filter((l) => PIPELINE.includes(l.stage));
+  const work = leads.filter((l) => l.stage === "work_order");
+  const declined = leads.filter((l) => l.stage === "declined");
   const sum = (a: Lead[]) => a.reduce((s, l) => s + l.value_cents, 0);
+  const rate = work.length + declined.length ? Math.round((work.length / (work.length + declined.length)) * 100) : null;
+
+  const actions = (l: Lead) => {
+    const est = estimates.find((e) => e.id === l.estimate_id);
+    const btn = (label: string, fn: () => void, primary = false) => (
+      <button className={`btn sm${primary ? " primary" : ""}`} onClick={(e) => { e.stopPropagation(); fn(); }}>{label}</button>
+    );
+    switch (l.stage) {
+      case "new": return <>{btn("Mark contacted", () => void move(l, "contacted"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
+      case "contacted": return <>{btn("Send quote →", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
+      case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move({ ...l, stage: "contacted" }, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
+      case "quote_sent": return <>{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
+      default: return null;
+    }
+  };
 
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1 className="page-title">Leads</h1><p className="page-sub">Drag cards between stages, or tap one to edit.</p></div>
+        <div><h1 className="page-title">Leads</h1><p className="page-sub">New requests, quotes out, and accepted work.</p></div>
         <button className="btn primary" onClick={() => setEdit("new")}>{Icon.plus} New lead</button>
       </div>
+
       <div className="kpi-grid">
-        <div className="kpi"><div className="lbl">Open pipeline</div><div className="val num">{moneyShort(sum(open))}</div><div className="sub">{open.length} leads</div></div>
-        <div className="kpi"><div className="lbl">Won</div><div className="val num">{moneyShort(sum(won))}</div><div className="sub">{won.length} leads</div></div>
-        <div className="kpi"><div className="lbl">Lost</div><div className="val num">{moneyShort(sum(lost))}</div><div className="sub">{lost.length} leads</div></div>
-        <div className="kpi"><div className="lbl">Win rate</div><div className="val">{rate === null ? "-" : `${rate}%`}</div><div className="sub">won vs lost</div></div>
+        <div className="kpi"><div className="lbl">Open pipeline</div><div className="val num">{moneyShort(sum(pipeline))}</div><div className="sub">{pipeline.length} leads</div></div>
+        <div className="kpi"><div className="lbl">New to follow up</div><div className="val">{leads.filter((l) => l.stage === "new").length}</div><div className="sub">not contacted yet</div></div>
+        <div className="kpi"><div className="lbl">Work orders</div><div className="val num">{moneyShort(sum(work))}</div><div className="sub">{work.length} accepted</div></div>
+        <div className="kpi"><div className="lbl">Close rate</div><div className="val">{rate === null ? "-" : `${rate}%`}</div><div className="sub">accepted vs declined</div></div>
       </div>
-      <div className="pipe">
-        {STAGES.map(([stage, label]) => {
-          const col = leads.filter((l) => l.stage === stage);
-          return (
-            <div key={stage} className={`pipe-col${over === stage ? " over" : ""}`}
-              onDragOver={(e) => { e.preventDefault(); setOver(stage); }}
-              onDragLeave={() => setOver(null)}
-              onDrop={(e) => { e.preventDefault(); setOver(null); void move(e.dataTransfer.getData("text/plain"), stage); }}>
-              <div className="pipe-head"><b>{label}</b><span className="small muted">{col.length} · {moneyShort(sum(col))}</span></div>
-              {col.map((l) => (
-                <div key={l.id} className="lead" draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", l.id)} onClick={() => setEdit(l)}>
-                  <div className="bold">{l.name}</div>
-                  <div className="small muted">{l.service || "No details"}</div>
-                  <div className="row between" style={{ marginTop: 6 }}>
-                    <span className="small muted">{l.source}</span>
-                    <span className="bold num">{moneyShort(l.value_cents)}</span>
+
+      <div className="chips">
+        <button className={`chip${tab === "pipeline" ? " on" : ""}`} onClick={() => setTab("pipeline")}>Pipeline ({pipeline.length})</button>
+        <button className={`chip${tab === "work" ? " on" : ""}`} onClick={() => setTab("work")}>Work orders ({work.length})</button>
+        <button className={`chip${tab === "declined" ? " on" : ""}`} onClick={() => setTab("declined")}>Declined ({declined.length})</button>
+      </div>
+
+      {tab === "pipeline" && (
+        <div className="pipe pipe4">
+          {PIPELINE.map((stage) => {
+            const col = pipeline.filter((l) => l.stage === stage);
+            return (
+              <div key={stage} className={`pipe-col${over === stage ? " over" : ""}`}
+                onDragOver={(e) => { e.preventDefault(); setOver(stage); }} onDragLeave={() => setOver(null)}
+                onDrop={(e) => { e.preventDefault(); setOver(null); const l = leads.find((x) => x.id === e.dataTransfer.getData("text/plain")); if (l) void move(l, stage); }}>
+                <div className="pipe-head"><b>{STAGE_LABEL[stage]}</b><span className="small muted">{col.length} · {moneyShort(sum(col))}</span></div>
+                {col.map((l) => (
+                  <div key={l.id} className="lead" draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", l.id)} onClick={() => setEdit(l)}>
+                    <div className="row between"><div className="bold">{l.name}</div>{l.source === "Website form" && <span className="badge blue">Web</span>}</div>
+                    <div className="small muted">{l.service || "No details"}</div>
+                    <div className="row between" style={{ marginTop: 6 }}><span className="small muted">{fmtDate(l.created_at)}</span><span className="bold num">{l.value_cents ? moneyShort(l.value_cents) : ""}</span></div>
+                    <div className="row wrap" style={{ marginTop: 8 }}>{actions(l)}</div>
                   </div>
-                  <select className="select" style={{ marginTop: 8, height: 34, fontSize: 13 }} value={l.stage}
-                    onClick={(e) => e.stopPropagation()} onChange={(e) => void move(l.id, e.target.value as LeadStage)}>
-                    {STAGES.map(([k, n]) => <option key={k} value={k}>{n}</option>)}
-                  </select>
+                ))}
+                {col.length === 0 && <div className="small muted" style={{ textAlign: "center", padding: 16 }}>No leads</div>}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {tab === "work" && (
+        <div className="card flush">
+          {work.length === 0 && <div className="empty">Accepted quotes appear here once they are scheduled.</div>}
+          <div className="list">
+            {work.map((l) => {
+              const job = jobs.find((j) => j.id === l.job_id);
+              return (
+                <div key={l.id} className="list-item" onClick={async () => (job ? nav(`/jobs/${job.id}`) : setSchedule({ lead: l, customerId: await customerFor(l) }))}>
+                  <div className="grow">
+                    <div className="title">{l.name}</div>
+                    <div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)} ${fmtTime(job.start_at)}` : " · not scheduled yet"}</div>
+                  </div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}</div>
                 </div>
-              ))}
-              {col.length === 0 && <div className="small muted" style={{ textAlign: "center", padding: 16 }}>Empty</div>}
-            </div>
-          );
-        })}
-      </div>
-      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} />}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tab === "declined" && (
+        <div className="card flush">
+          {declined.length === 0 && <div className="empty">No declined leads.</div>}
+          <div className="list">
+            {declined.map((l) => (
+              <div key={l.id} className="list-item" onClick={() => setEdit(l)}>
+                <div className="grow"><div className="title">{l.name}</div><div className="small muted">{l.service || "No details"}{l.notes ? ` · ${l.notes.split("\n").pop()}` : ""}</div></div>
+                <div className="right"><div className="bold num">{l.value_cents ? moneyShort(l.value_cents) : ""}</div>
+                  <button className="btn sm" onClick={(e) => { e.stopPropagation(); void patch(l, { stage: "contacted" }); toast("Moved back to Contacted"); }}>Reopen</button></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} onBuildQuote={(l) => void move({ ...l, stage: "contacted" }, "send_quote")} />}
+
+      {quote && (
+        <EstimateForm customerId={quote.customerId} title={quote.lead.service} onClose={() => setQuote(null)}
+          onSaved={async (est) => { await patch(quote.lead, { estimate_id: est.id, stage: "send_quote", customer_id: quote.customerId }); toast("Quote built. Send it, then confirm it was sent."); nav(`/estimates/${est.id}`); }} />
+      )}
+
+      {schedule && (
+        <JobForm defaultCustomer={schedule.customerId} defaultTitle={schedule.lead.service || schedule.lead.name} onClose={() => setSchedule(null)}
+          onSaved={async (job) => {
+            const est = estimates.find((e) => e.id === schedule.lead.estimate_id);
+            if (est) await store.saveRow("estimates", { ...est, status: "approved", job_id: job.id });
+            await patch(schedule.lead, { stage: "work_order", job_id: job.id });
+            toast("On the calendar and in Work orders");
+            setTab("work");
+          }} />
+      )}
+
+      {decline && (
+        <Sheet title={`Why did ${decline.name} decline?`} onClose={() => setDecline(null)}>
+          <div className="stack">
+            {REASONS.map((r) => (
+              <button key={r} className="btn block" onClick={async () => {
+                const est = estimates.find((e) => e.id === decline.estimate_id);
+                if (est && est.status !== "declined") await store.saveRow("estimates", { ...est, status: "declined" });
+                await patch(decline, { stage: "declined", notes: `${decline.notes ? decline.notes + "\n" : ""}Declined: ${r}` });
+                setDecline(null); setTab("declined");
+              }}>{r}</button>
+            ))}
+          </div>
+        </Sheet>
+      )}
+      <Link to="/settings" className="small muted no-print" style={{ alignSelf: "center" }}>Add a lead form to your website under Settings</Link>
     </div>
   );
 }

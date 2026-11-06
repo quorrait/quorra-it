@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Your quote</title>
+<style>
+  :root { --brand:#e8590c; --ink:#111827; --muted:#6b7280; --line:#e3e7ee; --bad:#b42318; --good:#137a3c; }
+  * { box-sizing: border-box; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:#f3f4f6; }
+  main { max-width:620px; margin:0 auto; padding:16px; display:grid; gap:14px; }
+  .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; }
+  header { display:flex; align-items:center; gap:12px; }
+  header img { max-height:44px; max-width:140px; object-fit:contain; }
+  h1 { font-size:20px; margin:0 0 2px; }
+  .muted { color:var(--muted); font-size:13px; }
+  .li { display:flex; justify-content:space-between; gap:12px; padding:9px 0; border-top:1px solid var(--line); }
+  .li:first-child { border-top:0; }
+  .tot { display:flex; justify-content:space-between; padding:3px 0; }
+  .tot.g { font-size:18px; font-weight:800; border-top:2px solid var(--ink); margin-top:6px; padding-top:8px; }
+  label { display:grid; gap:4px; font-weight:600; font-size:13px; margin-top:10px; }
+  input, select { font:inherit; padding:11px 12px; border:1px solid var(--line); border-radius:10px; background:#fff; }
+  button { font:inherit; font-weight:700; padding:13px; border:0; border-radius:10px; width:100%; cursor:pointer; margin-top:12px; }
+  .accept { background:var(--good); color:#fff; }
+  .decline { background:#fff; color:var(--bad); border:1px solid var(--line); }
+  button:disabled { opacity:.6; }
+  .msg { padding:12px; border-radius:10px; font-weight:600; margin-top:12px; }
+  .ok { background:#ecfdf3; color:var(--good); } .err { background:#fef3f2; color:var(--bad); }
+  details summary { cursor:pointer; color:var(--muted); font-size:13px; margin-top:12px; }
+  @media print { body { background:#fff; } .actions { display:none; } }
+</style>
+</head>
+<body>
+<main id="app"><div class="card muted">Loading your quote...</div></main>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search), t = q.get("t"), api = (q.get("api") || "").replace(/\/$/, "");
+  var app = document.getElementById("app");
+  var usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
+  var money = function (c) { return usd.format(c / 100); };
+  var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+  var fmt = function (iso) { return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); };
+  function fail(m) { app.innerHTML = '<div class="card"><b>' + esc(m) + "</b></div>"; }
+  if (!t || !api) return fail("This quote link is not valid.");
+
+  function post(body) {
+    body.t = t;
+    return fetch(api + "/quote-respond", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Something went wrong"); return j; }); });
+  }
+
+  function render(d) {
+    var b = d.business || {};
+    var h = '<div class="card"><header>' + (b.logo ? '<img src="' + esc(b.logo) + '" alt="">' : "") +
+      '<div><h1>' + esc(b.name) + '</h1><div class="muted">' + esc([b.phone, b.email].filter(Boolean).join(" · ")) + "</div></div></header></div>";
+    h += '<div class="card"><div class="muted">Quote #' + d.number + " for " + esc(d.customer) + " · valid until " + fmt(d.valid_until) + "</div><h1 style=\"margin-top:6px\">" + esc(d.title) + "</h1>";
+    d.items.forEach(function (li) {
+      h += '<div class="li"><div>' + esc(li.description || "Item") + '<div class="muted">' + li.qty + " × " + money(li.unit_cents) + "</div></div><b>" + money(Math.round(li.qty * li.unit_cents)) + "</b></div>";
+    });
+    h += '<div class="tot muted"><span>Subtotal</span><span>' + money(d.subtotal_cents) + "</span></div>";
+    h += '<div class="tot muted"><span>Tax (' + d.tax_rate + '%)</span><span>' + money(d.total_cents - d.subtotal_cents) + "</span></div>";
+    h += '<div class="tot g"><span>Total</span><span>' + money(d.total_cents) + "</span></div>";
+    if (d.notes) h += '<p class="muted" style="white-space:pre-wrap;margin-top:12px">' + esc(d.notes) + "</p>";
+    h += "</div>";
+
+    if (d.status === "approved") {
+      h += '<div class="card"><div class="msg ok">Quote accepted. ' + (d.scheduled_for ? "You are scheduled for " + fmt(d.scheduled_for) + ". We will confirm your arrival time." : "We will be in touch to schedule your service.") + "</div></div>";
+    } else if (d.status === "declined") {
+      h += '<div class="card"><div class="msg">This quote was declined. If you change your mind, please contact us.</div></div>';
+    } else if (d.status === "sent") {
+      var min = new Date().toISOString().slice(0, 10);
+      h += '<div class="card actions"><b>Accept this quote</b><div class="muted">Choose when you would like us to come. We will confirm the exact time.</div>' +
+        '<label>Preferred date<input id="date" type="date" min="' + min + '"></label>' +
+        '<label>Preferred time<select id="win"><option value="morning">Morning</option><option value="afternoon">Afternoon</option></select></label>' +
+        '<button class="accept" id="acc">Accept quote</button>' +
+        '<details><summary>Decline this quote</summary><label>Reason (optional)<select id="why"><option value="">Select a reason</option><option>Price too high</option><option>Went with someone else</option><option>Not ready yet</option><option>Other</option></select></label><button class="decline" id="dec">Decline quote</button></details>' +
+        '<div id="out" role="status"></div></div>';
+    } else {
+      h += '<div class="card"><div class="msg">This quote is not available to accept yet.</div></div>';
+    }
+    app.innerHTML = h;
+
+    var out = function (cls, m) { var o = document.getElementById("out"); o.className = "msg " + cls; o.textContent = m; };
+    var acc = document.getElementById("acc");
+    if (acc) acc.onclick = function () {
+      var date = document.getElementById("date").value;
+      if (!date) return out("err", "Please choose a preferred date.");
+      acc.disabled = true;
+      post({ action: "accept", date: date, window: document.getElementById("win").value, tz: new Date().getTimezoneOffset() })
+        .then(function () { return load(); })
+        .catch(function (e) { acc.disabled = false; out("err", e.message); });
+    };
+    var dec = document.getElementById("dec");
+    if (dec) dec.onclick = function () {
+      dec.disabled = true;
+      post({ action: "decline", reason: document.getElementById("why").value })
+        .then(function () { return load(); })
+        .catch(function (e) { dec.disabled = false; out("err", e.message); });
+    };
+  }
+
+  function load() {
+    return fetch(api + "/quote-view?t=" + encodeURIComponent(t))
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not load this quote"); return j; }); })
+      .then(render)
+      .catch(function (e) { fail(e.message); });
+  }
+  load();
+})();
+</script>
+</body>
+</html>

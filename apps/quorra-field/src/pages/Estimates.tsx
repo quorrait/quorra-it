@@ -60,7 +60,7 @@ export default function Estimates() {
       </div>
 
       <div className="card flush">
-        {rows.length === 0 && <div className="empty">No estimates here</div>}
+        {rows.length === 0 && <div className="empty">No estimates match this filter</div>}
         <div className="list">
           {rows.map((e) => (
             <div key={e.id} className="list-item" onClick={() => nav(`/estimates/${e.id}`)}>

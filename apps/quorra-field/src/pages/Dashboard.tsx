@@ -56,6 +56,7 @@ export default function Dashboard() {
   const overdue = open.filter((i) => isOverdue(i, payments));
   const overdueAmt = overdue.reduce((s, i) => s + balanceDue(i, payments), 0);
 
+  const completed = jobs.filter((j) => j.status === "completed").sort((a, b) => b.end_at.localeCompare(a.end_at)).slice(0, 5);
   const invById = new Map(invoices.map((i) => [i.id, i]));
   const recent = [...payments].sort((a, b) => b.paid_at.localeCompare(a.paid_at)).slice(0, 5);
 
@@ -152,6 +153,33 @@ export default function Dashboard() {
               <Link to="/calendar" className="small bold" style={{ color: "var(--brand)" }}>Full calendar →</Link>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div className="card flush">
+        <div className="row between" style={{ padding: "16px 16px 6px" }}>
+          <div className="card-title" style={{ margin: 0 }}>Recent completed jobs</div>
+          <Link to="/jobs" className="small bold" style={{ color: "var(--brand)" }}>All jobs →</Link>
+        </div>
+        {completed.length === 0 && <div className="empty">No completed jobs yet</div>}
+        <div className="list">
+          {completed.map((j) => {
+            const d = new Date(j.end_at);
+            const billed = invoices.some((i) => i.job_id === j.id && i.status !== "void");
+            return (
+              <div key={j.id} className="list-item" onClick={() => nav(`/jobs/${j.id}`)}>
+                <div className="date-chip">
+                  <small>{d.toLocaleDateString("en-US", { month: "short" })}</small>
+                  <b>{d.getDate()}</b>
+                </div>
+                <div className="grow">
+                  <div className="title">{j.title}</div>
+                  <div className="small muted">{customerById(j.customer_id)?.name}{j.assigned_to ? ` · ${j.assigned_to}` : ""}</div>
+                </div>
+                {can("invoices") && <span className={`badge ${billed ? "good" : "gray"}`}>{billed ? "Invoiced" : "Not invoiced"}</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
 

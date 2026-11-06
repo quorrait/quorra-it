@@ -297,3 +297,5 @@ input, textarea, select { caret-color: auto; }
 .list-item, .card, .lead, .chip, .btn, .tab, .side-link, .cal-day, .date-chip, .kpi, .pipe-col { user-select: none; -webkit-user-select: none; }
 :focus:not(:focus-visible) { outline: none; }
 div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: none; }
+@media (min-width: 1100px) { .pipe.pipe4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.nav-badge { margin-left: auto; background: var(--brand); color: #fff; font-size: 11px; font-weight: 800; border-radius: 999px; padding: 1px 8px; }

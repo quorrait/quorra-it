@@ -53,7 +53,8 @@ async function ensureCustomer(ctx: Ctx, name: string, extra: Partial<Customer> =
 
 const CATS: PriceCategory[] = ["Labor", "Material", "Service", "Equipment"];
 const ROLES: Role[] = ["Owner", "Manager", "Office", "Sales", "Technician"];
-const STAGES: LeadStage[] = ["new", "contacted", "quoted", "won", "lost"];
+const STAGES: LeadStage[] = ["new", "contacted", "send_quote", "quote_sent", "work_order", "declined"];
+const LEGACY: Record<string, LeadStage> = { quoted: "quote_sent", won: "work_order", lost: "declined", "send quote": "send_quote", "quote sent": "quote_sent", "work order": "work_order" };
 const pick = <T extends string>(list: readonly T[], v: string, fallback: T): T => list.find((x) => x.toLowerCase() === (v ?? "").trim().toLowerCase()) ?? fallback;
 
 export const ENTITIES: Entity[] = [
@@ -90,7 +91,7 @@ export const ENTITIES: Entity[] = [
     async save(v, ctx) { await ctx.store.saveRow("price_items", v as never); },
   },
   {
-    key: "leads", label: "Leads", hint: "Stage can be new, contacted, quoted, won or lost.",
+    key: "leads", label: "Leads", hint: "Stage: new, contacted, send quote, quote sent, work order or declined.",
     fields: [
       { key: "name", label: "Name", aliases: ["name", "lead", "contact", "customer"], required: true, example: "Hillcrest HOA" },
       { key: "phone", label: "Phone", aliases: ["phone", "mobile"], example: "(916) 555-0140" },
@@ -104,7 +105,7 @@ export const ENTITIES: Entity[] = [
     ],
     build(r) {
       if (!r.name?.trim()) return { error: "Missing name" };
-      return { value: { name: r.name.trim(), phone: r.phone ?? "", email: r.email ?? "", address: r.address ?? "", source: r.source || "Other", service: r.service ?? "", value_cents: cents(r.value), stage: pick(STAGES, r.stage, "new"), notes: r.notes ?? "", customer_id: null, created_at: new Date().toISOString() } };
+      return { value: { name: r.name.trim(), phone: r.phone ?? "", email: r.email ?? "", address: r.address ?? "", source: r.source || "Other", service: r.service ?? "", value_cents: cents(r.value), stage: LEGACY[(r.stage ?? "").trim().toLowerCase()] ?? pick(STAGES, (r.stage ?? "").trim().replace(" ", "_"), "new"), notes: r.notes ?? "", customer_id: null, estimate_id: null, job_id: null, created_at: new Date().toISOString() } };
     },
     async save(v, ctx) { await ctx.store.saveRow("leads", v as never); },
   },

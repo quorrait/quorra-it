@@ -90,7 +90,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
           </div>
         )}
         <Field label="Job title">
-          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="AC not cooling, water heater swap..." />
+          <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. AC repair, water heater replacement" />
         </Field>
         <Field label="Address">
           <input className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Job site address" />
@@ -113,7 +113,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
           </select>
         </Field>
         <Field label="Notes">
-          <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Gate code, what the customer reported, parts needed..." />
+          <textarea className="textarea" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Access instructions, issue reported by the customer, parts needed" />
         </Field>
         <button className="btn primary block" onClick={save} disabled={busy}>{busy ? "Saving..." : job ? "Save changes" : "Schedule job"}</button>
       </div>

@@ -51,7 +51,7 @@ export default function PriceBook() {
         <div><h1 className="page-title">Price book</h1><p className="page-sub">Your standard services and parts. Pick them when building estimates and invoices.</p></div>
         <button className="btn primary" onClick={() => setEdit("new")}>{Icon.plus} Add item</button>
       </div>
-      <input className="input" placeholder="Search price book..." value={q} onChange={(e) => setQ(e.target.value)} />
+      <input className="input" placeholder="Search price book" value={q} onChange={(e) => setQ(e.target.value)} />
       <div className="chips">
         {(["all", ...CATS] as const).map((c) => <button key={c} className={`chip${cat === c ? " on" : ""}`} onClick={() => setCat(c)}>{c === "all" ? "All" : c}</button>)}
       </div>

@@ -86,7 +86,7 @@ export default function JobDetail() {
           <div className="card-title" style={{ margin: 0 }}>Invoices</div>
           <button className="btn sm primary" onClick={() => setInvoicing(true)}>{Icon.plus} Invoice</button>
         </div>
-        {jobInvoices.length === 0 && <div className="empty">No invoice yet{job.status === "completed" ? " — this job is done, so bill it." : "."}</div>}
+        {jobInvoices.length === 0 && <div className="empty">No invoice yet.{job.status === "completed" ? " This job is complete and ready to invoice." : ""}</div>}
         <div className="list">
           {jobInvoices.map((i) => (
             <div key={i.id} className="list-item" onClick={() => nav(`/invoices/${i.id}`)}>

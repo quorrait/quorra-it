@@ -13,6 +13,7 @@ export interface Business {
   qbo_company: string | null;
   stripe_connected: boolean;
   logo: string | null; // small data URL shown on printed invoices/estimates
+  lead_key?: string | null; // public key for the website lead form
 }
 
 export interface Customer {
@@ -81,9 +82,10 @@ export interface Estimate {
   notes: string;
   job_id: string | null;
   invoice_id: string | null;
+  public_token?: string; // lets the customer open and accept the quote from a link (live mode)
 }
 
-export type LeadStage = "new" | "contacted" | "quoted" | "won" | "lost";
+export type LeadStage = "new" | "contacted" | "send_quote" | "quote_sent" | "work_order" | "declined";
 export interface Lead {
   id: string;
   name: string;
@@ -96,6 +98,8 @@ export interface Lead {
   stage: LeadStage;
   notes: string;
   customer_id: string | null;
+  estimate_id: string | null; // the quote built for this lead
+  job_id: string | null; // the job on the calendar once accepted
   created_at: string;
 }
 

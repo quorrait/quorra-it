@@ -76,3 +76,11 @@ Note: this hides screens in the app. Hard enforcement (so a technician can't rea
 
 - **Templates:** saved estimate/invoice and job templates, plus a starter library (HVAC, Plumbing, Electrical, General construction) that adds standard price book items and ready-made templates. Pick a template when creating an estimate, invoice or job; use "Save as template" on any estimate or job. Run `supabase/migrations/0004_templates.sql` first.
 - **Imports (CSV):** customers, price book, leads, jobs, team and past invoices, each with a downloadable template, automatic column matching, preview, duplicate skipping and a row-by-row error list. Imports run one record at a time, so very large files (thousands of rows) will be slow.
+
+## Lead pipeline, website form and online quotes
+
+- **Pipeline:** New, Contacted, Send quote, Quote sent. Accepted leads move to the **Work orders** tab (and onto the calendar); the rest go to **Declined** with a reason. "Send quote" builds an estimate for the lead. The quote is sent by email or text, then you confirm it was sent, which moves the lead to Quote sent.
+- **Website lead form:** Settings, Website lead form shows an embed code (an iframe) and a share link. Submissions arrive as new leads marked "Web". It uses the `lead-intake` function (honeypot and a 30 per hour limit per business).
+- **Online quote acceptance:** quotes sent by email or text include a link (`quote.html`). The customer reviews the quote, picks a preferred date and time, and accepts or declines. Accepting creates the job on the calendar, approves the quote and moves the lead to Work orders. Uses the `quote-view` and `quote-respond` functions.
+- **Setup:** run `supabase/migrations/0005_lead_pipeline.sql`, then `supabase functions deploy lead-intake quote-view quote-respond --no-verify-jwt`. The public pages (`lead.html`, `quote.html`) are built into the app's `public` folder and need no extra hosting. In demo mode the form and the accept step are simulated inside the app.
+- Not included yet: email or text alerts when a new lead arrives (the app badge and Leads list update while the app is open).

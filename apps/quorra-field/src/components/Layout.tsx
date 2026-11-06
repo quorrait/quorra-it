@@ -38,7 +38,8 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 ];
 
 export default function Layout() {
-  const { store, business, error, can, me, viewAs, team } = useData();
+  const { store, business, error, can, me, viewAs, team, leads } = useData();
+  const newLeads = leads.filter((l) => l.stage === "new").length;
   const mine = (l: NavItem) => !l.f || can(l.f);
   return (
     <div className="shell">
@@ -54,6 +55,7 @@ export default function Layout() {
               <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>
                 {l.icon}
                 {l.label}
+                {l.to === "/leads" && newLeads > 0 && <span className="nav-badge">{newLeads}</span>}
               </NavLink>
             ))}
           </div>

@@ -49,7 +49,7 @@ export default function Invoices() {
       </div>
 
       <div className="card flush">
-        {rows.length === 0 && <div className="empty">No invoices here</div>}
+        {rows.length === 0 && <div className="empty">No invoices match this filter</div>}
         <div className="list">
           {rows.slice(0, 100).map((i) => {
             const total = invoiceTotals(i).total;

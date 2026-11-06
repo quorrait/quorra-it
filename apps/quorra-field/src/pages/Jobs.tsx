@@ -55,7 +55,7 @@ export default function Jobs() {
       </div>
 
       <div className="card flush">
-        {shown.length === 0 && <div className="empty">No jobs here</div>}
+        {shown.length === 0 && <div className="empty">No jobs match this filter</div>}
         <div className="list">
           {shown.slice(0, 80).map((j) => (
             <div key={j.id} className="list-item" onClick={() => nav(`/jobs/${j.id}`)}>
