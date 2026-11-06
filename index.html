@@ -51,6 +51,13 @@
         .q-section-head{display:flex;flex-direction:column;align-items:center;gap:12px;padding-bottom:64px;text-align:center;}
         .q-section-head .q-eyebrow{padding-top:14px;}
         .q-section-title{font-weight:500;font-size:clamp(40px,5vw,60px);line-height:1.02;letter-spacing:-.03em;margin:0;color:var(--q-accent);text-align:center;}
+        .q-apps-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;}
+        .q-app-card{display:flex;flex-direction:column;align-items:center;gap:24px;width:320px;padding:44px 32px 36px;background:var(--q-card);border:1px solid var(--q-rule);border-radius:20px;text-align:center;transition:border-color .25s,transform .25s,box-shadow .25s;}
+        .q-app-card:hover{border-color:var(--q-accent);transform:translateY(-4px);box-shadow:0 24px 48px -24px rgba(28,170,222,.35);}
+        .q-app-logo{width:160px;height:160px;border-radius:36px;object-fit:cover;display:block;box-shadow:0 12px 32px -12px rgba(0,0,0,.6);}
+        .q-app-name{font-weight:500;font-size:30px;letter-spacing:-.02em;margin:0;color:var(--q-ink);}
+        .q-app-desc{font-size:15px;line-height:1.5;color:var(--q-ink-2);margin:0;}
+        .q-app-visit{font-family:var(--q-mono);font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--q-accent);}
         .q-stack{border-top:1px solid var(--q-rule);padding:56px var(--q-gutter);max-width:var(--q-max);margin:0 auto;}
         .q-stack-head{display:grid;grid-template-columns:160px 1fr;gap:40px;align-items:center;margin-bottom:36px;}
         .q-stack-logos{display:flex;gap:14px;flex-wrap:wrap;align-items:center;}
@@ -219,6 +226,7 @@
                         <img src={LOGO_SRC} alt="Quorra IT" className="q-brand-logo" />
                     </a>
                     <ul className="q-nav-links">
+                        <li><a href="#apps">Apps</a></li>
                         <li><a href="#services">Services</a></li>
                         <li><a href="#contact">Contact</a></li>
                     </ul>
@@ -235,6 +243,30 @@
                     <div className="q-hero-cta">
                         <a href="#contact" className="q-btn q-btn-primary">Book a consultation</a>
                         <a href="#services" className="q-btn q-btn-ghost">What we do</a>
+                    </div>
+                </section>
+            );
+        }
+
+        const APPS = [
+            {name:"TrueFlow",desc:"Meter data and consumption insights for water utilities.",logo:"trueflow/favicon-192.png",url:"https://trueflowsoftware.com"},
+        ];
+
+        function Apps() {
+            return (
+                <section className="q-section" id="apps">
+                    <div className="q-section-head">
+                        <h2 className="q-section-title">Our Apps</h2>
+                    </div>
+                    <div className="q-apps-grid">
+                        {APPS.map((a) => (
+                            <a key={a.name} href={a.url} target="_blank" rel="noopener" className="q-app-card" aria-label={`${a.name} — visit ${a.url.replace("https://","")}`}>
+                                <img src={a.logo} alt={`${a.name} logo`} className="q-app-logo" />
+                                <h3 className="q-app-name">{a.name}</h3>
+                                <p className="q-app-desc">{a.desc}</p>
+                                <span className="q-app-visit">Visit site ↗</span>
+                            </a>
+                        ))}
                     </div>
                 </section>
             );
@@ -382,7 +414,7 @@
             const close = React.useCallback(() => setModal(null), []);
             return (
                 <div>
-                    <Nav /><Hero /><Contact /><Stack /><Services />
+                    <Nav /><Hero /><Apps /><Contact /><Stack /><Services />
                     <Footer onPrivacy={() => setModal("privacy")} onTerms={() => setModal("terms")} />
                     {modal === "privacy" && <Modal title="Privacy Policy" onClose={close}><PrivacyContent /></Modal>}
                     {modal === "terms" && <Modal title="Terms of Service" onClose={close}><TermsContent /></Modal>}
