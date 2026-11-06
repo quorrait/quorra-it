@@ -44,6 +44,8 @@ export interface Job {
   assigned_to: string;
   started_at?: string | null; // when the tech pressed Start job
   actual_minutes?: number | null; // time it really took, entered at completion
+  en_route_at?: string | null; en_route_lat?: number | null; en_route_lng?: number | null; // "On my way" check-in
+  arrived_at?: string | null; arrived_lat?: number | null; arrived_lng?: number | null; // "Arrived" check-in
 }
 
 export interface LineItem {

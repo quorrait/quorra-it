@@ -14,7 +14,7 @@ import { reviewRequest } from "../lib/review";
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { loading, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
+  const { loading, me, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -47,6 +47,28 @@ export default function JobDetail() {
     toast(complete ? "Job completed" : "Time updated");
   }
 
+  function where(): Promise<{ lat: number; lng: number } | null> {
+    return new Promise((res) => {
+      if (!navigator.geolocation) return res(null);
+      navigator.geolocation.getCurrentPosition((p) => res({ lat: p.coords.latitude, lng: p.coords.longitude }), () => res(null), { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 });
+    });
+  }
+  async function checkIn(kind: "en_route" | "arrived") {
+    const pos = await where();
+    const now = new Date().toISOString();
+    const patch = kind === "en_route"
+      ? { en_route_at: now, en_route_lat: pos?.lat ?? null, en_route_lng: pos?.lng ?? null }
+      : { arrived_at: now, arrived_lat: pos?.lat ?? null, arrived_lng: pos?.lng ?? null };
+    await store.saveJob({ ...job!, ...patch });
+    await refresh();
+    toast(pos ? (kind === "en_route" ? "On my way recorded with your location" : "Arrival recorded with your location") : (kind === "en_route" ? "On my way recorded (location not shared)" : "Arrival recorded (location not shared)"));
+    if (kind === "en_route" && customer?.phone) {
+      const who = me.name.split(" ")[0];
+      const msg = `Hi ${customer.name.split(" ")[0]}, this is ${who} with ${business.name || "us"}. I'm on my way to ${job!.address || "your location"} now.`;
+      if (confirm("Text the customer that you're on your way?")) location.href = `sms:${customer.phone}?&body=${encodeURIComponent(msg)}`;
+    }
+  }
+
   async function setStatus(status: JobStatus) {
     await store.saveJob({ ...job!, status, ...(status === "in_progress" ? { started_at: new Date().toISOString() } : {}) });
     await refresh();
@@ -63,6 +85,22 @@ export default function JobDetail() {
         </div>
         <JobBadge status={job.status} />
       </div>
+
+      {(job.status === "scheduled" || job.status === "in_progress") && (
+        <div className="card stack">
+          <div className="card-title" style={{ margin: 0 }}>Arrival</div>
+          <div className="grid2">
+            <button className="btn" disabled={Boolean(job.en_route_at)} onClick={() => void checkIn("en_route")}>On my way</button>
+            <button className="btn" disabled={Boolean(job.arrived_at)} onClick={() => void checkIn("arrived")}>I've arrived</button>
+          </div>
+          {(job.en_route_at || job.arrived_at) && (
+            <div className="small muted">
+              {job.en_route_at && <div>On the way since {fmtTime(job.en_route_at)}{job.en_route_lat != null && <> · <a href={`https://maps.google.com/?q=${job.en_route_lat},${job.en_route_lng}`} target="_blank" rel="noopener" style={{ color: "var(--brand)" }}>see location</a></>}</div>}
+              {job.arrived_at && <div>Arrived {fmtTime(job.arrived_at)}{job.arrived_lat != null && <> · <a href={`https://maps.google.com/?q=${job.arrived_lat},${job.arrived_lng}`} target="_blank" rel="noopener" style={{ color: "var(--brand)" }}>see location</a></>}</div>}
+            </div>
+          )}
+        </div>
+      )}
 
       {job.status === "scheduled" && (
         <button className="btn dark block" style={{ minHeight: 54 }} onClick={() => setStatus("in_progress")}>Start job</button>
