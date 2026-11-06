@@ -17,6 +17,8 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
 }) {
   const { store, customers, estimates, business, refresh } = useData();
   const toast = useToast();
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [cust, setCust] = useState(estimate?.customer_id ?? customerId ?? customers[0]?.id ?? "");
   const [title, setTitle] = useState(estimate?.title ?? defaultTitle ?? "");
   const [rows, setRows] = useState<Row[]>(estimate ? estimate.items.map(toRow) : [{ description: "", qty: "1", price: "" }]);
@@ -30,14 +32,17 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
 
   async function save() {
     if (!cust) return toast("Pick a customer");
+    if (cust === "__new__" && !newName.trim()) return toast("Add the customer's name");
     if (!title.trim()) return toast("Give the estimate a title");
     if (items.length === 0) return toast("Add at least one line item");
     setBusy(true);
     try {
+      let cid = cust;
+      if (cid === "__new__") cid = (await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address: "", notes: "" })).id;
       const saved = await store.saveRow("estimates", {
         id: estimate?.id,
         number: estimate?.number ?? Math.max(2000, ...estimates.map((e) => e.number)) + 1,
-        customer_id: cust,
+        customer_id: cid,
         title: title.trim(),
         status: estimate?.status ?? "draft",
         items,
@@ -65,9 +70,16 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
         {!estimate && (
           <Field label="Customer">
             <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>
+              <option value="__new__">+ New customer</option>
               {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           </Field>
+        )}
+        {!estimate && cust === "__new__" && (
+          <div className="grid2 stack-sm">
+            <Field label="Customer name"><input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jane Smith" /></Field>
+            <Field label="Phone"><input className="input" type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="(916) 555-0100" /></Field>
+          </div>
         )}
         {!estimate && <TemplatePicker kind="estimate" onPick={(t) => { setTitle(t.title || t.name); setRows(t.items.map(toRow)); setNotes(t.notes); }} />}
         <Field label="Title">

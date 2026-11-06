@@ -1,18 +1,19 @@
 // Creates a Stripe Checkout page for an invoice's remaining balance, charged on the contractor's own Stripe account.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, appUrl, env, handler, HttpError, invoiceTotalCents, json, requireUser } from "../_shared/util.ts";
+import { admin, appUrl, env, handler, HttpError, invoiceTotalCents, json, requireUser, accountOwner } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
+  const ownerId = await accountOwner(user.id);
   const { invoice_id } = await req.json();
   if (!invoice_id) throw new HttpError(400, "invoice_id required");
 
   const db = admin();
-  const { data: inv } = await db.from("invoices").select("*").eq("id", invoice_id).eq("owner_id", user.id).maybeSingle();
+  const { data: inv } = await db.from("invoices").select("*").eq("id", invoice_id).eq("owner_id", ownerId).maybeSingle();
   if (!inv) throw new HttpError(404, "Invoice not found");
   if (inv.status !== "sent") throw new HttpError(400, "Mark the invoice as sent before taking payment");
 
-  const { data: biz } = await db.from("business").select("name, stripe_account_id, stripe_connected").eq("owner_id", user.id).maybeSingle();
+  const { data: biz } = await db.from("business").select("name, stripe_account_id, stripe_connected").eq("owner_id", ownerId).maybeSingle();
   if (!biz?.stripe_account_id || !biz.stripe_connected) throw new HttpError(400, "Connect Stripe in Settings first");
 
   const { data: pays } = await db.from("payments").select("amount_cents").eq("invoice_id", inv.id);
@@ -23,7 +24,7 @@ handler(async (req) => {
   const { data: cust } = await db.from("customers").select("name, email").eq("id", inv.customer_id).maybeSingle();
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
-  const meta = { invoice_id: inv.id, owner_id: user.id };
+  const meta = { invoice_id: inv.id, owner_id: ownerId };
   const session = await stripe.checkout.sessions.create(
     {
       mode: "payment",

@@ -37,37 +37,70 @@
 <div class="card">
   <div class="head">
     <div class="biz" id="biz"></div>
-    <h1>Request service</h1>
-    <p>Tell us what you need and we will get back to you shortly.</p>
+    <h1 id="h">Request service</h1>
+    <p id="intro">Tell us what you need and we will get back to you shortly.</p>
   </div>
   <form id="f" novalidate>
     <div class="row">
       <label>Full name *<input name="name" autocomplete="name" placeholder="Jane Smith" required /></label>
-      <label>Phone<input name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" /></label>
+      <label>Phone<input id="phone" name="phone" type="tel" autocomplete="tel" placeholder="(555) 123-4567" /></label>
     </div>
-    <label>Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com" /></label>
-    <label>Service address<input name="address" autocomplete="street-address" placeholder="Street, city" /></label>
-    <label>What do you need done?<input name="service" placeholder="e.g. AC not cooling, water heater replacement" /></label>
+    <label id="lemail">Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com" /></label>
+    <label id="laddr">Service address<input name="address" autocomplete="street-address" placeholder="Street, city" /></label>
+    <label id="lservice">What do you need done?<input name="service" placeholder="e.g. AC not cooling, water heater replacement" /></label>
+    <label id="lextra" style="display:none"><span id="extraLabel"></span><input name="extra" /></label>
     <label>Additional details<textarea name="message" placeholder="Anything that will help us prepare"></textarea></label>
     <div class="hp" aria-hidden="true"><label>Leave blank<input name="hp" tabindex="-1" autocomplete="off" /></label></div>
     <div id="out" role="status"></div>
     <button id="go" type="submit">Request service</button>
-    <p class="hint">Provide a phone number or email so we can reach you.</p>
+    <p class="hint" id="hint">Provide a phone number or email so we can reach you.</p>
   </form>
 </div>
 <script>
 (function () {
   var q = new URLSearchParams(location.search);
-  var key = q.get("k"), api = q.get("api"), demo = q.get("demo") === "1", name = q.get("n");
+  var key = q.get("k"), api = q.get("api"), demo = q.get("demo") === "1", name = q.get("n"), anon = q.get("a");
   var f = document.getElementById("f"), out = document.getElementById("out"), go = document.getElementById("go");
+  var cfg = {};
   if (name) document.getElementById("biz").textContent = name;
   function show(cls, text) { out.className = "msg " + cls; out.textContent = text; }
+  function shade(hex, amt) { var n = parseInt(hex.slice(1), 16), r = Math.max(0, (n >> 16) - amt), g = Math.max(0, ((n >> 8) & 255) - amt), b = Math.max(0, (n & 255) - amt); return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
+  function apply(c) {
+    cfg = c || {};
+    if (cfg.heading) { document.getElementById("h").textContent = cfg.heading; document.title = cfg.heading; }
+    if (cfg.intro) document.getElementById("intro").textContent = cfg.intro;
+    if (cfg.button) go.textContent = cfg.button;
+    if (cfg.accent && /^#[0-9a-f]{6}$/i.test(cfg.accent)) { document.documentElement.style.setProperty("--brand", cfg.accent); document.documentElement.style.setProperty("--brand-dark", shade(cfg.accent, 24)); }
+    if (cfg.show_address === false) document.getElementById("laddr").style.display = "none";
+    if (cfg.show_email === false) document.getElementById("lemail").style.display = "none";
+    if (cfg.require_phone) { document.getElementById("phone").required = true; document.getElementById("hint").textContent = "Please include a phone number so we can reach you."; }
+    if (cfg.extra_label) { document.getElementById("lextra").style.display = ""; document.getElementById("extraLabel").textContent = cfg.extra_label; }
+    if (cfg.services && cfg.services.length) {
+      var sel = document.createElement("select"); sel.name = "service";
+      sel.style.cssText = "font:inherit;font-weight:400;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:var(--soft);color:var(--ink);width:100%";
+      var o0 = document.createElement("option"); o0.value = ""; o0.textContent = "Choose a service"; sel.appendChild(o0);
+      cfg.services.forEach(function (x) { var o = document.createElement("option"); o.value = x; o.textContent = x; sel.appendChild(o); });
+      var lab = document.getElementById("lservice"); lab.removeChild(lab.querySelector("input")); lab.appendChild(sel);
+    }
+  }
+  // Wording comes from the preview link, or from the business's saved settings.
+  if (q.get("cfg")) { try { apply(JSON.parse(decodeURIComponent(escape(atob(q.get("cfg")))))); } catch (e) {} }
+  else if (!demo && key && api && anon) {
+    fetch(api.replace(/\/functions\/v1\/?$/, "") + "/rest/v1/rpc/lead_form_config", { method: "POST", headers: { "Content-Type": "application/json", apikey: anon, Authorization: "Bearer " + anon }, body: JSON.stringify({ p_key: key }) })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) { if (j) { if (j.name && !name) document.getElementById("biz").textContent = j.name; apply(j.form); } })
+      .catch(function () {});
+  }
   if (!demo && (!key || !api)) show("err", "This form is not set up correctly.");
   f.addEventListener("submit", function (e) {
     e.preventDefault();
     var d = Object.fromEntries(new FormData(f).entries());
     if (!d.name.trim()) return show("err", "Please enter your name.");
-    if (!d.phone.trim() && !d.email.trim()) return show("err", "Please enter a phone number or email so we can reach you.");
+    if (cfg.require_phone && !(d.phone || "").trim()) return show("err", "Please enter a phone number.");
+    if (!(d.phone || "").trim() && !(d.email || "").trim()) return show("err", "Please enter a phone number or email so we can reach you.");
+    if (d.extra && cfg.extra_label) d.message = ((d.message || "") + "\n" + cfg.extra_label + ": " + d.extra).trim();
+    delete d.extra;
+    var thanks = cfg.thanks || "Thank you. Your request was sent and we will contact you shortly.";
     if (demo) { f.reset(); return show("ok", "Preview only: on your live form this request would now appear under Leads."); }
     d.k = key; go.disabled = true; show("", "");
     fetch(api.replace(/\/$/, "") + "/lead-intake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) })
@@ -75,7 +108,7 @@
       .then(function (r) {
         if (!r.ok) { go.disabled = false; return show("err", r.j.error || "Something went wrong. Please try again."); }
         f.reset(); go.textContent = "Request sent";
-        show("ok", "Thank you. Your request was sent and we will contact you shortly.");
+        show("ok", thanks);
       })
       .catch(function () { go.disabled = false; show("err", "Could not send your request. Please check your connection and try again."); });
   });

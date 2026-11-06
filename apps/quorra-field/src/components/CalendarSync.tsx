@@ -62,17 +62,27 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
     );
   }
 
+  const google = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(webcalUrl(token))}`;
   return (
     <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Calendar: <b>{label}</b></p>
       {how}
-      <div className="row wrap">
-        <a className="btn primary" href={webcalUrl(token)}>Add to phone calendar</a>
-        <button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button>
-        {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar (updates automatically): ${webcalUrl(token)}`)}`}>Text link</a>}
+      <div className="grid2">
+        <a className="btn primary" style={{ minHeight: 52 }} href={webcalUrl(token)}>Add to iPhone calendar</a>
+        <a className="btn primary" style={{ minHeight: 52 }} href={google} target="_blank" rel="noopener">Add to Google Calendar</a>
       </div>
-      <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
-      {steps}
+      <div className="small muted">Tap once and your phone's calendar opens with the subscription ready to confirm. After that, jobs stay up to date on their own.</div>
+      <details className="small">
+        <summary className="bold">Other calendars or manual setup</summary>
+        <div className="stack" style={{ marginTop: 8 }}>
+          <div className="row wrap">
+            <button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button>
+            {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar (updates automatically): ${webcalUrl(token)}`)}`}>Text link</a>}
+          </div>
+          <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
+          <div><b>Outlook:</b> Add calendar, Subscribe from web, paste the link.</div>
+        </div>
+      </details>
       <div className="small muted">Anyone with this link can see these jobs, so keep it private. If it gets shared by mistake, reset it and add the new link on the phone.</div>
       <div><button className="btn sm danger" disabled={busy} onClick={reset}>Reset link</button></div>
     </div>

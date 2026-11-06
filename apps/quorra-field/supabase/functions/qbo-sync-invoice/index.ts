@@ -1,22 +1,23 @@
 // Pushes one invoice (and its customer + any new payments) to QuickBooks Online. Safe to call repeatedly.
-import { admin, handler, HttpError, json, requireUser, type LineItem } from "../_shared/util.ts";
+import { admin, handler, HttpError, json, requireUser, type LineItem, accountOwner } from "../_shared/util.ts";
 import { getConnection, q, qbo, qboQuery } from "../_shared/qbo.ts";
 
 const dateOnly = (iso: string) => iso.slice(0, 10);
 
 handler(async (req) => {
   const user = await requireUser(req);
+  const ownerId = await accountOwner(user.id);
   const { invoice_id } = await req.json();
   const db = admin();
 
-  const { data: inv } = await db.from("invoices").select("*").eq("id", invoice_id).eq("owner_id", user.id).maybeSingle();
+  const { data: inv } = await db.from("invoices").select("*").eq("id", invoice_id).eq("owner_id", ownerId).maybeSingle();
   if (!inv) throw new HttpError(404, "Invoice not found");
   if (inv.status === "draft" || inv.status === "void") throw new HttpError(400, "Only sent or paid invoices can be synced");
 
-  const { data: cust } = await db.from("customers").select("*").eq("id", inv.customer_id).eq("owner_id", user.id).maybeSingle();
+  const { data: cust } = await db.from("customers").select("*").eq("id", inv.customer_id).eq("owner_id", ownerId).maybeSingle();
   if (!cust) throw new HttpError(404, "Customer not found");
 
-  const conn = await getConnection(user.id);
+  const conn = await getConnection(ownerId);
 
   /* 1. Customer: reuse by id, then by name, else create. */
   let custId: string | null = cust.qbo_id;

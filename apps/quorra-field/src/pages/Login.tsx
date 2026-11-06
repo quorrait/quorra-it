@@ -1,18 +1,29 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { APP_NAME } from "../lib/config";
 import { Field } from "../components/ui";
+import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
 
+/** Sign in. Creating a login here is only possible through a team invite; new businesses buy a plan first. */
 export default function Login() {
   const auth = useAuth();
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const nav = useNavigate();
+  const code = codeFromHash();
+  const [invite, setInvite] = useState<{ business: string; email: string; role: string } | null>(null);
+  const [mode, setMode] = useState<"in" | "up">(code ? "up" : "in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [biz, setBiz] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!code) return;
+    rememberInvite(code);
+    void inviteInfo(code).then((i) => { setInvite(i); if (i) setEmail(i.email); });
+  }, [code]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -22,10 +33,9 @@ export default function Login() {
     try {
       if (mode === "in") await auth.signIn(email, password);
       else {
-        if (!biz.trim() && auth.mode === "supabase") throw new Error("Enter your business name.");
         if (password !== confirm) throw new Error("The passwords do not match.");
-        const r = await auth.signUp(email, password, biz.trim());
-        if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in.");
+        const r = await auth.signUp(email, password);
+        if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in with the same email.");
       }
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Something went wrong. Please try again.");
@@ -34,6 +44,7 @@ export default function Login() {
     }
   }
 
+  const joining = Boolean(code);
   return (
     <div className="auth">
       <form className="auth-card stack" onSubmit={submit}>
@@ -43,28 +54,21 @@ export default function Login() {
           ) : (
             <>
               <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
-              <h1>Create your account</h1>
-              <p className="muted">{`Set up ${APP_NAME} for your business. It takes about a minute.`}</p>
+              <h1>Join {invite?.business ?? "your team"}</h1>
+              <p className="muted">{invite ? `You were invited as ${invite.role}. Create your login to get started.` : "This invite is no longer valid. Ask your manager to send a new one."}</p>
             </>
           )}
         </div>
 
-        {auth.mode === "demo" && (
-          <div className="notice">Demo mode: any email works and sample data is saved in this browser only.</div>
-        )}
+        {auth.mode === "demo" && <div className="notice">Demo mode: any email works and sample data is saved in this browser only.</div>}
+        {joining && mode === "in" && <div className="notice">Sign in with the email you were invited with to join the team.</div>}
 
-        {mode === "up" && auth.mode === "supabase" && (
-          <Field label="Business name">
-            <input className="input" autoComplete="organization" value={biz} onChange={(e) => setBiz(e.target.value)} placeholder="Summit Home Services" required />
-          </Field>
-        )}
         <Field label="Email">
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required={auth.mode === "supabase"} placeholder="you@company.com" />
+          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
         </Field>
         <Field label="Password">
           <input className="input" type="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
         </Field>
-
         {mode === "up" && (
           <Field label="Confirm password">
             <input className="input" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} placeholder="Type it again" />
@@ -74,13 +78,15 @@ export default function Login() {
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
 
-        <button className="btn primary block" disabled={busy}>
-          {busy ? "One moment..." : mode === "in" ? (auth.mode === "demo" ? "Open the demo" : "Sign in") : "Create account"}
+        <button className="btn primary block" disabled={busy || (mode === "up" && !invite)}>
+          {busy ? "One moment..." : mode === "in" ? (auth.mode === "demo" ? "Open the demo" : "Sign in") : "Create my login"}
         </button>
-        {auth.mode === "supabase" && (
+        {joining ? (
           <button type="button" className="btn block" onClick={() => setMode(mode === "in" ? "up" : "in")}>
-            {mode === "in" ? "New here? Create an account" : "Already have an account? Sign in"}
+            {mode === "in" ? "I need to create a login" : "I already have a login"}
           </button>
+        ) : (
+          <button type="button" className="btn block" onClick={() => nav("/plans")}>Buy service</button>
         )}
       </form>
     </div>

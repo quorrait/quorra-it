@@ -23,6 +23,10 @@ import { useData } from "./lib/app";
 import { ROUTE_FEATURE } from "./lib/access";
 import Templates from "./pages/Templates";
 import Import from "./pages/Import";
+import Plans from "./pages/Plans";
+import Start from "./pages/Start";
+import Billing from "./pages/Billing";
+import Join from "./pages/Join";
 import Settings, { More } from "./pages/Settings";
 
 function Guard({ path, children }: { path: string; children: JSX.Element }) {
@@ -32,12 +36,27 @@ function Guard({ path, children }: { path: string; children: JSX.Element }) {
   return <Navigate to="/" replace />;
 }
 
+function Locked({ children }: { children: JSX.Element }) {
+  const { locked, me, loading } = useData();
+  if (loading || !locked) return children;
+  if (!me.isOwner) return <div className="auth"><div className="auth-card stack"><h1>Plan not active</h1><p className="muted">Your company's Quorra Dispatch plan is not active. Ask the account owner to restart it under Billing.</p></div></div>;
+  return children;
+}
+
 function Gate() {
   const { ready, email } = useAuth();
   if (!ready) return <Spinner />;
-  if (!email) return <Login />;
+  if (!email) return (
+    <Routes>
+      <Route path="plans" element={<Plans />} />
+      <Route path="start" element={<Start />} />
+      <Route path="join" element={<Login />} />
+      <Route path="*" element={<Login />} />
+    </Routes>
+  );
   return (
     <DataProvider>
+      <Locked>
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
@@ -59,10 +78,13 @@ function Gate() {
           <Route path="timesheets" element={<Guard path="/timesheets"><Timesheets /></Guard>} />
           <Route path="reports" element={<Guard path="/reports"><Reports /></Guard>} />
           <Route path="settings" element={<Guard path="/settings"><Settings /></Guard>} />
+          <Route path="billing" element={<Guard path="/billing"><Billing /></Guard>} />
+          <Route path="join" element={<Join />} />
           <Route path="more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
+      </Locked>
     </DataProvider>
   );
 }

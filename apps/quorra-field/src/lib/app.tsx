@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, TeamMember, TimeEntry } from "./types";
+import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, Subscription, TeamMember, TimeEntry } from "./types";
+import { acceptInvite, pendingInviteCode, rememberInvite } from "./team";
 import type { Store } from "./store";
 import { canAccess, type Feature } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
@@ -97,7 +98,9 @@ export const useAuth = () => {
 /* ---------------- Data ---------------- */
 
 interface DataCtx {
-  me: { id: string | null; name: string; role: Role };
+  me: { id: string | null; name: string; email: string; role: Role; isOwner: boolean };
+  subscription: Subscription | null;
+  locked: boolean;
   can(f: Feature): boolean;
   viewAs(memberId: string): void;
   store: Store;
@@ -153,9 +156,33 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [docTemplates, setDocTemplates] = useState<DocTemplate[]>([]);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [requireSub, setRequireSub] = useState(false);
+  const [myMemberId, setMyMemberId] = useState<string | null>(null);
+  const [isStaff, setIsStaff] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
+      // Someone who opened an invite link joins that business before anything loads.
+      if (hasSupabase && supabase) {
+        const code = pendingInviteCode();
+        if (code) {
+          const err = await acceptInvite(code);
+          rememberInvite(null);
+          if (err) setError(err);
+        }
+        const [mem, sub, set] = await Promise.all([
+          supabase.from("account_members").select("team_member_id").maybeSingle(),
+          supabase.from("subscriptions").select("*").maybeSingle(),
+          supabase.from("platform_settings").select("require_subscription").maybeSingle(),
+        ]);
+        setIsStaff(Boolean(mem.data));
+        setMyMemberId((mem.data?.team_member_id as string | null | undefined) ?? null);
+        setSubscription((sub.data as Subscription | null) ?? null);
+        setRequireSub(Boolean(set.data?.require_subscription));
+      } else {
+        setSubscription({ status: "active", plan: "Quorra Dispatch", amount_cents: 30000, billing_interval: "month", current_period_end: new Date(Date.now() + 19 * 86400_000).toISOString(), cancel_at_period_end: false, comped: false });
+      }
       const [b, c, j, i, p, pi, es, ld, sp, tm, te, po, dt] = await Promise.all([
         store.getBusiness(),
         store.listCustomers(),
@@ -203,14 +230,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Who is using the app. Real accounts: match the login email to a team member (no match = the account owner).
   // Demo: the "View as" switcher picks any team member so you can see each role's screens.
   const meMember = hasSupabase
-    ? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase())
+    ? team.find((t) => t.id === myMemberId) ?? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase()) ?? (isStaff ? undefined : team.find((t) => t.role === "Owner"))
     : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
-  const me = { id: meMember?.id ?? null, name: meMember?.name ?? "Owner", role: (meMember?.role ?? "Owner") as Role };
+  const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
+  const role = (meMember?.role ?? (isStaff ? "Technician" : "Owner")) as Role;
+  const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: !isStaff && (hasSupabase ? true : role === "Owner") };
+  const subOk = !hasSupabase || !requireSub || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
+  const locked = !subOk;
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
 
   const value = useMemo<DataCtx>(
     () => ({
       me,
+      subscription,
+      locked,
       can: (f) => canAccess(me.role, f),
       viewAs(id) { try { localStorage.setItem("qf-view-as", id); } catch { /* ignore */ } setAsId(id); },
       store,
@@ -236,7 +269,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       customerById: (id) => customers.find((c) => c.id === id),
     }),
-    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
+    [store, subscription, locked, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

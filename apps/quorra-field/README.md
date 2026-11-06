@@ -97,3 +97,12 @@ The quote form shows what similar jobs usually cost. Figures are published natio
 
 ## Website lead form and calendar sync
 Settings shows a preview, a share link, copy-paste embed code and platform steps for the lead form. Phone calendar sync is a live subscription feed (refresh hint every 15 minutes; Google Calendar sets its own schedule).
+
+## Teams, plans and billing (migration 0010)
+
+- **Invites:** Team > Invite or add member creates a one-time link/code. The person signs up with the invited email and joins the owner's business. Remove access any time. Seat limits come from the plan (`src/lib/plans.ts`).
+- **Plans:** Solo / Crew / Company (prices and seats in `plans.ts` are placeholders; confirm them). Signed-out visitors use Buy service > Plans > create account > Stripe Checkout.
+- **Stripe secrets:** `STRIPE_SECRET_KEY`, `STRIPE_PRICE_SOLO`, `STRIPE_PRICE_CREW`, `STRIPE_PRICE_COMPANY`, `STRIPE_BILLING_WEBHOOK_SECRET`, `APP_URL` (include the `#`). Price nicknames should be Solo / Crew / Company.
+- **Deploy:** `supabase functions deploy billing-checkout billing-portal` and `supabase functions deploy billing-webhook --no-verify-jwt`; point a Stripe webhook at billing-webhook (customer.subscription.*, checkout.session.completed).
+- **Subscription lock:** `platform_settings.require_subscription` is false by default. Before turning it on at launch, comp your own account: `insert into subscriptions(owner_id,status,comped) values ('<your user id>','active',true);` then `update platform_settings set require_subscription = true;`
+- **Website form editor:** Settings > Website lead form saves wording/fields to `business.lead_form`; `public/lead.html` loads them through the `lead_form_config` RPC.

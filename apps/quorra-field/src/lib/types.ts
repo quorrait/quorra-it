@@ -17,6 +17,8 @@ export interface Business {
   calendar_token?: string | null; // private link for the all-jobs phone calendar feed
   state?: string | null; // two-letter state, used by the local price guide
   address?: string; // mailing address shown on invoices
+  doc_settings?: DocSettings; // invoice and estimate layout
+  lead_form?: LeadFormSettings; // website request form wording and fields
 }
 
 export interface Customer {
@@ -192,3 +194,52 @@ export interface Collections {
   purchase_orders: PurchaseOrder;
 }
 export type CollectionName = keyof Collections;
+
+/** How invoices and estimates look. Every field is optional; defaults are in lib/docSettings.ts. */
+export interface DocSettings {
+  accent?: string; // hex color of the header band
+  header?: "band" | "plain";
+  show_logo?: boolean;
+  show_address?: boolean;
+  show_phone?: boolean;
+  show_email?: boolean;
+  show_status?: boolean;
+  title_invoice?: string; // e.g. "INVOICE" or "TAX INVOICE"
+  title_estimate?: string;
+  default_notes?: string; // printed on every invoice unless the invoice has its own
+  default_estimate_notes?: string;
+  footer?: string; // extra line above the contact footer
+}
+
+export interface LeadFormSettings {
+  heading?: string;
+  intro?: string;
+  button?: string;
+  thanks?: string;
+  accent?: string;
+  show_address?: boolean;
+  show_email?: boolean;
+  services?: string[]; // when set, the "service" field becomes a dropdown
+  require_phone?: boolean;
+  extra_label?: string; // optional extra question
+}
+
+export interface Subscription {
+  status: "none" | "active" | "past_due" | "canceled" | "incomplete";
+  plan: string;
+  amount_cents: number;
+  billing_interval: string;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  comped: boolean;
+}
+
+export interface Invite {
+  id: string;
+  team_member_id: string | null;
+  email: string;
+  role: string;
+  code: string;
+  status: "pending" | "accepted" | "revoked";
+  created_at: string;
+}

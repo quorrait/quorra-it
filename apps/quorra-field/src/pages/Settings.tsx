@@ -1,4 +1,5 @@
 import LeadFormCard from "../components/LeadFormCard";
+import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
 import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -28,10 +29,11 @@ export function More() {
           {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>}
           {can("import") && <Link to="/import" className="list-item">{Icon.send}<div className="grow title">Import</div>›</Link>}
           {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings & integrations</div>›</Link>}
+          {can("billing") && <Link to="/billing" className="list-item">{Icon.card}<div className="grow title">Billing</div>›</Link>}
         </div>
       </div>
       <div className="card stack">
-        <div className="small muted">Signed in as {email} · {me.name} ({me.role})</div>
+        <div><div className="bold">{me.name}</div><div className="small muted">{me.role} · {email}</div></div>
         {store.mode === "demo" && (
           <select className="select" value={me.id ?? ""} onChange={(e) => viewAs(e.target.value)} aria-label="View as">
             {team.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>Demo: view as {t.name} ({t.role})</option>)}
@@ -130,6 +132,8 @@ export default function Settings() {
         <div className="card-title" style={{ margin: 0 }}>Phone calendar sync</div>
         <CalendarSync />
       </div>
+
+      <InvoiceLayoutCard />
 
       <LeadFormCard />
 

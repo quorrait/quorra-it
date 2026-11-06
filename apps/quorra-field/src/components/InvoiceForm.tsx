@@ -18,6 +18,8 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   const toast = useToast();
   const job = jobs.find((j) => j.id === (invoice?.job_id ?? jobId));
 
+  const [newName, setNewName] = useState("");
+  const [newPhone, setNewPhone] = useState("");
   const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
   const [rows, setRows] = useState<Row[]>(
     invoice ? invoice.items.map(toRow) : [{ description: job?.title ?? "", qty: "1", price: "" }],
@@ -33,14 +35,17 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
 
   async function save() {
     if (!cust) return toast("Pick a customer");
+    if (cust === "__new__" && !newName.trim()) return toast("Add the customer's name");
     if (items.length === 0) return toast("Add at least one line item");
     setBusy(true);
     try {
+      let cid = cust;
+      if (cid === "__new__") cid = (await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address: job?.address ?? "", notes: "" })).id;
       const nextNumber = Math.max(1000, ...invoices.map((i) => i.number)) + 1;
       const saved = await store.saveInvoice({
         id: invoice?.id,
         number: invoice?.number ?? nextNumber,
-        customer_id: cust,
+        customer_id: cid,
         job_id: invoice?.job_id ?? job?.id ?? null,
         status: invoice?.status ?? "draft",
         items,
@@ -66,9 +71,16 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
       <div className="stack">
         <Field label="Customer">
           <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>
+            <option value="__new__">+ New customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </Field>
+        {cust === "__new__" && (
+          <div className="grid2 stack-sm">
+            <Field label="Customer name"><input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jane Smith" /></Field>
+            <Field label="Phone"><input className="input" type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="(916) 555-0100" /></Field>
+          </div>
+        )}
 
         {!invoice && <TemplatePicker kind="estimate" onPick={(t) => setRows(t.items.map(toRow))} />}
         <LineItemsEditor rows={rows} setRows={setRows} />

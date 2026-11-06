@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import type { LeadFormSettings } from "../lib/types";
 import { useData } from "../lib/app";
 import { leadFormPreviewUrl, leadFormUrl } from "../lib/publicLinks";
 import { Field, Sheet, useToast } from "./ui";
@@ -9,7 +10,17 @@ export default function LeadFormCard() {
   const toast = useToast();
   const [demoForm, setDemoForm] = useState(false);
   const live = leadFormUrl(business.lead_key, business.name);
-  const previewSrc = live || leadFormPreviewUrl(business.name);
+  const [cfg, setCfg] = useState<LeadFormSettings>(business.lead_form ?? {});
+  const [dirty, setDirty] = useState(false);
+  const set = (p: Partial<LeadFormSettings>) => { setCfg((c) => ({ ...c, ...p })); setDirty(true); };
+  const [servicesText, setServicesText] = useState((business.lead_form?.services ?? []).join("\n"));
+  const previewSrc = useMemo(() => leadFormPreviewUrl(business.name, { ...cfg, services: servicesText.split("\n").map((x) => x.trim()).filter(Boolean) }), [business.name, cfg, servicesText]);
+  async function save() {
+    const services = servicesText.split("\n").map((x) => x.trim()).filter(Boolean);
+    const next = { ...cfg, services: services.length ? services : undefined };
+    try { await store.saveBusiness({ lead_form: next }); await refresh(); setDirty(false); toast("Form saved. Your website form updates right away."); }
+    catch (e) { toast(e instanceof Error ? e.message : "Could not save"); }
+  }
   const embed = `<iframe src="${live || "https://your-form-link"}" title="Request service" style="width:100%;max-width:600px;height:760px;border:0" loading="lazy"></iframe>`;
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the text and copy it manually."); } };
 
@@ -27,10 +38,27 @@ export default function LeadFormCard() {
         </ol>
       </div>
 
+      <div className="stack" style={{ gap: 8 }}>
+        <div className="bold small">Edit your form</div>
+        <Field label="Heading"><input className="input" value={cfg.heading ?? ""} placeholder="Request service" onChange={(e) => set({ heading: e.target.value })} /></Field>
+        <Field label="Intro text"><textarea className="textarea" rows={2} value={cfg.intro ?? ""} placeholder="Tell us what you need and we will get back to you shortly." onChange={(e) => set({ intro: e.target.value })} /></Field>
+        <div className="grid2 stack-sm">
+          <Field label="Button text"><input className="input" value={cfg.button ?? ""} placeholder="Request service" onChange={(e) => set({ button: e.target.value })} /></Field>
+          <Field label="Accent color"><input className="input" type="color" value={cfg.accent ?? "#ea580c"} onChange={(e) => set({ accent: e.target.value })} style={{ padding: 4, height: 44 }} /></Field>
+        </div>
+        <Field label="Thank-you message"><input className="input" value={cfg.thanks ?? ""} placeholder="Thank you. Your request was sent and we will contact you shortly." onChange={(e) => set({ thanks: e.target.value })} /></Field>
+        <Field label="Service choices (one per line, leave empty for a free-text box)"><textarea className="textarea" rows={4} value={servicesText} placeholder={"AC repair\nFurnace repair\nNew install"} onChange={(e) => { setServicesText(e.target.value); setDirty(true); }} /></Field>
+        <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>
+        <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
+        <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
+        <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
+        <div><button className="btn primary" disabled={!dirty} onClick={() => void save()}>Save form</button></div>
+      </div>
+
       <div className="stack" style={{ gap: 6 }}>
         <div className="bold small">Preview</div>
-        <iframe title="Lead form preview" src={previewSrc} style={{ width: "100%", height: 640, border: "1px solid var(--line)", borderRadius: 12, background: "#f1f5f9" }} />
-        {!live && <div className="small muted">This is a preview. It does not send anything. Your live link and embed code appear here once your account is connected to the database.</div>}
+        <iframe key={previewSrc} title="Lead form preview" src={previewSrc} style={{ width: "100%", height: 640, border: "1px solid var(--line)", borderRadius: 12, background: "#f1f5f9" }} />
+        {!live && <div className="small muted">This is a preview of your edits. It does not send anything. Your live link and embed code appear here once your account is connected to the database.</div>}
       </div>
 
       <div className="stack" style={{ gap: 6 }}>

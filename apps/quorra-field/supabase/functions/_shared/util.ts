@@ -33,6 +33,12 @@ export async function requireUser(req: Request) {
   return data.user;
 }
 
+/** The business a signed-in person works for: their own, or the one that invited them. */
+export async function accountOwner(userId: string): Promise<string> {
+  const { data } = await admin().from("account_members").select("owner_id").eq("user_id", userId).maybeSingle();
+  return (data?.owner_id as string | undefined) ?? userId;
+}
+
 export class HttpError extends Error {
   constructor(public status: number, message: string) {
     super(message);

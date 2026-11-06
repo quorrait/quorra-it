@@ -1,14 +1,15 @@
 // Starts (or resumes) Stripe onboarding for a contractor. Uses Standard connected accounts:
 // they own their Stripe account, payouts and disputes; funds never sit with us.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, appUrl, env, handler, json, requireUser } from "../_shared/util.ts";
+import { admin, appUrl, env, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
+  const ownerId = await accountOwner(user.id);
   const db = admin();
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 
-  const { data: biz } = await db.from("business").select("name, email, stripe_account_id").eq("owner_id", user.id).maybeSingle();
+  const { data: biz } = await db.from("business").select("name, email, stripe_account_id").eq("owner_id", ownerId).maybeSingle();
   let account = biz?.stripe_account_id as string | null | undefined;
 
   if (!account) {
@@ -18,11 +19,11 @@ handler(async (req) => {
       business_profile: { name: biz?.name || undefined },
     });
     account = created.id;
-    await db.from("business").update({ stripe_account_id: account }).eq("owner_id", user.id);
+    await db.from("business").update({ stripe_account_id: account }).eq("owner_id", ownerId);
   } else {
     const a = await stripe.accounts.retrieve(account);
     if (a.charges_enabled) {
-      await db.from("business").update({ stripe_connected: true }).eq("owner_id", user.id);
+      await db.from("business").update({ stripe_connected: true }).eq("owner_id", ownerId);
       return json({ url: `${appUrl()}/settings?stripe=done` });
     }
   }

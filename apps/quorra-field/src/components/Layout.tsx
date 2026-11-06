@@ -34,6 +34,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "reports", to: "/reports", label: "Reports", icon: Icon.invoice, end: false },
     { f: "import", to: "/import", label: "Import", icon: Icon.send, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
+    { f: "billing", to: "/billing", label: "Billing", icon: Icon.card, end: false },
   ] },
 ];
 
@@ -62,8 +63,9 @@ export default function Layout() {
           </div>
         ))}
         <div className="side-foot">
-          <div style={{ color: "#c8d1dd", fontWeight: 700 }}>{business.name}</div>
-          <div>{me.name === me.role ? me.role : `${me.name} · ${me.role}`}</div>
+          <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
+          <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>
+          <div style={{ marginTop: 2 }}>{business.name}</div>
           {store.mode === "demo" && (
             <select className="select" style={{ marginTop: 8, height: 34, fontSize: 12 }} value={me.id ?? ""} onChange={(e) => viewAs(e.target.value)} aria-label="View as">
               {team.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>View as: {t.name} ({t.role})</option>)}
