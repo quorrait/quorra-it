@@ -20,6 +20,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "leads", to: "/leads", label: "Leads", icon: Icon.users, end: false },
     { f: "estimates", to: "/estimates", label: "Estimates", icon: Icon.invoice, end: false },
     { f: "pricebook", to: "/pricebook", label: "Price book", icon: Icon.card, end: false },
+    { f: "templates", to: "/templates", label: "Templates", icon: Icon.invoice, end: false },
   ] },
   { title: "Work", links: [
     LINKS[2], LINKS[3],
@@ -31,6 +32,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "team", to: "/team", label: "Team", icon: Icon.users, end: false },
     { f: "timesheets", to: "/timesheets", label: "Timesheets", icon: Icon.cal, end: false },
     { f: "reports", to: "/reports", label: "Reports", icon: Icon.invoice, end: false },
+    { f: "import", to: "/import", label: "Import", icon: Icon.send, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
   ] },
 ];

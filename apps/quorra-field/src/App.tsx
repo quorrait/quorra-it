@@ -21,6 +21,8 @@ import Timesheets from "./pages/Timesheets";
 import Reports from "./pages/Reports";
 import { useData } from "./lib/app";
 import { ROUTE_FEATURE } from "./lib/access";
+import Templates from "./pages/Templates";
+import Import from "./pages/Import";
 import Settings, { More } from "./pages/Settings";
 
 function Guard({ path, children }: { path: string; children: JSX.Element }) {
@@ -49,6 +51,8 @@ function Gate() {
           <Route path="estimates" element={<Guard path="/estimates"><Estimates /></Guard>} />
           <Route path="estimates/:id" element={<Guard path="/estimates"><EstimateDetail /></Guard>} />
           <Route path="pricebook" element={<Guard path="/pricebook"><PriceBook /></Guard>} />
+          <Route path="templates" element={<Guard path="/templates"><Templates /></Guard>} />
+          <Route path="import" element={<Guard path="/import"><Import /></Guard>} />
           <Route path="plans" element={<Guard path="/plans"><ServicePlans /></Guard>} />
           <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PurchaseOrders /></Guard>} />
           <Route path="team" element={<Guard path="/team"><Team /></Guard>} />

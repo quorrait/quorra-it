@@ -158,7 +158,20 @@ export interface PurchaseOrder {
   notes: string;
 }
 
+export type TemplateKind = "estimate" | "job";
+export interface DocTemplate {
+  id: string;
+  kind: TemplateKind; // estimate templates also work for invoices
+  name: string;
+  trade: string;
+  title: string; // default estimate/job title
+  notes: string; // estimate notes or job notes
+  items: LineItem[]; // estimate templates only
+  hours: number; // job templates only: default duration
+}
+
 export interface Collections {
+  doc_templates: DocTemplate;
   price_items: PriceItem;
   estimates: Estimate;
   leads: Lead;

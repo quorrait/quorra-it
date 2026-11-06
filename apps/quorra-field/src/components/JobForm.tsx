@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Job } from "../lib/types";
+import TemplatePicker from "./TemplatePicker";
 import { fromLocalInput, toLocalInput } from "../lib/dates";
 
 const NEW = "__new__";
@@ -75,6 +76,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   return (
     <Sheet title={job ? "Edit job" : "New job"} onClose={onClose}>
       <div className="stack">
+        {!job && <TemplatePicker kind="job" onPick={(t) => { setTitle(t.title || t.name); setDescription(t.notes); setHours(String(t.hours)); }} />}
         <Field label="Customer">
           <select className="select" value={customerId} onChange={(e) => pickCustomer(e.target.value)}>
             <option value={NEW}>+ New customer</option>

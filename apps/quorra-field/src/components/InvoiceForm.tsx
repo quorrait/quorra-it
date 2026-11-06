@@ -4,6 +4,7 @@ import { useData } from "../lib/app";
 import type { Invoice, LineItem } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
+import TemplatePicker from "./TemplatePicker";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
 export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSaved }: {
@@ -68,6 +69,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
           </Field>
         )}
 
+        {!invoice && <TemplatePicker kind="estimate" onPick={(t) => setRows(t.items.map(toRow))} />}
         <LineItemsEditor rows={rows} setRows={setRows} />
 
         <div className="grid2 stack-sm">

@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, PurchaseOrder, Role, ServicePlan, TeamMember, TimeEntry } from "./types";
+import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, TeamMember, TimeEntry } from "./types";
 import type { Store } from "./store";
 import { canAccess, type Feature } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
@@ -115,6 +115,7 @@ interface DataCtx {
   team: TeamMember[];
   timeEntries: TimeEntry[];
   purchaseOrders: PurchaseOrder[];
+  docTemplates: DocTemplate[];
   refresh(): Promise<void>;
   resetDemo(): void;
   customerById(id: string): Customer | undefined;
@@ -151,10 +152,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [team, setTeam] = useState<TeamMember[]>([]);
   const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+  const [docTemplates, setDocTemplates] = useState<DocTemplate[]>([]);
 
   const refresh = useCallback(async () => {
     try {
-      const [b, c, j, i, p, pi, es, ld, sp, tm, te, po] = await Promise.all([
+      const [b, c, j, i, p, pi, es, ld, sp, tm, te, po, dt] = await Promise.all([
         store.getBusiness(),
         store.listCustomers(),
         store.listJobs(),
@@ -167,6 +169,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         store.listRows("team_members"),
         store.listRows("time_entries"),
         store.listRows("purchase_orders"),
+        store.listRows("doc_templates").catch(() => [] as DocTemplate[]), // table may not exist until migration 0004 is run
       ]);
       setBusiness(b);
       setCustomers(c);
@@ -180,6 +183,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTeam(tm);
       setTimeEntries(te);
       setPurchaseOrders(po);
+      setDocTemplates(dt);
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not load data");
@@ -220,6 +224,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       team,
       timeEntries,
       purchaseOrders,
+      docTemplates,
       refresh,
       resetDemo() {
         resetDemoData();
@@ -227,7 +232,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       customerById: (id) => customers.find((c) => c.id === id),
     }),
-    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, refresh, me.id, me.role, me.name, visibleJobs],
+    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

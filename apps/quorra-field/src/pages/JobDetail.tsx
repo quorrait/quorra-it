@@ -100,6 +100,7 @@ export default function JobDetail() {
 
       <div className="row wrap">
         <button className="btn grow" onClick={() => setEditing(true)}>Edit job</button>
+        {can("templates") && <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "job", name: job.title, trade: "", title: job.title, notes: job.description, items: [], hours: Math.max(0.5, (new Date(job.end_at).getTime() - new Date(job.start_at).getTime()) / 3600_000) }); await refresh(); toast("Saved as a job template"); }}>Save as template</button>}
         {job.status !== "canceled" && job.status !== "completed" && (
           <button className="btn danger grow" onClick={() => { if (confirm("Cancel this job?")) void setStatus("canceled"); }}>Cancel job</button>
         )}

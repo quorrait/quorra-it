@@ -15,12 +15,14 @@ export function More() {
           {can("leads") && <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>}
           {can("estimates") && <Link to="/estimates" className="list-item">{Icon.invoice}<div className="grow title">Estimates</div>›</Link>}
           {can("pricebook") && <Link to="/pricebook" className="list-item">{Icon.card}<div className="grow title">Price book</div>›</Link>}
+          {can("templates") && <Link to="/templates" className="list-item">{Icon.invoice}<div className="grow title">Templates</div>›</Link>}
           {can("plans") && <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>›</Link>}
           {can("purchase_orders") && <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>›</Link>}
           {can("customers") && <Link to="/customers" className="list-item">{Icon.users}<div className="grow title">Customers</div>›</Link>}
           {can("team") && <Link to="/team" className="list-item">{Icon.users}<div className="grow title">Team</div>›</Link>}
           {can("timesheets") && <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>›</Link>}
           {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>}
+          {can("import") && <Link to="/import" className="list-item">{Icon.send}<div className="grow title">Import</div>›</Link>}
           {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings & integrations</div>›</Link>}
         </div>
       </div>

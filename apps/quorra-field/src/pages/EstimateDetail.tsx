@@ -135,6 +135,7 @@ export default function EstimateDetail() {
         <a className="btn grow" href={mail}>Email</a>
         <a className="btn grow" href={sms}>Text</a>
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
+        <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "estimate", name: est.title, trade: "", title: est.title, notes: est.notes, items: est.items, hours: 2 }); await refresh(); toast("Saved as a template"); }}>Save as template</button>
         <button className="btn danger grow" onClick={async () => { if (confirm("Delete this estimate?")) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
       </div>
 

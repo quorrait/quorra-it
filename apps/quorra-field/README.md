@@ -71,3 +71,8 @@ Customer portal, separate logins/permissions for team members (everyone shares t
 Owner and Manager see everything. Office, Sales and Technician see only what their job needs (Team, Timesheets, Reports, Settings and revenue are manager-only; technicians see only jobs assigned to them). Roles are matched by login email to the Team list; run `supabase/migrations/0003_manager_role.sql` to allow the Manager role.
 
 Note: this hides screens in the app. Hard enforcement (so a technician can't read data by calling the database directly) needs a separate Supabase login per person and business-wide row security. That is the next step.
+
+## Templates and imports
+
+- **Templates:** saved estimate/invoice and job templates, plus a starter library (HVAC, Plumbing, Electrical, General construction) that adds standard price book items and ready-made templates. Pick a template when creating an estimate, invoice or job; use "Save as template" on any estimate or job. Run `supabase/migrations/0004_templates.sql` first.
+- **Imports (CSV):** customers, price book, leads, jobs, team and past invoices, each with a downloadable template, automatic column matching, preview, duplicate skipping and a row-by-row error list. Imports run one record at a time, so very large files (thousands of rows) will be slow.

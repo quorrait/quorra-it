@@ -4,6 +4,7 @@ import { useData } from "../lib/app";
 import type { Estimate } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
+import TemplatePicker from "./TemplatePicker";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
 export default function EstimateForm({ estimate, customerId, title: defaultTitle, onClose, onSaved }: {
@@ -67,6 +68,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
             </select>
           </Field>
         )}
+        {!estimate && <TemplatePicker kind="estimate" onPick={(t) => { setTitle(t.title || t.name); setRows(t.items.map(toRow)); setNotes(t.notes); }} />}
         <Field label="Title">
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Replace 3-ton AC condenser" />
         </Field>
