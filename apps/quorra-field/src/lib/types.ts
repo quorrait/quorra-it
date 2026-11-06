@@ -38,6 +38,8 @@ export interface Job {
   start_at: string; // ISO
   end_at: string; // ISO
   assigned_to: string;
+  started_at?: string | null; // when the tech pressed Start job
+  actual_minutes?: number | null; // time it really took, entered at completion
 }
 
 export interface LineItem {

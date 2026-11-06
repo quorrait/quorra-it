@@ -6,7 +6,7 @@ import { type Store, uid } from "./store";
 import { addDays, startOfDay } from "./dates";
 import { invoiceTotals, amountPaid } from "./money";
 
-const KEY = "quorra-field-demo-v4";
+const KEY = "quorra-field-demo-v5";
 
 interface DB {
   business: Business;
@@ -102,6 +102,10 @@ function seed(): DB {
         end_at: end.toISOString(),
         assigned_to: crew[Math.floor(r() * crew.length)],
       };
+      if (status === "completed") {
+        const q = Math.round((end.getTime() - start.getTime()) / 60000);
+        job.actual_minutes = Math.max(30, Math.round((q + (Math.floor(r() * 5) - 1) * 15) / 15) * 15);
+      }
       jobs.push(job);
 
       if (status === "completed") {

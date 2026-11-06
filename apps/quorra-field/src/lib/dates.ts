@@ -60,3 +60,17 @@ export const snapTime = (hhmm: string) => {
   return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
 };
 export const toInputDate = (d: Date) => toLocalInput(d.toISOString()).slice(0, 10);
+
+/** "2 h 30 min" style duration from minutes. */
+export const fmtDuration = (mins: number) => {
+  const m = Math.round(mins);
+  const h = Math.floor(m / 60), r = m % 60;
+  return h && r ? `${h} h ${r} min` : h ? `${h} h` : `${r} min`;
+};
+export const quotedMinutes = (j: { start_at: string; end_at: string }) => Math.round((new Date(j.end_at).getTime() - new Date(j.start_at).getTime()) / 60000);
+/** Over / under text for actual vs quoted. */
+export const fmtVariance = (actual: number, quoted: number) => {
+  const d = actual - quoted;
+  if (Math.abs(d) < 5) return "On the quoted time";
+  return `${fmtDuration(Math.abs(d))} ${d > 0 ? "over" : "under"} the quote`;
+};

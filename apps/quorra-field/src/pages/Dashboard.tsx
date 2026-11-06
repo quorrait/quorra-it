@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
 import { balanceDue, invoiceTotals, isOverdue, money, moneyShort } from "../lib/money";
 import { dailySeries, earningsSummary, monthlySeries, weeklySeries } from "../lib/stats";
-import { addDays, addMonths, fmtDayShort, fmtMonth, fmtTime, sameDay, startOfDay } from "../lib/dates";
+import { addDays, addMonths, fmtDayShort, fmtDuration, quotedMinutes, fmtMonth, fmtTime, sameDay, startOfDay } from "../lib/dates";
 import { BarChart, JobBadge, Spinner } from "../components/ui";
 import MonthGrid from "../components/MonthGrid";
 import JobForm from "../components/JobForm";
@@ -175,6 +175,7 @@ export default function Dashboard() {
                 <div className="grow">
                   <div className="title">{j.title}</div>
                   <div className="small muted">{customerById(j.customer_id)?.name}{j.assigned_to ? ` · ${j.assigned_to}` : ""}</div>
+                  {j.actual_minutes != null && <div className="small muted">Quoted {fmtDuration(quotedMinutes(j))} · Took {fmtDuration(j.actual_minutes)}</div>}
                 </div>
                 {can("invoices") && <span className={`badge ${billed ? "good" : "gray"}`}>{billed ? "Invoiced" : "Not invoiced"}</span>}
               </div>

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useData } from "../lib/app";
-import { fmtDate, fmtTime } from "../lib/dates";
-import { Icon, InvoiceBadge, JobBadge, Spinner, useToast } from "../components/ui";
+import { fmtDate, fmtDuration, fmtTime, fmtVariance, quotedMinutes } from "../lib/dates";
+import { Field, Icon, InvoiceBadge, JobBadge, Sheet, Spinner, useToast } from "../components/ui";
 import JobForm from "../components/JobForm";
 import InvoiceForm from "../components/InvoiceForm";
 import { invoiceTotals, isOverdue, money } from "../lib/money";
@@ -18,6 +18,9 @@ export default function JobDetail() {
   const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [invoicing, setInvoicing] = useState(false);
+  const [timing, setTiming] = useState(false);
+  const [hrs, setHrs] = useState("");
+  const [mins, setMins] = useState("");
 
   if (loading) return <Spinner />;
   const job = jobs.find((j) => j.id === id);
@@ -27,8 +30,24 @@ export default function JobDetail() {
   const jobInvoices = invoices.filter((i) => i.job_id === job.id && i.status !== "void");
   const maps = `https://maps.google.com/?q=${encodeURIComponent(job.address)}`;
 
+  const quoted = quotedMinutes(job);
+  function openTiming() {
+    // Suggest the time since Start job (rounded to 15 minutes), or the quoted time if it was never started.
+    const since = job!.actual_minutes ?? (job!.started_at ? Math.max(15, Math.round((Date.now() - new Date(job!.started_at).getTime()) / 900000) * 15) : quoted);
+    setHrs(String(Math.floor(since / 60))); setMins(String(since % 60));
+    setTiming(true);
+  }
+  async function saveTime(complete: boolean) {
+    const total = (parseInt(hrs || "0", 10) || 0) * 60 + (parseInt(mins || "0", 10) || 0);
+    if (total <= 0) return toast("Enter the time it took");
+    await store.saveJob({ ...job!, status: complete ? "completed" : job!.status, actual_minutes: total });
+    await refresh();
+    setTiming(false);
+    toast(complete ? "Job completed" : "Time updated");
+  }
+
   async function setStatus(status: JobStatus) {
-    await store.saveJob({ ...job!, status });
+    await store.saveJob({ ...job!, status, ...(status === "in_progress" ? { started_at: new Date().toISOString() } : {}) });
     await refresh();
     toast(status === "completed" ? "Job completed" : status === "in_progress" ? "Job started" : "Status updated");
   }
@@ -48,7 +67,21 @@ export default function JobDetail() {
         <button className="btn dark block" style={{ minHeight: 54 }} onClick={() => setStatus("in_progress")}>Start job</button>
       )}
       {job.status === "in_progress" && (
-        <button className="btn good block" style={{ minHeight: 54 }} onClick={() => setStatus("completed")}>{Icon.check} Mark complete</button>
+        <button className="btn good block" style={{ minHeight: 54 }} onClick={openTiming}>{Icon.check} Mark complete</button>
+      )}
+
+      {(job.status === "completed" || job.status === "in_progress") && (
+        <div className="card stack">
+          <div className="row between">
+            <div className="card-title" style={{ margin: 0 }}>Time on the job</div>
+            {job.status === "completed" && <button className="btn sm" onClick={openTiming}>Edit time</button>}
+          </div>
+          <div className="grid2">
+            <div className="kpi"><div className="lbl">Quoted</div><div className="val">{fmtDuration(quoted)}</div></div>
+            <div className="kpi"><div className="lbl">Took</div><div className="val">{job.actual_minutes != null ? fmtDuration(job.actual_minutes) : "Not recorded"}</div></div>
+          </div>
+          {job.actual_minutes != null && <div className="small muted">{fmtVariance(job.actual_minutes, quoted)}</div>}
+        </div>
       )}
 
       {can("money") && (() => {
@@ -112,6 +145,23 @@ export default function JobDetail() {
 
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
       {invoicing && <InvoiceForm jobId={job.id} customerId={job.customer_id} onClose={() => setInvoicing(false)} onSaved={(i) => nav(`/invoices/${i.id}`)} />}
+      {timing && (
+        <Sheet title={job.status === "completed" ? "Edit time on the job" : "How long did the job take?"} onClose={() => setTiming(false)}>
+          <div className="stack">
+            <div className="small muted">Quoted time: {fmtDuration(quoted)}</div>
+            <div className="grid2 stack-sm">
+              <Field label="Hours"><input className="input" inputMode="numeric" value={hrs} onChange={(e) => setHrs(e.target.value.replace(/\D/g, ""))} /></Field>
+              <Field label="Minutes">
+                <select className="select" value={mins} onChange={(e) => setMins(e.target.value)}>
+                  {[0, 15, 30, 45].map((m) => <option key={m} value={m}>{m}</option>)}
+                  {![0, 15, 30, 45].includes(Number(mins)) && <option value={mins}>{mins}</option>}
+                </select>
+              </Field>
+            </div>
+            <button className="btn good block" onClick={() => void saveTime(job.status !== "completed")}>{job.status === "completed" ? "Save time" : "Complete job"}</button>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
