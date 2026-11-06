@@ -34,7 +34,7 @@ export default function Login() {
     <div className="auth">
       <form className="auth-card stack" onSubmit={submit}>
         <div>
-          <span className="logo-mark">Q</span>
+          <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <h1>{APP_NAME}</h1>
           <p className="muted">{APP_TAGLINE}</p>
         </div>

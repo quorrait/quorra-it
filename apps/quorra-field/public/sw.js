@@ -1,7 +1,7 @@
 // Minimal offline shell: cache the app shell, always go to the network first for everything else.
-const CACHE = "quorra-field-v1";
+const CACHE = "quorra-dispatch-v2";
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "manifest.webmanifest", "icon.svg"])));
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "manifest.webmanifest", "logo.png"])));
   self.skipWaiting();
 });
 self.addEventListener("activate", (e) => {
