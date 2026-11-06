@@ -7,6 +7,14 @@ import { admin, env } from "../_shared/util.ts";
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
+// Plan name from the price id (STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE), so it is right even when the Stripe price has no nickname.
+function planName(price?: Stripe.Price | null): string {
+  for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
+    if (price?.id && price.id === Deno.env.get(`STRIPE_PRICE_${key}`)) return name;
+  }
+  return price?.nickname || "Quorra Dispatch";
+}
+
 async function save(sub: Stripe.Subscription) {
   const db = admin();
   let ownerId = sub.metadata?.owner_id;
@@ -20,7 +28,7 @@ async function save(sub: Stripe.Subscription) {
   const { error } = await db.from("subscriptions").upsert({
     owner_id: ownerId,
     status,
-    plan: item?.price?.nickname || (typeof item?.price?.product === "string" ? "Quorra Dispatch" : "Quorra Dispatch"),
+    plan: planName(item?.price),
     amount_cents: item?.price?.unit_amount ?? 30000,
     billing_interval: item?.price?.recurring?.interval ?? "month",
     current_period_end: new Date((sub.current_period_end ?? 0) * 1000).toISOString(),
