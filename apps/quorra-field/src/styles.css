@@ -77,7 +77,8 @@ h1, h2, h3, p { margin: 0; }
 .logo-mark {
   width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; display: block;
 }
-.auth-card .logo-mark { width: 76px; height: 76px; margin: 0 auto; }
+.auth-card .auth-wide { display: block; width: 100%; max-width: 300px; height: auto; margin: 4px auto 0; }
+.auth-card .auth-mark { display: block; width: 84px; height: auto; margin: 0 auto; }
 .auth-card .auth-head { text-align: center; }
 .auth-card .auth-head h1 { margin-top: 12px; }
 
