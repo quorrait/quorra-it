@@ -4,6 +4,7 @@ import { useData } from "../lib/app";
 import { amountPaid, balanceDue, invoiceTotals, isOverdue, lineTotal, money } from "../lib/money";
 import { fmtDate } from "../lib/dates";
 import type { InvoiceStatus } from "../lib/types";
+import { buildPdf, savePdf } from "../lib/pdf";
 import { Icon, InvoiceBadge, Spinner, useToast } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
 import { CardPaySheet, ManualPaySheet } from "../components/PaySheet";
@@ -69,6 +70,10 @@ export default function InvoiceDetail() {
 
   const mail = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Invoice #${inv.number} from ${business.name}`)}&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"},\n\nYour invoice #${inv.number} for ${money(totals.total)} is ready. Balance due: ${money(balance)}, due ${fmtDate(inv.due_at)}.\n\nThank you,\n${business.name}`)}`;
 
+  const smsBody = `Hi ${customer?.name.split(" ")[0] ?? "there"}, this is ${business.name}. Invoice #${inv.number} for ${money(balance)} is ready (due ${fmtDate(inv.due_at)}). Thank you!`;
+  const sms = `sms:${customer?.phone ?? ""}?&body=${encodeURIComponent(smsBody)}`;
+  const makePdf = () => buildPdf({ kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid });
+
   return (
     <div className="stack">
       <div className="page-head">
@@ -106,8 +111,20 @@ export default function InvoiceDetail() {
           <div className="pay-btns">
             <button className="btn primary card-pay" onClick={() => setCardOpen(true)}>{Icon.card} Take card payment</button>
             <button className="btn" onClick={() => setManualOpen(true)}>Cash / check</button>
-            <a className="btn" href={mail}>{Icon.send} Email invoice</a>
           </div>
+        </div>
+      )}
+
+      {inv.status !== "draft" && (
+        <div className="card stack">
+          <div className="card-title" style={{ margin: 0 }}>Send to customer</div>
+          <div className="pay-btns">
+            <button className="btn" onClick={() => void savePdf(makePdf(), `Invoice-${inv.number}.pdf`)}>Download PDF</button>
+            <a className="btn" href={mail}>Email</a>
+            <a className="btn" href={sms}>Text</a>
+            <button className="btn" onClick={() => void savePdf(makePdf(), `Invoice-${inv.number}.pdf`, true)}>Share PDF</button>
+          </div>
+          <div className="small muted">Email and Text open your phone's apps with the message filled in. Share PDF attaches the file.</div>
         </div>
       )}
 

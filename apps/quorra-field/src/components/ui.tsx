@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import type { Bar } from "../lib/stats";
 import { moneyShort } from "../lib/money";
 import type { InvoiceStatus, JobStatus } from "../lib/types";
@@ -98,31 +98,42 @@ export function InvoiceBadge({ status, overdue, partial }: { status: InvoiceStat
 
 /* ---------- Bar chart (SVG) ---------- */
 export function BarChart({ data }: { data: Bar[] }) {
-  const W = 600;
-  const H = 170;
-  const padTop = 22;
-  const padBottom = 22;
+  const ref = useRef<HTMLDivElement>(null);
+  const [W, setW] = useState(600);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setW(Math.max(240, el.clientWidth)));
+    ro.observe(el);
+    setW(Math.max(240, el.clientWidth));
+    return () => ro.disconnect();
+  }, []);
+  const H = 190;
+  const padTop = 26;
+  const padBottom = 26;
   const max = Math.max(1, ...data.map((d) => d.value));
   const slot = W / data.length;
-  const bw = Math.min(34, slot * 0.62);
+  const bw = Math.min(40, slot * 0.6);
   const ch = H - padTop - padBottom;
+  const showVals = slot >= 52;
+  const every = slot < 30 ? 2 : 1;
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" role="img" aria-label="Earnings chart">
-      {data.map((d, i) => {
-        const h = Math.max(d.value > 0 ? 3 : 0, (d.value / max) * ch);
-        const x = i * slot + (slot - bw) / 2;
-        const y = padTop + ch - h;
-        return (
-          <g key={i}>
-            <rect className={`bar${d.current ? " cur" : ""}`} x={x} y={y} width={bw} height={h} rx={6} />
-            {d.value > 0 && (data.length <= 8 || d.current) && (
-              <text className="bar-val" x={x + bw / 2} y={y - 6}>{moneyShort(d.value)}</text>
-            )}
-            <text className="bar-label" x={x + bw / 2} y={H - 6}>{d.label}</text>
-          </g>
-        );
-      })}
-    </svg>
+    <div ref={ref} style={{ width: "100%" }}>
+      <svg className="chart" width={W} height={H} viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Revenue chart">
+        {data.map((d, i) => {
+          const h = Math.max(d.value > 0 ? 3 : 0, (d.value / max) * ch);
+          const x = i * slot + (slot - bw) / 2;
+          const y = padTop + ch - h;
+          return (
+            <g key={i}>
+              <rect className={`bar${d.current ? " cur" : ""}`} x={x} y={y} width={bw} height={h} rx={6} />
+              {d.value > 0 && (showVals || d.current) && <text className="bar-val" x={x + bw / 2} y={y - 6}>{moneyShort(d.value)}</text>}
+              {(i % every === 0 || d.current) && <text className="bar-label" x={x + bw / 2} y={H - 8}>{d.label}</text>}
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }
 

@@ -291,3 +291,10 @@ h1, h2, h3, p { margin: 0; }
 .progress { height: 8px; background: #e6e9ee; border-radius: 99px; overflow: hidden; }
 .progress > i { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
 .list-item > svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--ink-2); }
+
+/* No blinking text cursor / focus box on plain text and tappable rows */
+body { caret-color: transparent; -webkit-tap-highlight-color: transparent; }
+input, textarea, select { caret-color: auto; }
+.list-item, .card, .lead, .chip, .btn, .tab, .side-link, .cal-day, .date-chip, .kpi, .pipe-col { user-select: none; -webkit-user-select: none; }
+:focus:not(:focus-visible) { outline: none; }
+div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: none; }

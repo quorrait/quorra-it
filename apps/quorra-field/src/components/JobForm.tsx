@@ -20,12 +20,12 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   const start0 = job ? new Date(job.start_at) : defaultStart ?? (() => { const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return d; })();
   const hrs0 = job ? Math.max(0.5, (new Date(job.end_at).getTime() - new Date(job.start_at).getTime()) / 3600_000) : 2;
 
-  const [customerId, setCustomerId] = useState(job?.customer_id ?? defaultCustomer ?? customers[0]?.id ?? NEW);
+  const [customerId, setCustomerId] = useState(job?.customer_id ?? defaultCustomer ?? NEW);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [title, setTitle] = useState(job?.title ?? defaultTitle ?? "");
   const [description, setDescription] = useState(job?.description ?? "");
-  const [address, setAddress] = useState(job?.address ?? customers.find((c) => c.id === (defaultCustomer ?? customers[0]?.id))?.address ?? "");
+  const [address, setAddress] = useState(job?.address ?? customers.find((c) => c.id === defaultCustomer)?.address ?? "");
   const [startLocal, setStartLocal] = useState(toLocalInput(start0.toISOString()));
   const [hours, setHours] = useState(String(hrs0));
   const [assigned, setAssigned] = useState(job?.assigned_to ?? "");
@@ -77,8 +77,8 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
       <div className="stack">
         <Field label="Customer">
           <select className="select" value={customerId} onChange={(e) => pickCustomer(e.target.value)}>
+            <option value={NEW}>+ New customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            <option value={NEW}>+ New customer...</option>
           </select>
         </Field>
         {customerId === NEW && (

@@ -6,6 +6,7 @@ import { dailySeries, earningsSummary, monthlySeries, weeklySeries } from "../li
 import { addDays, addMonths, fmtDayShort, fmtMonth, fmtTime, sameDay, startOfDay } from "../lib/dates";
 import { BarChart, JobBadge, Spinner } from "../components/ui";
 import MonthGrid from "../components/MonthGrid";
+import JobForm from "../components/JobForm";
 
 const dayWord = (d: Date) => {
   const t = startOfDay(new Date());
@@ -16,14 +17,11 @@ const dayWord = (d: Date) => {
 
 function delta(now: number, prev: number, label: string) {
   if (prev <= 0) return null;
-  const pct = Math.round(((now - prev) / prev) * 100);
-  // Huge percentages from a tiny base read as noise; show dollars instead.
-  const text = Math.abs(pct) > 200 ? money(Math.abs(now - prev)) : `${Math.abs(pct)}%`;
-  return (
-    <span className={`delta ${pct >= 0 ? "up" : "down"}`}>
-      {pct >= 0 ? "▲" : "▼"} {text} vs {label}
-    </span>
-  );
+  const diff = now - prev;
+  const pct = Math.round((Math.abs(diff) / prev) * 100);
+  const amount = pct > 200 ? money(Math.abs(diff)) : `${pct}%`;
+  const word = diff === 0 ? "Same as" : `${diff > 0 ? "Up" : "Down"} ${amount} from`;
+  return <span className={`delta ${diff >= 0 ? "up" : "down"}`}>{word} {label}</span>;
 }
 
 export default function Dashboard() {
@@ -40,6 +38,7 @@ export default function Dashboard() {
   const today = new Date();
   const [month, setMonth] = useState(() => startOfDay(new Date()));
   const [picked, setPicked] = useState<Date | null>(null);
+  const [adding, setAdding] = useState<Date | null>(null);
 
   // Jobs that haven't finished yet, soonest first. The first one is "Next job".
   const upcoming = jobs
@@ -122,7 +121,12 @@ export default function Dashboard() {
           <div className="card flush">
             <div className="row between" style={{ padding: "14px 16px 6px" }}>
               <div className="card-title" style={{ margin: 0 }}>{picked ? fmtDayShort(picked) : "Coming up"}</div>
-              {picked && <button className="btn sm" onClick={() => setPicked(null)}>Show upcoming</button>}
+              {picked && (
+                <div className="row">
+                  <button className="btn sm primary" onClick={() => setAdding(new Date(picked.getFullYear(), picked.getMonth(), picked.getDate(), 9))}>+ New job</button>
+                  <button className="btn sm" onClick={() => setPicked(null)}>Upcoming</button>
+                </div>
+              )}
             </div>
             {panelJobs.length === 0 && <div className="empty">{picked ? "No jobs this day" : "Nothing else scheduled"}</div>}
             <div className="list">
@@ -152,7 +156,7 @@ export default function Dashboard() {
 
       <div className="card">
         <div className="row between" style={{ marginBottom: 8 }}>
-          <div className="card-title" style={{ margin: 0 }}>Money in</div>
+          <div className="card-title" style={{ margin: 0 }}>Revenue</div>
           <div className="seg" role="tablist">
             {(["day", "week", "month"] as const).map((r) => (
               <button key={r} className={range === r ? "on" : ""} onClick={() => setRange(r)}>
@@ -199,6 +203,7 @@ export default function Dashboard() {
       <p className="small muted" style={{ textAlign: "center" }}>
         {invoices.length} invoices · {money(invoices.reduce((s, i) => s + invoiceTotals(i).total, 0))} billed all time
       </p>
+      {adding && <JobForm defaultStart={adding} onClose={() => setAdding(null)} onSaved={(j) => setPicked(startOfDay(new Date(j.start_at)))} />}
     </div>
   );
 }

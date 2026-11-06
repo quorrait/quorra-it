@@ -7,6 +7,7 @@ import { Icon, Spinner, useToast } from "../components/ui";
 import { EstimateBadge } from "./Estimates";
 import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
+import { buildPdf, savePdf } from "../lib/pdf";
 import PrintHeader from "../components/PrintHeader";
 import type { EstimateStatus } from "../lib/types";
 
@@ -61,6 +62,9 @@ export default function EstimateDetail() {
   }
 
   const mail = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Estimate #${est.number} from ${business.name}`)}&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"},\n\nHere is your estimate for ${est.title}: ${money(totals.total)}. It's valid until ${fmtDate(est.valid_until)}.\n\nReply to approve and we'll get you on the schedule.\n\nThank you,\n${business.name}`)}`;
+
+  const sms = `sms:${customer?.phone ?? ""}?&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"}, this is ${business.name}. Your estimate #${est.number} for ${money(totals.total)} is ready. Let us know if you'd like to move forward!`)}`;
+  const makePdf = () => buildPdf({ kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes });
 
   return (
     <div className="stack">
@@ -126,7 +130,10 @@ export default function EstimateDetail() {
       </div>
 
       <div className="row wrap no-print">
-        <button className="btn grow" onClick={() => window.print()}>Print / PDF</button>
+        <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
+        <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
+        <a className="btn grow" href={mail}>Email</a>
+        <a className="btn grow" href={sms}>Text</a>
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
         <button className="btn danger grow" onClick={async () => { if (confirm("Delete this estimate?")) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
       </div>
