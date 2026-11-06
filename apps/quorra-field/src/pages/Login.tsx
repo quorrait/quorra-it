@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useAuth } from "../lib/app";
-import { APP_NAME, APP_TAGLINE } from "../lib/config";
+import { APP_NAME } from "../lib/config";
 import { Field } from "../components/ui";
 
 export default function Login() {
@@ -40,7 +40,7 @@ export default function Login() {
         <div className="auth-head">
           <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
           <h1>{mode === "in" ? APP_NAME : "Create your account"}</h1>
-          <p className="muted">{mode === "in" ? APP_TAGLINE : `Set up ${APP_NAME} for your business. It takes about a minute.`}</p>
+          {mode === "up" && <p className="muted">{`Set up ${APP_NAME} for your business. It takes about a minute.`}</p>}
         </div>
 
         {auth.mode === "demo" && (
