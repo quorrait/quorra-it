@@ -9,6 +9,7 @@ import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
 import { buildPdf, savePdf } from "../lib/pdf";
 import { quoteUrl } from "../lib/publicLinks";
+import SendSheet from "../components/SendSheet";
 import PrintHeader from "../components/PrintHeader";
 import type { EstimateStatus } from "../lib/types";
 
@@ -20,6 +21,7 @@ export default function EstimateDetail() {
   const [editing, setEditing] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
 
   if (loading) return <Spinner />;
   const est = estimates.find((e) => e.id === id);
@@ -67,9 +69,9 @@ export default function EstimateDetail() {
   }
 
   const link = quoteUrl(est.public_token);
-  const mail = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Estimate #${est.number} from ${business.name}`)}&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"},\n\nHere is your estimate for ${est.title}: ${money(totals.total)}. It's valid until ${fmtDate(est.valid_until)}.\n\n${link ? `View and accept your quote online: ${link}` : "Reply to approve and we will schedule your service."}\n\nThank you,\n${business.name}`)}`;
-
-  const sms = `sms:${customer?.phone ?? ""}?&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"}, this is ${business.name}. Your estimate #${est.number} for ${money(totals.total)} is ready. Please let us know if you would like to proceed.${link ? ` View and accept online: ${link}` : ""}`)}`;
+  const first = customer?.name.split(" ")[0] ?? "there";
+  const subject = `Estimate #${est.number} from ${business.name}`;
+  const body = `Hi ${first},\n\nYour estimate for ${est.title} is attached: ${money(totals.total)}, valid until ${fmtDate(est.valid_until)}.${link ? `\n\nView and accept it online: ${link}` : "\n\nReply to approve and we will schedule your service."}\n\nThank you,\n${business.name}${business.phone ? `\n${business.phone}` : ""}`;
   const makePdf = () => buildPdf({ kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes });
 
   return (
@@ -106,12 +108,8 @@ export default function EstimateDetail() {
       <div className="card stack no-print">
         {est.status === "draft" && (
           <>
-            <div className="notice">Step 1: send the quote to the customer by email or text. Step 2: confirm it was sent.</div>
-            <div className="row wrap">
-              <a className="btn primary grow" href={mail}>{Icon.send} Email quote</a>
-              <a className="btn primary grow" href={sms}>Text quote</a>
-            </div>
-            <button className="btn good block" disabled={busy} onClick={() => setStatus("sent", "Quote marked as sent")}>{Icon.check} Confirm quote was sent</button>
+            <div className="notice">Send the quote to the customer by email or text with the PDF attached, then mark it as sent.</div>
+            <button className="btn primary block" onClick={() => setSendOpen(true)}>{Icon.send} Send quote</button>
           </>
         )}
         {est.status === "sent" && (
@@ -120,7 +118,7 @@ export default function EstimateDetail() {
             <div className="row wrap">
               <button className="btn good grow" disabled={busy} onClick={() => setStatus("approved", "Estimate approved")}>{Icon.check} Approved</button>
               <button className="btn danger grow" disabled={busy} onClick={() => setStatus("declined", "Marked declined")}>Declined</button>
-              <a className="btn grow" href={mail}>Resend</a>
+              <button className="btn grow" onClick={() => setSendOpen(true)}>Resend</button>
             </div>
           </>
         )}
@@ -139,13 +137,16 @@ export default function EstimateDetail() {
       <div className="row wrap no-print">
         <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
         <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
-        {est.status !== "draft" && <a className="btn grow" href={mail}>Email</a>}
-        {est.status !== "draft" && <a className="btn grow" href={sms}>Text</a>}
+        {est.status !== "draft" && <button className="btn grow" onClick={() => setSendOpen(true)}>Email / Text</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
         <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "estimate", name: est.title, trade: "", title: est.title, notes: est.notes, items: est.items, hours: 2 }); await refresh(); toast("Saved as a template"); }}>Save as template</button>
         <button className="btn danger grow" onClick={async () => { if (confirm("Delete this estimate?")) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
       </div>
 
+      {sendOpen && (
+        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} to={customer?.email} phone={customer?.phone} subject={subject} body={body}
+          onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} confirmLabel="I sent it, mark as sent" onClose={() => setSendOpen(false)} />
+      )}
       {editing && <EstimateForm estimate={est} onClose={() => setEditing(false)} />}
       {scheduling && (
         <JobForm

@@ -1,7 +1,7 @@
 {
   "name": "Quorra Dispatch",
   "short_name": "Quorra Dispatch",
-  "description": "Jobs, schedule and payments for the trades.",
+  "description": "Schedule jobs, send quotes and get paid, all in one place.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0f1720",

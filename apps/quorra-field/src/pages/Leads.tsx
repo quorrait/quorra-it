@@ -140,7 +140,7 @@ export default function Leads() {
       </div>
 
       <div className="chips">
-        <button className={`chip${tab === "pipeline" ? " on" : ""}`} onClick={() => setTab("pipeline")}>Pipeline ({pipeline.length})</button>
+        <button className={`chip${tab === "pipeline" ? " on" : ""}`} onClick={() => setTab("pipeline")}>Open leads ({pipeline.length})</button>
         <button className={`chip${tab === "work" ? " on" : ""}`} onClick={() => setTab("work")}>Work orders ({work.length})</button>
         <button className={`chip${tab === "declined" ? " on" : ""}`} onClick={() => setTab("declined")}>Declined ({declined.length})</button>
       </div>

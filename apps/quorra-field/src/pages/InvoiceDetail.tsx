@@ -7,6 +7,7 @@ import type { InvoiceStatus } from "../lib/types";
 import { buildPdf, savePdf } from "../lib/pdf";
 import { Icon, InvoiceBadge, Spinner, useToast } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
+import SendSheet from "../components/SendSheet";
 import { CardPaySheet, ManualPaySheet } from "../components/PaySheet";
 
 export default function InvoiceDetail() {
@@ -17,6 +18,7 @@ export default function InvoiceDetail() {
   const [editing, setEditing] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
+  const [sendOpen, setSendOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [params, setParams] = useSearchParams();
 
@@ -68,11 +70,10 @@ export default function InvoiceDetail() {
     }
   }
 
-  const mail = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Invoice #${inv.number} from ${business.name}`)}&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"},\n\nYour invoice #${inv.number} for ${money(totals.total)} is ready. Balance due: ${money(balance)}, due ${fmtDate(inv.due_at)}.\n\nThank you,\n${business.name}`)}`;
-
-  const smsBody = `Hi ${customer?.name.split(" ")[0] ?? "there"}, this is ${business.name}. Invoice #${inv.number} for ${money(balance)} is ready (due ${fmtDate(inv.due_at)}). Thank you!`;
-  const sms = `sms:${customer?.phone ?? ""}?&body=${encodeURIComponent(smsBody)}`;
-  const makePdf = () => buildPdf({ kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid });
+  const first = customer?.name.split(" ")[0] ?? "there";
+  const subject = `Invoice #${inv.number} from ${business.name}`;
+  const body = `Hi ${first},\n\nYour invoice #${inv.number} is attached. Balance due: ${money(balance)}, due ${fmtDate(inv.due_at)}.\n\nThank you,\n${business.name}${business.phone ? `\n${business.phone}` : ""}`;
+  const makePdf = () => buildPdf({ kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid, notes: inv.notes });
 
   return (
     <div className="stack">
@@ -110,7 +111,7 @@ export default function InvoiceDetail() {
           <div className="card-title">Get paid · {money(balance)}</div>
           <div className="pay-btns">
             <button className="btn primary card-pay" onClick={() => setCardOpen(true)}>{Icon.card} Take card payment</button>
-            <button className="btn" onClick={() => setManualOpen(true)}>Cash / check</button>
+            <button className="btn good" onClick={() => setManualOpen(true)}>{Icon.check} Mark paid</button>
           </div>
         </div>
       )}
@@ -119,22 +120,20 @@ export default function InvoiceDetail() {
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Send to customer</div>
           <div className="pay-btns">
+            <button className="btn" onClick={() => setSendOpen(true)}>{Icon.send} Email or text with PDF</button>
             <button className="btn" onClick={() => void savePdf(makePdf(), `Invoice-${inv.number}.pdf`)}>Download PDF</button>
-            <a className="btn" href={mail}>Email</a>
-            <a className="btn" href={sms}>Text</a>
-            <button className="btn" onClick={() => void savePdf(makePdf(), `Invoice-${inv.number}.pdf`, true)}>Share PDF</button>
           </div>
-          <div className="small muted">Email and Text open your phone's apps with the message filled in. Share PDF attaches the file.</div>
         </div>
       )}
 
       {inv.status === "draft" && (
         <div className="card stack">
-          <div className="notice">This invoice is a draft. Mark it sent when it's ready for the customer.</div>
+          <div className="notice">This invoice is a draft. Send it to the customer when it is ready.</div>
           <div className="row wrap">
-            <button className="btn primary grow" disabled={busy} onClick={() => setStatus("sent", "Invoice marked sent")}>{Icon.send} Mark as sent</button>
+            <button className="btn primary grow" onClick={() => setSendOpen(true)}>{Icon.send} Send invoice</button>
             <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
           </div>
+          <button className="btn good block" onClick={() => setManualOpen(true)}>{Icon.check} Mark paid</button>
         </div>
       )}
 
@@ -170,13 +169,27 @@ export default function InvoiceDetail() {
       </div>
 
       <div className="row wrap">
-        {inv.status !== "draft" && inv.status !== "paid" && <button className="btn grow" onClick={() => setEditing(true)}>Edit invoice</button>}
+        {inv.status !== "draft" && inv.status !== "void" && inv.status !== "paid" && <button className="btn grow" onClick={() => setEditing(true)}>Edit invoice</button>}
         {inv.job_id && <Link className="btn grow" to={`/jobs/${inv.job_id}`}>View job</Link>}
         {inv.status !== "void" && inv.status !== "paid" && (
           <button className="btn danger grow" disabled={busy} onClick={() => { if (confirm("Void this invoice?")) { void setStatus("void", "Invoice voided").then(() => nav("/invoices")); } }}>Void</button>
         )}
       </div>
 
+      {sendOpen && (
+        <SendSheet
+          title="Send invoice"
+          filename={`Invoice-${inv.number}.pdf`}
+          makePdf={makePdf}
+          to={customer?.email}
+          phone={customer?.phone}
+          subject={subject}
+          body={body}
+          onConfirm={inv.status === "draft" ? () => setStatus("sent", "Invoice sent") : undefined}
+          confirmLabel="I sent it, mark as sent"
+          onClose={() => setSendOpen(false)}
+        />
+      )}
       {editing && <InvoiceForm invoice={inv} onClose={() => setEditing(false)} />}
       {cardOpen && <CardPaySheet invoice={inv} customer={customer} balance={balance} onClose={() => setCardOpen(false)} />}
       {manualOpen && <ManualPaySheet invoice={inv} balance={balance} onClose={() => setManualOpen(false)} />}

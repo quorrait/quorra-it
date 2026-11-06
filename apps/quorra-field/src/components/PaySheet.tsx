@@ -99,9 +99,10 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
     if (cents > balance) return toast(`That's more than the ${money(balance)} due`);
     setBusy(true);
     try {
+      if (invoice.status === "draft") await store.saveInvoice({ ...invoice, status: "sent" });
       await store.recordPayment({ invoice_id: invoice.id, amount_cents: cents, method });
       await refresh();
-      toast(`${money(cents)} recorded`);
+      toast(cents === balance ? "Invoice marked paid" : `${money(cents)} recorded`);
       onClose();
     } catch (e) {
       toast(e instanceof Error ? e.message : "Could not record payment");
@@ -111,18 +112,18 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
   }
 
   return (
-    <Sheet title="Record payment" onClose={onClose}>
+    <Sheet title="Mark paid" onClose={onClose}>
       <div className="stack">
         <div className="chips">
           {(["cash", "check", "other"] as PayMethod[]).map((m) => (
-            <button key={m} className={`chip${method === m ? " on" : ""}`} onClick={() => setMethod(m)}>{m[0].toUpperCase() + m.slice(1)}</button>
+            <button key={m} className={`chip${method === m ? " on" : ""}`} onClick={() => setMethod(m)}>{m === "other" ? "Other (Zelle, Venmo...)" : m[0].toUpperCase() + m.slice(1)}</button>
           ))}
         </div>
         <label className="field">
-          <span>Amount (balance {money(balance)})</span>
+          <span>Amount received (balance due {money(balance)})</span>
           <input className="input" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
-        <button className="btn good block" onClick={save} disabled={busy}>{busy ? "Saving..." : "Record payment"}</button>
+        <button className="btn good block" onClick={save} disabled={busy}>{busy ? "Saving..." : "Mark paid"}</button>
       </div>
     </Sheet>
   );

@@ -13,7 +13,7 @@ interface AuthCtx {
   email: string | null;
   mode: "demo" | "supabase";
   signIn(email: string, password: string): Promise<void>;
-  signUp(email: string, password: string): Promise<{ needsConfirm: boolean }>;
+  signUp(email: string, password: string, businessName?: string): Promise<{ needsConfirm: boolean }>;
   signOut(): Promise<void>;
 }
 
@@ -60,12 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
         if (error) throw error;
       },
-      async signUp(e, p) {
+      async signUp(e, p, businessName) {
         if (!supabase) {
           await this.signIn(e, p);
           return { needsConfirm: false };
         }
-        const { data, error } = await supabase.auth.signUp({ email: e, password: p });
+        const { data, error } = await supabase.auth.signUp({ email: e, password: p, options: { data: { business_name: businessName ?? "" } } });
         if (error) throw error;
         return { needsConfirm: !data.session };
       },

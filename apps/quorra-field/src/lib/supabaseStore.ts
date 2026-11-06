@@ -46,8 +46,10 @@ export function createSupabaseStore(): Store {
       if (error) throw error;
       if (data) return data as Business;
       // Only profile columns are writable by the client; connection flags come from server functions.
-      const { name, phone, email, tax_rate } = DEFAULT_BUSINESS;
-      return upsert<Business>("business", { name, phone, email, tax_rate });
+      const { phone, email, tax_rate } = DEFAULT_BUSINESS;
+      const { data: u } = await sb().auth.getUser();
+      const name = String(u.user?.user_metadata?.business_name || "").trim() || DEFAULT_BUSINESS.name;
+      return upsert<Business>("business", { name, phone, email: u.user?.email ?? email, tax_rate });
     },
     async saveBusiness(patch) {
       const current = await this.getBusiness();

@@ -48,7 +48,7 @@ export default function Settings() {
   const { signOut, email } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
 
@@ -66,7 +66,7 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "" });
+    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "" });
   }, [business]);
 
   useEffect(() => {
@@ -113,6 +113,7 @@ export default function Settings() {
           <Field label="Phone"><input className="input" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
           <Field label="Email"><input className="input" value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></Field>
         </div>
+        <Field label="Business address (printed on invoices)"><textarea className="textarea" rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="123 Main St, Roseville, CA 95678" /></Field>
         <div className="grid2 stack-sm">
           <Field label="Default sales tax %"><input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} /></Field>
           <Field label="State you work in (for the price guide)">
@@ -122,7 +123,7 @@ export default function Settings() {
             </select>
           </Field>
         </div>
-        <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null }); }, "Saved")}>Save</button>
+        <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address }); }, "Saved")}>Save</button>
       </div>
 
       <div className="card stack">

@@ -21,48 +21,61 @@ const d = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "s
 export function buildPdf(o: DocInput): jsPDF {
   const pdf = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612, M = 48;
-  let y = 56;
+  const biz = o.business;
+  const contact = [biz.phone, biz.email].filter(Boolean);
+  const t = invoiceTotals({ items: o.items, tax_rate: o.tax_rate });
+  const paid = o.paid ?? 0;
+  const balance = Math.max(0, t.total - paid);
+  const isPaid = o.kind === "Invoice" && t.total > 0 && balance === 0;
 
-  if (o.business.logo) {
+  // Header band
+  pdf.setFillColor(15, 39, 66).rect(0, 0, W, 108, "F");
+  let textX = M;
+  if (biz.logo) {
     try {
-      const p = pdf.getImageProperties(o.business.logo);
-      const h = 44, w = Math.min(140, (p.width / p.height) * h);
-      pdf.addImage(o.business.logo, p.fileType, M, y - 12, w, w ? (w * p.height) / p.width : h);
+      const p = pdf.getImageProperties(biz.logo);
+      const h = 52, w = Math.min(110, (p.width / p.height) * h), hh = (w * p.height) / p.width;
+      pdf.addImage(biz.logo, p.fileType, M, 28, w, hh);
+      textX = M + w + 14;
     } catch { /* ignore bad logo */ }
   }
-  pdf.setFont("helvetica", "bold").setFontSize(22).setTextColor(20);
-  pdf.text(o.kind.toUpperCase(), W - M, y, { align: "right" });
-  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(110);
-  pdf.text(`#${o.number}`, W - M, y + 16, { align: "right" });
-  y += 56;
+  pdf.setFont("helvetica", "bold").setFontSize(17).setTextColor(255).text(biz.name, textX, 46);
+  pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(205, 215, 230);
+  const bizLines = [...(biz.address ? biz.address.split(/\n|, (?=[A-Z]{2}\b)/) : []), ...contact].filter(Boolean);
+  pdf.text(bizLines.slice(0, 4), textX, 62);
+  pdf.setFont("helvetica", "bold").setFontSize(24).setTextColor(255).text(o.kind.toUpperCase(), W - M, 50, { align: "right" });
+  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(255, 178, 122).text(`#${o.number}`, W - M, 68, { align: "right" });
 
-  pdf.setFont("helvetica", "bold").setFontSize(12).setTextColor(20).text(o.business.name, M, y);
-  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(90);
-  pdf.text([o.business.phone, o.business.email].filter(Boolean).join("  ·  "), M, y + 14);
+  let y = 142;
+  // Bill to + dates
+  pdf.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(130).text("BILL TO", M, y - 14);
+  pdf.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(20).text(o.customer?.name ?? "", M, y);
+  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(80);
+  const to = [o.customer?.address, o.customer?.phone, o.customer?.email].filter(Boolean) as string[];
+  pdf.text(to, M, y + 14);
+  const label = (txt: string, val: string, yy: number) => {
+    pdf.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(130).text(txt, 380, yy);
+    pdf.setFont("helvetica", "normal").setFontSize(10.5).setTextColor(20).text(val, W - M, yy, { align: "right" });
+  };
+  label("ISSUED", d(o.issued), y - 14);
+  label(o.dateLabel.toUpperCase(), d(o.dateValue), y + 4);
+  if (o.kind === "Invoice") label("STATUS", isPaid ? "Paid" : paid > 0 ? "Partly paid" : "Unpaid", y + 22);
+  y += Math.max(14 + to.length * 13, 40) + 26;
 
-  pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(130).text("BILL TO", 340, y - 2);
-  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(20);
-  const to = [o.customer?.name ?? "", o.customer?.address ?? "", o.customer?.email ?? ""].filter(Boolean);
-  pdf.text(to, 340, y + 12);
-  y += 14 + to.length * 13 + 16;
-
-  pdf.setFontSize(10).setTextColor(90);
-  pdf.text(`Issued ${d(o.issued)}   ·   ${o.dateLabel} ${d(o.dateValue)}`, M, y);
-  y += 20;
-
+  // Items
   pdf.setFillColor(238, 241, 245).rect(M, y, W - 2 * M, 22, "F");
-  pdf.setFont("helvetica", "bold").setFontSize(9).setTextColor(90);
+  pdf.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(90);
   pdf.text("DESCRIPTION", M + 8, y + 15);
   pdf.text("QTY", 370, y + 15, { align: "right" });
   pdf.text("PRICE", 450, y + 15, { align: "right" });
   pdf.text("AMOUNT", W - M - 8, y + 15, { align: "right" });
-  y += 36;
+  y += 38;
 
   pdf.setFont("helvetica", "normal").setFontSize(10.5).setTextColor(20);
   for (const li of o.items) {
     const lines = pdf.splitTextToSize(li.description || "Item", 270) as string[];
-    if (y + lines.length * 13 > 700) { pdf.addPage(); y = 56; }
-    pdf.text(lines, M + 8, y);
+    if (y + lines.length * 13 > 680) { pdf.addPage(); y = 56; }
+    pdf.setTextColor(20).text(lines, M + 8, y);
     pdf.text(String(li.qty), 370, y, { align: "right" });
     pdf.text(money(li.unit_cents), 450, y, { align: "right" });
     pdf.text(money(lineTotal(li)), W - M - 8, y, { align: "right" });
@@ -70,25 +83,37 @@ export function buildPdf(o: DocInput): jsPDF {
     pdf.setDrawColor(228).line(M, y - 15, W - M, y - 15);
   }
 
-  const t = invoiceTotals({ items: o.items, tax_rate: o.tax_rate });
-  y += 10;
-  const row = (label: string, val: string, bold = false) => {
-    pdf.setFont("helvetica", bold ? "bold" : "normal").setFontSize(bold ? 13 : 10.5).setTextColor(bold ? 20 : 90);
-    pdf.text(label, 400, y, { align: "right" });
-    pdf.text(val, W - M - 8, y, { align: "right" });
-    y += bold ? 20 : 16;
+  // Totals
+  if (y > 620) { pdf.addPage(); y = 56; }
+  y += 8;
+  const row = (lbl: string, val: string) => {
+    pdf.setFont("helvetica", "normal").setFontSize(10.5).setTextColor(90);
+    pdf.text(lbl, 400, y, { align: "right" });
+    pdf.setTextColor(20).text(val, W - M - 8, y, { align: "right" });
+    y += 16;
   };
   row("Subtotal", money(t.subtotal));
   row(`Tax (${o.tax_rate}%)`, money(t.tax));
-  row("Total", money(t.total), true);
-  if (o.paid) { row("Paid", `-${money(o.paid)}`); row("Balance due", money(t.total - o.paid), true); }
+  row("Total", money(t.total));
+  if (paid) row("Paid", `-${money(paid)}`);
+  if (o.kind === "Invoice") {
+    y += 4;
+    pdf.setFillColor(isPaid ? 19 : 232, isPaid ? 122 : 89, isPaid ? 60 : 12).roundedRect(330, y - 14, W - M - 330, 32, 6, 6, "F");
+    pdf.setFont("helvetica", "bold").setFontSize(10).setTextColor(255).text(isPaid ? "PAID IN FULL" : "BALANCE DUE", 342, y + 6);
+    pdf.setFontSize(14).text(money(balance), W - M - 10, y + 6, { align: "right" });
+    y += 44;
+  }
 
   if (o.notes) {
-    y += 16;
-    pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(90);
-    pdf.text(pdf.splitTextToSize(o.notes, W - 2 * M) as string[], M, y);
+    pdf.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(130).text(o.kind === "Invoice" ? "NOTES AND PAYMENT TERMS" : "NOTES", M, y);
+    pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(70);
+    pdf.text(pdf.splitTextToSize(o.notes, W - 2 * M) as string[], M, y + 14);
   }
-  pdf.setFontSize(9).setTextColor(150).text(`Thank you for your business — ${o.business.name}`, W / 2, 750, { align: "center" });
+
+  // Footer: contact details only
+  const foot = [biz.name, biz.address?.replace(/\n/g, ", "), ...contact].filter(Boolean).join("  ·  ");
+  pdf.setDrawColor(228).line(M, 742, W - M, 742);
+  pdf.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(140).text(foot, W / 2, 758, { align: "center", maxWidth: W - 2 * M });
   return pdf;
 }
 

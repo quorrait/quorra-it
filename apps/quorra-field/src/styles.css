@@ -69,12 +69,17 @@ h1, h2, h3, p { margin: 0; }
   .side-link svg { width: 20px; height: 20px; }
   .side-link:hover { background: rgba(255,255,255,.07); }
   .side-link.active { background: var(--brand); color: #fff; }
+  .side-out { margin-top: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16); background: transparent; color: #dbe3ee; font: inherit; font-weight: 700; cursor: pointer; }
+  .side-out:hover { background: rgba(255,255,255,.08); }
   .side-foot { margin-top: auto; padding-top: 14px; font-size: 12px; color: #8793a3; padding: 10px; }
 }
 
 .logo-mark {
-  width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex-shrink: 0; display: block;
+  width: 36px; height: 36px; object-fit: contain; flex-shrink: 0; display: block;
 }
+.auth-card .logo-mark { width: 76px; height: 76px; margin: 0 auto; }
+.auth-card .auth-head { text-align: center; }
+.auth-card .auth-head h1 { margin-top: 12px; }
 
 /* ---------- Basics ---------- */
 .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }

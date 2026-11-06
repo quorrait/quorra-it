@@ -24,6 +24,8 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   );
   const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? business.tax_rate ?? 0));
   const [due, setDue] = useState(toDateInput(invoice?.due_at ?? addDays(new Date(), 14).toISOString()));
+  const [issued, setIssued] = useState(toDateInput(invoice?.issued_at ?? new Date().toISOString()));
+  const [notes, setNotes] = useState(invoice?.notes ?? "");
   const [busy, setBusy] = useState(false);
 
   const items: LineItem[] = rowsToItems(rows);
@@ -43,7 +45,8 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
         status: invoice?.status ?? "draft",
         items,
         tax_rate: parseFloat(taxRate) || 0,
-        issued_at: invoice?.issued_at ?? new Date().toISOString(),
+        issued_at: fromDateInput(issued),
+        notes,
         due_at: fromDateInput(due),
         qbo_id: invoice?.qbo_id ?? null,
       });
@@ -61,21 +64,30 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   return (
     <Sheet title={invoice ? `Edit invoice #${invoice.number}` : "New invoice"} onClose={onClose}>
       <div className="stack">
-        {!invoice && (
-          <Field label="Customer">
-            <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>
-              {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          </Field>
-        )}
+        <Field label="Customer">
+          <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>
+            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </Field>
 
         {!invoice && <TemplatePicker kind="estimate" onPick={(t) => setRows(t.items.map(toRow))} />}
         <LineItemsEditor rows={rows} setRows={setRows} />
 
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>
-          <Field label="Due date"><input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} /></Field>
+          <Field label="Invoice date"><input className="input" type="date" value={issued} onChange={(e) => setIssued(e.target.value)} /></Field>
         </div>
+        <Field label="Payment due">
+          <input className="input" type="date" value={due} onChange={(e) => setDue(e.target.value)} />
+          <div className="chips" style={{ marginTop: 8 }}>
+            {([["On receipt", 0], ["Net 7", 7], ["Net 14", 14], ["Net 30", 30]] as [string, number][]).map(([l, n]) => (
+              <button key={l} type="button" className="chip" onClick={() => setDue(toDateInput(addDays(new Date(fromDateInput(issued)), n).toISOString()))}>{l}</button>
+            ))}
+          </div>
+        </Field>
+        <Field label="Notes and payment terms (printed on the invoice)">
+          <textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Payment methods accepted, warranty, late fee policy" />
+        </Field>
 
         <div className="totals" style={{ marginTop: 0 }}>
           <div className="t muted"><span>Subtotal</span><span className="num">{money(totals.subtotal)}</span></div>

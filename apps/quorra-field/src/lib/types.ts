@@ -16,6 +16,7 @@ export interface Business {
   lead_key?: string | null; // public key for the website lead form
   calendar_token?: string | null; // private link for the all-jobs phone calendar feed
   state?: string | null; // two-letter state, used by the local price guide
+  address?: string; // mailing address shown on invoices
 }
 
 export interface Customer {
@@ -56,6 +57,7 @@ export interface Invoice {
   issued_at: string; // ISO
   due_at: string; // ISO
   qbo_id: string | null;
+  notes?: string; // terms / message printed on the invoice
 }
 
 export interface Payment {

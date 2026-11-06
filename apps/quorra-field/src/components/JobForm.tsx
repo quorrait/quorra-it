@@ -3,7 +3,7 @@ import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Job } from "../lib/types";
 import TemplatePicker from "./TemplatePicker";
-import { fromLocalInput, toLocalInput } from "../lib/dates";
+import { addDays, fromLocalInput, snapTime, timeOptions, toInputDate, toLocalInput } from "../lib/dates";
 
 const NEW = "__new__";
 
@@ -27,7 +27,10 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   const [title, setTitle] = useState(job?.title ?? defaultTitle ?? "");
   const [description, setDescription] = useState(job?.description ?? "");
   const [address, setAddress] = useState(job?.address ?? customers.find((c) => c.id === defaultCustomer)?.address ?? "");
-  const [startLocal, setStartLocal] = useState(toLocalInput(start0.toISOString()));
+  const init = toLocalInput(start0.toISOString());
+  const [date, setDate] = useState(init.slice(0, 10));
+  const [time, setTime] = useState(snapTime(init.slice(11, 16)));
+  const startLocal = `${date}T${time}`;
   const [hours, setHours] = useState(String(hrs0));
   const [assigned, setAssigned] = useState(job?.assigned_to ?? "");
   const [busy, setBusy] = useState(false);
@@ -95,9 +98,19 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
         <Field label="Address">
           <input className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Job site address" />
         </Field>
+        <Field label="Date">
+          <input className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
+          <div className="chips" style={{ marginTop: 8 }}>
+            {([["Today", 0], ["Tomorrow", 1], ["In 1 week", 7]] as [string, number][]).map(([l, n]) => (
+              <button key={l} type="button" className={`chip${date === toInputDate(addDays(new Date(), n)) ? " on" : ""}`} onClick={() => setDate(toInputDate(addDays(new Date(), n)))}>{l}</button>
+            ))}
+          </div>
+        </Field>
         <div className="grid2 stack-sm">
-          <Field label="Starts">
-            <input className="input" type="datetime-local" value={startLocal} onChange={(e) => setStartLocal(e.target.value)} />
+          <Field label="Start time">
+            <select className="select" value={time} onChange={(e) => setTime(e.target.value)}>
+              {timeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
+            </select>
           </Field>
           <Field label="Duration">
             <select className="select" value={hours} onChange={(e) => setHours(e.target.value)}>

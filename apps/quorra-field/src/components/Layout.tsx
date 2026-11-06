@@ -1,7 +1,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { Icon } from "./ui";
 import { APP_NAME } from "../lib/config";
-import { useData } from "../lib/app";
+import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
 import type { ReactNode } from "react";
 
@@ -39,6 +39,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 
 export default function Layout() {
   const { store, business, error, can, me, viewAs, team, leads } = useData();
+  const { signOut } = useAuth();
   const newLeads = leads.filter((l) => l.stage === "new").length;
   const mine = (l: NavItem) => !l.f || can(l.f);
   return (
@@ -61,13 +62,14 @@ export default function Layout() {
           </div>
         ))}
         <div className="side-foot">
-          {business.name}
-          <div>{me.name} · {me.role}</div>
+          <div style={{ color: "#c8d1dd", fontWeight: 700 }}>{business.name}</div>
+          <div>{me.name === me.role ? me.role : `${me.name} · ${me.role}`}</div>
           {store.mode === "demo" && (
             <select className="select" style={{ marginTop: 8, height: 34, fontSize: 12 }} value={me.id ?? ""} onChange={(e) => viewAs(e.target.value)} aria-label="View as">
               {team.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>View as: {t.name} ({t.role})</option>)}
             </select>
           )}
+          <button className="side-out" onClick={() => void signOut()}>Sign out</button>
         </div>
       </aside>
 
