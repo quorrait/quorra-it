@@ -130,31 +130,26 @@ export default function Settings() {
         <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address, review_url: f.review_url.trim() }); }, "Saved")}>Save</button>
       </div>
 
-      <div className="card stack">
-        <div className="card-title" style={{ margin: 0 }}>Phone calendar sync</div>
-        <CalendarSync />
-      </div>
 
       <InvoiceLayoutCard />
 
       <LeadFormCard />
 
-      <div className="card stack">
-        <div className="row between">
-          <div className="card-title" style={{ margin: 0 }}>Card payments (Stripe)</div>
-          {business.stripe_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}
-        </div>
+      <details className="card fold">
+        <summary><span className="card-title">Integrations</span><span className="small muted">Stripe, QuickBooks, phone calendar</span></summary>
+        <div className="stack">
+          <details className="sub">
+            <summary><span className="bold">Card payments (Stripe)</span>{business.stripe_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}</summary>
+            <div className="stack">
         <p className="small muted">Customers pay by card or Apple/Google Pay, and the money goes straight to your own Stripe account.</p>
         {!business.stripe_connected && (
           <button className="btn dark" disabled={busy === "stripe"} onClick={() => run("stripe", () => store.stripeConnect())}>{Icon.card} Connect Stripe</button>
         )}
-      </div>
-
-      <div className="card stack">
-        <div className="row between">
-          <div className="card-title" style={{ margin: 0 }}>QuickBooks Online</div>
-          {business.qbo_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}
-        </div>
+            </div>
+          </details>
+          <details className="sub">
+            <summary><span className="bold">QuickBooks Online</span>{business.qbo_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}</summary>
+            <div className="stack">
         {business.qbo_connected ? (
           <>
             <p className="small muted">Linked to <b>{business.qbo_company ?? "your company"}</b>. Open any sent invoice and tap "Sync to QuickBooks" to send it and its payments over.</p>
@@ -166,7 +161,14 @@ export default function Settings() {
             <button className="btn dark" disabled={busy === "qbo"} onClick={() => run("qbo", () => store.qboConnect(), "QuickBooks connected")}>Connect QuickBooks</button>
           </>
         )}
-      </div>
+            </div>
+          </details>
+          <details className="sub">
+            <summary><span className="bold">Phone calendar</span><span className="badge gray">Optional</span></summary>
+            <div className="stack"><CalendarSync /></div>
+          </details>
+        </div>
+      </details>
 
       <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>

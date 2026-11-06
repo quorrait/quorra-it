@@ -50,6 +50,22 @@ export default function InvoiceLayoutCard() {
       <summary><span className="card-title">Invoice and estimate layout</span></summary>
       <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Choose how your invoices and estimates look. Changes apply to every new PDF you send.</p>
+      <div className="feature">
+        <div className="row between"><div className="feature-title">Use your own HTML layout</div><span className="badge blue">{d.custom_html ? "In use" : "Upload yours"}</span></div>
+        <div className="stack">
+          <p className="muted" style={{ margin: 0 }}>Upload an HTML file, or paste it, and use the placeholders below where each value should go. On an invoice or estimate, choose <b>Print custom layout</b> and save it as a PDF from the print window. Emailed PDFs keep the standard layout above. Scripts and forms are removed for safety.</p>
+          <div className="row wrap">
+            <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+            <button type="button" className="btn" onClick={() => downloadText("invoice-layout-starter.html", STARTER_DOC)}>Download a starter file</button>
+            {d.custom_html && <button type="button" className="btn" onClick={() => setCustom(renderTemplate(d.custom_html as string, sampleData()))}>Preview my layout</button>}
+            {d.custom_html && <button type="button" className="btn" onClick={() => set("custom_html", "")}>Remove it</button>}
+          </div>
+          <textarea className="textarea" rows={6} value={d.custom_html ?? ""} maxLength={MAX_DOC_HTML} onChange={(e) => set("custom_html", e.target.value)} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
+          <div className="muted" style={{ columnGap: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))" }}>
+            {PLACEHOLDERS.map(([k, v]) => <div key={k}><code>{k}</code> {v}</div>)}
+          </div>
+        </div>
+      </div>
       <Field label="Header color"><ColorPick value={d.accent} onChange={(c) => set("accent", c)} swatches={SWATCHES} label="Header color" /></Field>
       <Field label="Header style">
         <select className="select" value={d.header} onChange={(e) => set("header", e.target.value as "band" | "plain")}>
@@ -71,22 +87,6 @@ export default function InvoiceLayoutCard() {
       <Field label="Default notes and payment terms on invoices"><textarea className="textarea" value={d.default_notes} onChange={(e) => set("default_notes", e.target.value)} placeholder="Payment due within 14 days. We accept card, check or cash." /></Field>
       <Field label="Default notes on estimates"><textarea className="textarea" value={d.default_estimate_notes} onChange={(e) => set("default_estimate_notes", e.target.value)} placeholder="Estimate valid for 30 days. 50% deposit to schedule." /></Field>
       <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
-      <details className="small">
-        <summary className="bold" style={{ cursor: "pointer" }}>Use your own HTML layout (optional)</summary>
-        <div className="stack" style={{ marginTop: 10 }}>
-          <p className="muted" style={{ margin: 0 }}>Upload an HTML file, or paste it, and use the placeholders below where each value should go. On an invoice or estimate, choose <b>Print custom layout</b> and save it as a PDF from the print window. Emailed PDFs keep the standard layout above. Scripts and forms are removed for safety.</p>
-          <div className="row wrap">
-            <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
-            <button type="button" className="btn" onClick={() => downloadText("invoice-layout-starter.html", STARTER_DOC)}>Download a starter file</button>
-            {d.custom_html && <button type="button" className="btn" onClick={() => setCustom(renderTemplate(d.custom_html as string, sampleData()))}>Preview my layout</button>}
-            {d.custom_html && <button type="button" className="btn" onClick={() => set("custom_html", "")}>Remove it</button>}
-          </div>
-          <textarea className="textarea" rows={6} value={d.custom_html ?? ""} maxLength={MAX_DOC_HTML} onChange={(e) => set("custom_html", e.target.value)} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
-          <div className="muted" style={{ columnGap: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))" }}>
-            {PLACEHOLDERS.map(([k, v]) => <div key={k}><code>{k}</code> {v}</div>)}
-          </div>
-        </div>
-      </details>
       <div className="row wrap">
         <button className="btn" onClick={makePreview}>Preview invoice</button>
         <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); try { await store.saveBusiness({ doc_settings: d }); await refresh(); toast("Layout saved"); } catch (e) { toast(e instanceof Error ? e.message : "Could not save. Run the latest database update first."); } finally { setBusy(false); } }}>Save layout</button>

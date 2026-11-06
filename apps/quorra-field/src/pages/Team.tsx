@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
-import CalendarSync from "../components/CalendarSync";
+import ColorPick from "../components/ColorPick";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { Invite, Role, TeamMember } from "../lib/types";
 import { createInvite, inviteUrl, listInvites, revokeAccess } from "../lib/team";
@@ -91,12 +91,9 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
           <Field label="Hourly cost ($)"><input className="input" inputMode="decimal" value={f.rate} onChange={set("rate")} /></Field>
           <Field label="Commission %"><input className="input" inputMode="decimal" value={f.comm} onChange={set("comm")} /></Field>
         </div>
-        <Field label="Color">
-          <div className="row wrap">{COLORS.map((c) => <button key={c} aria-label={c} onClick={() => setF({ ...f, color: c })} style={{ width: 32, height: 32, borderRadius: "50%", background: c, border: f.color === c ? "3px solid var(--ink)" : "3px solid transparent", cursor: "pointer" }} />)}</div>
-        </Field>
+        <Field label="Color"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} swatches={COLORS} label="Team color" /></Field>
         {m && <InvitePanel m={{ ...m, email: f.email, name: f.name || m.name, phone: f.phone, role: f.role }} invites={invites} reload={reload} />}
-        {m && <div className="stack"><div className="small bold">Phone calendar</div><CalendarSync memberId={m.id} /></div>}
-        <label className="row"><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Active</label>
+        <Field label="Status"><select className="select" value={f.active ? "1" : "0"} onChange={(e) => setF({ ...f, active: e.target.value === "1" })}><option value="1">Active: can be assigned jobs</option><option value="0">Inactive: hidden from scheduling</option></select></Field>
         <button className="btn primary block" onClick={async () => {
           if (!f.name.trim()) return toast("Add a name");
           await store.saveRow("team_members", { id: m?.id, name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active });

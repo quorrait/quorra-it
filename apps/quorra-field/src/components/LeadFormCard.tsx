@@ -61,8 +61,8 @@ export default function LeadFormCard() {
         <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
         <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
         <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
-        <details className="small">
-          <summary className="bold" style={{ cursor: "pointer" }}>Use your own HTML form (optional)</summary>
+        <div className="feature">
+          <div className="row between"><div className="feature-title">Use your own HTML form</div><span className="badge blue">{cfg.custom_html ? "In use" : "Upload yours"}</span></div>
           <div className="stack" style={{ marginTop: 10 }}>
             <p className="muted" style={{ margin: 0 }}>Upload your own form design as an HTML file, or paste it. It replaces the form above. Give the fields these names so requests land in Leads: <code>name</code>, <code>phone</code>, <code>email</code>, <code>address</code>, <code>service</code>, <code>message</code>. Any other field is added to the lead's notes. Your page runs in a sealed box, so it can't touch your account.</p>
             <div className="row wrap">
@@ -72,7 +72,7 @@ export default function LeadFormCard() {
             </div>
             <textarea className="textarea" rows={6} value={cfg.custom_html ?? ""} maxLength={MAX_FORM_HTML} onChange={(e) => set({ custom_html: e.target.value })} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
           </div>
-        </details>
+        </div>
         <div><button className="btn primary" disabled={!dirty} onClick={() => void save()}>Save form</button></div>
       </div>
 
