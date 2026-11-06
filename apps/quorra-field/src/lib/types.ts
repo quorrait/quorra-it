@@ -213,6 +213,7 @@ export interface DocSettings {
   default_notes?: string; // printed on every invoice unless the invoice has its own
   default_estimate_notes?: string;
   footer?: string; // extra line above the contact footer
+  custom_html?: string; // an uploaded HTML template used for printing invoices and estimates
 }
 
 export interface LeadFormSettings {
@@ -226,6 +227,7 @@ export interface LeadFormSettings {
   services?: string[]; // when set, the "service" field becomes a dropdown
   require_phone?: boolean;
   extra_label?: string; // optional extra question
+  custom_html?: string; // an uploaded HTML form that replaces the built-in one
 }
 
 export interface Subscription {

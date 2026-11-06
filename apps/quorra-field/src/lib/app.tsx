@@ -181,7 +181,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         setSubscription((sub.data as Subscription | null) ?? null);
         setRequireSub(Boolean(set.data?.require_subscription));
       } else {
-        setSubscription({ status: "active", plan: "Quorra Dispatch", amount_cents: 30000, billing_interval: "month", current_period_end: new Date(Date.now() + 19 * 86400_000).toISOString(), cancel_at_period_end: false, comped: false });
+        setSubscription({ status: "active", plan: "Quorra Dispatch", amount_cents: 15000, billing_interval: "month", current_period_end: new Date(Date.now() + 19 * 86400_000).toISOString(), cancel_at_period_end: false, comped: false });
       }
       const [b, c, j, i, p, pi, es, ld, sp, tm, te, po, dt] = await Promise.all([
         store.getBusiness(),

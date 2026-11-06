@@ -4,6 +4,8 @@ import { Field, Sheet, useToast } from "./ui";
 import { buildPdf } from "../lib/pdf";
 import { DOC_DEFAULTS, docSettings } from "../lib/docSettings";
 import type { DocSettings } from "../lib/types";
+import ColorPick from "./ColorPick";
+import { MAX_DOC_HTML, PLACEHOLDERS, STARTER_DOC, downloadText, openPrintable, renderTemplate } from "../lib/customHtml";
 
 const SWATCHES = ["#0F2742", "#E8590C", "#1D4ED8", "#047857", "#7C3AED", "#111827"];
 
@@ -14,6 +16,7 @@ export default function InvoiceLayoutCard() {
   const [d, setD] = useState(() => docSettings(business.doc_settings));
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [custom, setCustom] = useState<string | null>(null);
   const set = <K extends keyof DocSettings>(k: K, v: DocSettings[K]) => setD((x) => ({ ...x, [k]: v }));
 
   function makePreview() {
@@ -25,20 +28,29 @@ export default function InvoiceLayoutCard() {
     setPreview(pdf.output("bloburl").toString());
   }
 
+  function sampleData() {
+    const inv = invoices.find((i) => i.status !== "void" && i.status !== "draft") ?? invoices[0];
+    return inv
+      ? { kind: "Invoice" as const, number: inv.number, business, customer: customers.find((c) => c.id === inv.customer_id), items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, notes: inv.notes }
+      : { kind: "Invoice" as const, number: 1001, business, customer: undefined, items: [{ description: "Service call and diagnosis", qty: 1, unit_cents: 12500 }, { description: "Replacement part", qty: 1, unit_cents: 8900 }], tax_rate: business.tax_rate, issued: new Date().toISOString(), dateLabel: "Due", dateValue: new Date(Date.now() + 14 * 86400_000).toISOString(), notes: "" };
+  }
+  async function upload(f?: File) {
+    if (!f) return;
+    if (f.size > MAX_DOC_HTML) return toast(`That file is too big. Keep it under ${Math.round(MAX_DOC_HTML / 1000)} KB.`);
+    set("custom_html", await f.text());
+    toast("Layout loaded. Preview it, then Save layout.");
+  }
+
   const check = (k: "show_logo" | "show_address" | "show_phone" | "show_email" | "show_status", label: string) => (
     <label className="row"><input type="checkbox" checked={Boolean(d[k])} onChange={(e) => set(k, e.target.checked)} /> {label}</label>
   );
 
   return (
-    <div className="card stack">
-      <div className="card-title" style={{ margin: 0 }}>Invoice and estimate layout</div>
+    <details className="card fold">
+      <summary><span className="card-title">Invoice and estimate layout</span></summary>
+      <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Choose how your invoices and estimates look. Changes apply to every new PDF you send.</p>
-      <Field label="Header color">
-        <div className="row wrap">
-          {SWATCHES.map((c) => <button key={c} type="button" aria-label={c} onClick={() => set("accent", c)} style={{ width: 34, height: 34, borderRadius: "50%", background: c, border: d.accent.toLowerCase() === c.toLowerCase() ? "3px solid var(--ink)" : "3px solid transparent", cursor: "pointer" }} />)}
-          <input type="color" value={d.accent} onChange={(e) => set("accent", e.target.value)} aria-label="Custom color" style={{ width: 44, height: 34, border: 0, background: "none" }} />
-        </div>
-      </Field>
+      <Field label="Header color"><ColorPick value={d.accent} onChange={(c) => set("accent", c)} swatches={SWATCHES} label="Header color" /></Field>
       <Field label="Header style">
         <select className="select" value={d.header} onChange={(e) => set("header", e.target.value as "band" | "plain")}>
           <option value="band">Color band across the top</option>
@@ -59,11 +71,35 @@ export default function InvoiceLayoutCard() {
       <Field label="Default notes and payment terms on invoices"><textarea className="textarea" value={d.default_notes} onChange={(e) => set("default_notes", e.target.value)} placeholder="Payment due within 14 days. We accept card, check or cash." /></Field>
       <Field label="Default notes on estimates"><textarea className="textarea" value={d.default_estimate_notes} onChange={(e) => set("default_estimate_notes", e.target.value)} placeholder="Estimate valid for 30 days. 50% deposit to schedule." /></Field>
       <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
+      <details className="small">
+        <summary className="bold" style={{ cursor: "pointer" }}>Use your own HTML layout (optional)</summary>
+        <div className="stack" style={{ marginTop: 10 }}>
+          <p className="muted" style={{ margin: 0 }}>Upload an HTML file, or paste it, and use the placeholders below where each value should go. On an invoice or estimate, choose <b>Print custom layout</b> and save it as a PDF from the print window. Emailed PDFs keep the standard layout above. Scripts and forms are removed for safety.</p>
+          <div className="row wrap">
+            <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+            <button type="button" className="btn" onClick={() => downloadText("invoice-layout-starter.html", STARTER_DOC)}>Download a starter file</button>
+            {d.custom_html && <button type="button" className="btn" onClick={() => setCustom(renderTemplate(d.custom_html as string, sampleData()))}>Preview my layout</button>}
+            {d.custom_html && <button type="button" className="btn" onClick={() => set("custom_html", "")}>Remove it</button>}
+          </div>
+          <textarea className="textarea" rows={6} value={d.custom_html ?? ""} maxLength={MAX_DOC_HTML} onChange={(e) => set("custom_html", e.target.value)} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
+          <div className="muted" style={{ columnGap: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))" }}>
+            {PLACEHOLDERS.map(([k, v]) => <div key={k}><code>{k}</code> {v}</div>)}
+          </div>
+        </div>
+      </details>
       <div className="row wrap">
         <button className="btn" onClick={makePreview}>Preview invoice</button>
         <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); try { await store.saveBusiness({ doc_settings: d }); await refresh(); toast("Layout saved"); } catch (e) { toast(e instanceof Error ? e.message : "Could not save. Run the latest database update first."); } finally { setBusy(false); } }}>Save layout</button>
         <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
       </div>
+      {custom && (
+        <Sheet title="Your layout (sample)" onClose={() => setCustom(null)}>
+          <div className="stack">
+            <iframe title="Custom layout preview" sandbox="" srcDoc={custom} style={{ width: "100%", height: "70vh", border: "1px solid var(--line)", borderRadius: 10, background: "#fff" }} />
+            <button className="btn block" onClick={() => openPrintable(custom)}>Open in a new tab to print</button>
+          </div>
+        </Sheet>
+      )}
       {preview && (
         <Sheet title="Invoice preview" onClose={() => setPreview(null)}>
           <div className="stack">
@@ -72,6 +108,7 @@ export default function InvoiceLayoutCard() {
           </div>
         </Sheet>
       )}
-    </div>
+      </div>
+    </details>
   );
 }

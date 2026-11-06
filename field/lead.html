@@ -34,7 +34,8 @@
 </style>
 </head>
 <body>
-<div class="card">
+<iframe id="custom" title="Request service" sandbox="allow-scripts" style="display:none;width:100%;max-width:640px;margin:0 auto;border:0;height:760px"></iframe>
+<div class="card" id="builtin">
   <div class="head">
     <div class="biz" id="biz"></div>
     <h1 id="h">Request service</h1>
@@ -65,8 +66,34 @@
   if (name) document.getElementById("biz").textContent = name;
   function show(cls, text) { out.className = "msg " + cls; out.textContent = text; }
   function shade(hex, amt) { var n = parseInt(hex.slice(1), 16), r = Math.max(0, (n >> 16) - amt), g = Math.max(0, ((n >> 8) & 255) - amt), b = Math.max(0, (n & 255) - amt); return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
+  // Business-supplied HTML runs in a sealed frame (scripts allowed, but no access to this page or the account).
+  // A small bridge catches its form, and this page sends the request, so the intake rules stay the same.
+  var BRIDGE = '<scr' + 'ipt>(function(){var known={name:1,phone:1,email:1,address:1,service:1,message:1,hp:1};function status(t,ok){var s=document.getElementById("quorra-status");if(!s){s=document.createElement("div");s.id="quorra-status";s.style.cssText="margin:12px 0;padding:10px 12px;border-radius:8px;font:600 14px system-ui,sans-serif";document.body.appendChild(s)}s.textContent=t;s.style.background=ok?"#ecfdf3":"#fef3f2";s.style.color=ok?"#137a3c":"#b42318"}document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd=new FormData(f),d={},extra=[];fd.forEach(function(v,k){if(typeof v!=="string")return;if(known[k])d[k]=v;else if(v.trim())extra.push(k+": "+v)});if(extra.length)d.message=((d.message||"")+"\\n"+extra.join("\\n")).trim();parent.postMessage({quorraLead:d},"*");status("Sending...",true)},true);window.addEventListener("message",function(e){var m=e.data&&e.data.quorraResult;if(!m)return;status(m.text,m.ok);if(m.ok){document.querySelectorAll("form").forEach(function(f){f.reset()})}});function size(){parent.postMessage({quorraHeight:document.documentElement.scrollHeight},"*")}window.addEventListener("load",size);if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement)})();</scr' + 'ipt>';
+  var frame = document.getElementById("custom");
+  function useCustom(html) {
+    document.getElementById("builtin").style.display = "none";
+    frame.style.display = "block";
+    frame.srcdoc = html + BRIDGE;
+  }
+  window.addEventListener("message", function (e) {
+    if (e.source !== frame.contentWindow) return;
+    var m = e.data || {};
+    if (typeof m.quorraHeight === "number") { frame.style.height = Math.min(Math.max(m.quorraHeight, 200), 3000) + "px"; return; }
+    if (!m.quorraLead || typeof m.quorraLead !== "object") return;
+    var d = {}; ["name", "phone", "email", "address", "service", "message", "hp"].forEach(function (k) { if (typeof m.quorraLead[k] === "string") d[k] = m.quorraLead[k]; });
+    function reply(ok, text) { frame.contentWindow.postMessage({ quorraResult: { ok: ok, text: text } }, "*"); }
+    if (!(d.name || "").trim()) return reply(false, "Please enter your name.");
+    if (!(d.phone || "").trim() && !(d.email || "").trim()) return reply(false, "Please enter a phone number or email so we can reach you.");
+    if (demo) return reply(true, "Preview only: on your live form this request would now appear under Leads.");
+    d.k = key;
+    fetch(api.replace(/\/$/, "") + "/lead-intake", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(d) })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (r) { reply(r.ok, r.ok ? (cfg.thanks || "Thank you. Your request was sent and we will contact you shortly.") : (r.j.error || "Something went wrong. Please try again.")); })
+      .catch(function () { reply(false, "Could not send your request. Please check your connection and try again."); });
+  });
   function apply(c) {
     cfg = c || {};
+    if (typeof cfg.custom_html === "string" && cfg.custom_html.trim()) { useCustom(cfg.custom_html); return; }
     if (cfg.heading) { document.getElementById("h").textContent = cfg.heading; document.title = cfg.heading; }
     if (cfg.intro) document.getElementById("intro").textContent = cfg.intro;
     if (cfg.button) go.textContent = cfg.button;

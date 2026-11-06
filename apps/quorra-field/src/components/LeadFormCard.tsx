@@ -3,6 +3,8 @@ import type { LeadFormSettings } from "../lib/types";
 import { useData } from "../lib/app";
 import { leadFormPreviewUrl, leadFormUrl } from "../lib/publicLinks";
 import { Field, Sheet, useToast } from "./ui";
+import ColorPick from "./ColorPick";
+import { MAX_FORM_HTML, STARTER_FORM, downloadText } from "../lib/customHtml";
 
 /** Website lead form: explains how it works, previews it, and gives the link and embed code. */
 export default function LeadFormCard() {
@@ -17,16 +19,23 @@ export default function LeadFormCard() {
   const previewSrc = useMemo(() => leadFormPreviewUrl(business.name, { ...cfg, services: servicesText.split("\n").map((x) => x.trim()).filter(Boolean) }), [business.name, cfg, servicesText]);
   async function save() {
     const services = servicesText.split("\n").map((x) => x.trim()).filter(Boolean);
-    const next = { ...cfg, services: services.length ? services : undefined };
+    const next = { ...cfg, services: services.length ? services : undefined, custom_html: cfg.custom_html?.trim() ? cfg.custom_html : undefined };
     try { await store.saveBusiness({ lead_form: next }); await refresh(); setDirty(false); toast("Form saved. Your website form updates right away."); }
     catch (e) { toast(e instanceof Error ? e.message : "Could not save"); }
+  }
+  async function upload(f?: File) {
+    if (!f) return;
+    if (f.size > MAX_FORM_HTML) return toast(`That file is too big. Keep it under ${Math.round(MAX_FORM_HTML / 1000)} KB.`);
+    set({ custom_html: await f.text() });
+    toast("Form loaded. Check the preview, then Save form.");
   }
   const embed = `<iframe src="${live || "https://your-form-link"}" title="Request service" style="width:100%;max-width:600px;height:760px;border:0" loading="lazy"></iframe>`;
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the text and copy it manually."); } };
 
   return (
-    <div className="card stack">
-      <div className="card-title" style={{ margin: 0 }}>Website lead form</div>
+    <details className="card fold">
+      <summary><span className="card-title">Website lead form</span></summary>
+      <div className="stack">
       <p className="small muted">A ready-made request form for your website. When a customer fills it out, the request shows up under Leads as a new lead and you get a badge on the Leads tab.</p>
 
       <div className="stack" style={{ gap: 6 }}>
@@ -44,7 +53,7 @@ export default function LeadFormCard() {
         <Field label="Intro text"><textarea className="textarea" rows={2} value={cfg.intro ?? ""} placeholder="Tell us what you need and we will get back to you shortly." onChange={(e) => set({ intro: e.target.value })} /></Field>
         <div className="grid2 stack-sm">
           <Field label="Button text"><input className="input" value={cfg.button ?? ""} placeholder="Request service" onChange={(e) => set({ button: e.target.value })} /></Field>
-          <Field label="Accent color"><input className="input" type="color" value={cfg.accent ?? "#ea580c"} onChange={(e) => set({ accent: e.target.value })} style={{ padding: 4, height: 44 }} /></Field>
+          <Field label="Accent color"><ColorPick value={cfg.accent ?? "#ea580c"} onChange={(c) => set({ accent: c })} swatches={["#ea580c", "#0F2742", "#1D4ED8", "#047857"]} label="Accent color" /></Field>
         </div>
         <Field label="Thank-you message"><input className="input" value={cfg.thanks ?? ""} placeholder="Thank you. Your request was sent and we will contact you shortly." onChange={(e) => set({ thanks: e.target.value })} /></Field>
         <Field label="Service choices (one per line, leave empty for a free-text box)"><textarea className="textarea" rows={4} value={servicesText} placeholder={"AC repair\nFurnace repair\nNew install"} onChange={(e) => { setServicesText(e.target.value); setDirty(true); }} /></Field>
@@ -52,6 +61,18 @@ export default function LeadFormCard() {
         <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
         <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
         <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
+        <details className="small">
+          <summary className="bold" style={{ cursor: "pointer" }}>Use your own HTML form (optional)</summary>
+          <div className="stack" style={{ marginTop: 10 }}>
+            <p className="muted" style={{ margin: 0 }}>Upload your own form design as an HTML file, or paste it. It replaces the form above. Give the fields these names so requests land in Leads: <code>name</code>, <code>phone</code>, <code>email</code>, <code>address</code>, <code>service</code>, <code>message</code>. Any other field is added to the lead's notes. Your page runs in a sealed box, so it can't touch your account.</p>
+            <div className="row wrap">
+              <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
+              <button type="button" className="btn" onClick={() => downloadText("lead-form-starter.html", STARTER_FORM)}>Download a starter file</button>
+              {cfg.custom_html && <button type="button" className="btn" onClick={() => set({ custom_html: "" })}>Go back to the built-in form</button>}
+            </div>
+            <textarea className="textarea" rows={6} value={cfg.custom_html ?? ""} maxLength={MAX_FORM_HTML} onChange={(e) => set({ custom_html: e.target.value })} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
+          </div>
+        </details>
         <div><button className="btn primary" disabled={!dirty} onClick={() => void save()}>Save form</button></div>
       </div>
 
@@ -103,6 +124,7 @@ export default function LeadFormCard() {
           </form>
         </Sheet>
       )}
-    </div>
+      </div>
+    </details>
   );
 }
