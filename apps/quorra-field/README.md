@@ -84,3 +84,10 @@ Note: this hides screens in the app. Hard enforcement (so a technician can't rea
 - **Online quote acceptance:** quotes sent by email or text include a link (`quote.html`). The customer reviews the quote, picks a preferred date and time, and accepts or declines. Accepting creates the job on the calendar, approves the quote and moves the lead to Work orders. Uses the `quote-view` and `quote-respond` functions.
 - **Setup:** run `supabase/migrations/0005_lead_pipeline.sql`, then `supabase functions deploy lead-intake quote-view quote-respond --no-verify-jwt`. The public pages (`lead.html`, `quote.html`) are built into the app's `public` folder and need no extra hosting. In demo mode the form and the accept step are simulated inside the app.
 - Not included yet: email or text alerts when a new lead arrives (the app badge and Leads list update while the app is open).
+
+## Phone calendar sync
+
+- **Per job:** "Add to phone calendar" on a job downloads a calendar file (works in the demo too).
+- **Automatic sync:** Calendar, Sync to phone (and Settings, Phone calendar sync) gives a private subscription link for Apple Calendar, Google Calendar or Outlook. Jobs, reschedules and cancellations then update on the phone about hourly. Managers get an all-jobs link; each team member has a personal link (Team, open the member) showing only their assigned jobs, which can be texted to them. "Reset link" replaces a link that was shared by mistake.
+- **Setup:** run `supabase/migrations/0006_calendar_sync.sql`, then `supabase functions deploy calendar-feed --no-verify-jwt`.
+- **One-way:** the phone calendar shows the jobs; changes made on the phone don't flow back into the app. Two-way Google/Apple sync is a bigger build (OAuth review) and isn't included.

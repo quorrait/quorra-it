@@ -14,6 +14,7 @@ export interface Business {
   stripe_connected: boolean;
   logo: string | null; // small data URL shown on printed invoices/estimates
   lead_key?: string | null; // public key for the website lead form
+  calendar_token?: string | null; // private link for the all-jobs phone calendar feed
 }
 
 export interface Customer {
@@ -138,6 +139,7 @@ export interface TeamMember {
   commission_pct: number;
   color: string;
   active: boolean;
+  calendar_token?: string; // private link for this person's phone calendar feed
 }
 
 export interface TimeEntry {

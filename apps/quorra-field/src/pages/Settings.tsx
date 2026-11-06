@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth, useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
 
@@ -112,6 +113,11 @@ export default function Settings() {
         </div>
         <Field label="Default sales tax %"><input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} /></Field>
         <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0 }); }, "Saved")}>Save</button>
+      </div>
+
+      <div className="card stack">
+        <div className="card-title" style={{ margin: 0 }}>Phone calendar sync</div>
+        <CalendarSync />
       </div>
 
       <div className="card stack">

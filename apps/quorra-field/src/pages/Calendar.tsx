@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
 import { addDays, addMonths, fmtDayShort, fmtMonth, fmtTime, sameDay, startOfDay, startOfMonth, startOfWeek } from "../lib/dates";
 import type { Job } from "../lib/types";
-import { Icon, JobBadge, Spinner } from "../components/ui";
+import CalendarSync from "../components/CalendarSync";
+import { Icon, JobBadge, Sheet, Spinner } from "../components/ui";
 import JobForm from "../components/JobForm";
 import MonthGrid from "../components/MonthGrid";
 
@@ -14,6 +15,7 @@ export default function Calendar() {
   const [cursor, setCursor] = useState(() => startOfDay(new Date()));
   const [selected, setSelected] = useState(() => startOfDay(new Date()));
   const [adding, setAdding] = useState<Date | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   const byDay = useMemo(() => {
     const m = new Map<number, Job[]>();
@@ -75,6 +77,7 @@ export default function Calendar() {
           </div>
           <button className="btn sm" onClick={() => step(-1)} aria-label="Previous">‹</button>
           <button className="btn sm" onClick={goToday}>Today</button>
+          <button className="btn sm" onClick={() => setSyncing(true)}>Sync to phone</button>
           <button className="btn sm" onClick={() => step(1)} aria-label="Next">›</button>
         </div>
       </div>
@@ -112,6 +115,7 @@ export default function Calendar() {
       )}
 
       {adding && <JobForm defaultStart={adding} onClose={() => setAdding(null)} onSaved={(j) => setSelected(startOfDay(new Date(j.start_at)))} />}
+      {syncing && <Sheet title="Sync to your phone calendar" onClose={() => setSyncing(false)}><CalendarSync /></Sheet>}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import CalendarSync from "../components/CalendarSync";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { Role, TeamMember } from "../lib/types";
 
@@ -30,6 +31,7 @@ function MemberForm({ m, onClose }: { m?: TeamMember; onClose(): void }) {
         <Field label="Color">
           <div className="row wrap">{COLORS.map((c) => <button key={c} aria-label={c} onClick={() => setF({ ...f, color: c })} style={{ width: 32, height: 32, borderRadius: "50%", background: c, border: f.color === c ? "3px solid var(--ink)" : "3px solid transparent", cursor: "pointer" }} />)}</div>
         </Field>
+        {m && <div className="stack"><div className="small bold">Phone calendar</div><CalendarSync memberId={m.id} /></div>}
         <label className="row"><input type="checkbox" checked={f.active} onChange={(e) => setF({ ...f, active: e.target.checked })} /> Active</label>
         <button className="btn primary block" onClick={async () => {
           if (!f.name.trim()) return toast("Add a name");
