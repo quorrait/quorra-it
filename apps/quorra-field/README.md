@@ -101,8 +101,12 @@ Settings shows a preview, a share link, copy-paste embed code and platform steps
 ## Teams, plans and billing (migration 0010)
 
 - **Invites:** Team > Invite or add member creates a one-time link/code. The person signs up with the invited email and joins the owner's business. Remove access any time. Seat limits come from the plan (`src/lib/plans.ts`).
-- **Plans:** Basic / Essentials / Max (14-day free trial, card taken at signup, first charge after 14 days) (prices and seats in `plans.ts` are placeholders; confirm them). Signed-out visitors use Buy service > Plans > create account > Stripe Checkout.
-- **Stripe secrets:** `STRIPE_SECRET_KEY`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ESSENTIALS`, `STRIPE_PRICE_MAX`, `STRIPE_BILLING_WEBHOOK_SECRET`, `APP_URL` (include the `#`). Price nicknames should be Basic / Essentials / Max (14-day free trial, card taken at signup, first charge after 14 days).
+- **Plans:** Basic / Essentials / Pro (14-day free trial, card taken at signup, first charge after 14 days) (prices and seats in `plans.ts` are placeholders; confirm them). Signed-out visitors use Buy service > Plans > create account > Stripe Checkout.
+- **Stripe secrets:** `STRIPE_SECRET_KEY`, `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ESSENTIALS`, `STRIPE_PRICE_PRO`, `STRIPE_BILLING_WEBHOOK_SECRET`, `APP_URL` (include the `#`). Price nicknames should be Basic / Essentials / Pro (14-day free trial, card taken at signup, first charge after 14 days).
 - **Deploy:** `supabase functions deploy billing-checkout billing-portal` and `supabase functions deploy billing-webhook --no-verify-jwt`; point a Stripe webhook at billing-webhook (customer.subscription.*, checkout.session.completed).
 - **Subscription lock:** `platform_settings.require_subscription` is false by default. Before turning it on at launch, comp your own account: `insert into subscriptions(owner_id,status,comped) values ('<your user id>','active',true);` then `update platform_settings set require_subscription = true;`
 - **Website form editor:** Settings > Website lead form saves wording/fields to `business.lead_form`; `public/lead.html` loads them through the `lead_form_config` RPC.
+
+## Customer portal and review requests (migration 0011)
+- Each customer has a private portal link (Customers > open a customer > Customer portal). It shows their quotes (view/accept) and invoices (pay by card). Deploy `portal-view` and `portal-pay` with `--no-verify-jwt`.
+- Settings > Google review link powers "Ask for a review" on completed jobs (text or email).

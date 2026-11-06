@@ -50,7 +50,7 @@ export default function Settings() {
   const { signOut, email } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
-  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "", review_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
 
@@ -68,7 +68,7 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "" });
+    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "" });
   }, [business]);
 
   useEffect(() => {
@@ -125,7 +125,9 @@ export default function Settings() {
             </select>
           </Field>
         </div>
-        <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address }); }, "Saved")}>Save</button>
+        <Field label="Google review link (for Ask for a review)"><input className="input" inputMode="url" value={f.review_url} onChange={(e) => setF({ ...f, review_url: e.target.value })} placeholder="https://g.page/r/your-business/review" /></Field>
+        <div className="small muted" style={{ marginTop: -6 }}>In Google Business Profile, choose "Ask for reviews" and copy the link here.</div>
+        <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address, review_url: f.review_url.trim() }); }, "Saved")}>Save</button>
       </div>
 
       <div className="card stack">

@@ -5,6 +5,7 @@ import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
 import type { Customer } from "../lib/types";
 import { balanceDue, money } from "../lib/money";
 import JobForm from "../components/JobForm";
+import { portalUrl } from "../lib/publicLinks";
 
 function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): void }) {
   const { store, refresh } = useData();
@@ -45,6 +46,7 @@ function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): v
 }
 
 export default function Customers() {
+  const toast = useToast();
   const { loading, customers, jobs, invoices, payments } = useData();
   const nav = useNavigate();
   const [q, setQ] = useState("");
@@ -93,6 +95,17 @@ export default function Customers() {
               <button className="btn" onClick={() => { setScheduling(open); setOpen(null); }}>{Icon.cal} Schedule job</button>
             </div>
             <div className="small muted bold">{jobs.filter((j) => j.customer_id === open.id).length} jobs · {invoices.filter((i) => i.customer_id === open.id).length} invoices · {money(owed(open.id))} outstanding</div>
+            {portalUrl(open.portal_token) ? (
+              <div className="stack" style={{ gap: 6 }}>
+                <div className="bold small">Customer portal</div>
+                <div className="small muted">A private page where {open.name.split(" ")[0]} can see quotes, accept them, view invoices and pay by card.</div>
+                <div className="row wrap">
+                  <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(portalUrl(open.portal_token)); toast("Portal link copied"); } catch { toast("Copy failed"); } }}>Copy link</button>
+                  <a className="btn" href={`sms:${open.phone}?&body=${encodeURIComponent(`Here is your private page for quotes, invoices and payments: ${portalUrl(open.portal_token)}`)}`}>Text link</a>
+                  <a className="btn" href={`mailto:${open.email}?subject=${encodeURIComponent("Your quotes and invoices")}&body=${encodeURIComponent(`Here is your private page for quotes, invoices and payments: ${portalUrl(open.portal_token)}`)}`}>Email link</a>
+                </div>
+              </div>
+            ) : <div className="small muted">Customer portal (quotes, invoices and card payments) is available on live accounts.</div>}
             <div className="row">
               <button className="btn grow" onClick={() => { setEditing(open); setOpen(null); }}>Edit</button>
               <button className="btn grow" onClick={() => { setOpen(null); nav("/invoices"); }}>Invoices</button>

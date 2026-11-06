@@ -10,10 +10,11 @@ import { buildIcs, downloadIcs } from "../lib/ics";
 import { jobEvents } from "../lib/jobEvents";
 import { amountPaid } from "../lib/money";
 import type { JobStatus } from "../lib/types";
+import { reviewRequest } from "../lib/review";
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { loading, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
+  const { loading, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -81,6 +82,12 @@ export default function JobDetail() {
             <div className="kpi"><div className="lbl">Took</div><div className="val">{job.actual_minutes != null ? fmtDuration(job.actual_minutes) : "Not recorded"}</div></div>
           </div>
           {job.actual_minutes != null && <div className="small muted">{fmtVariance(job.actual_minutes, quoted)}</div>}
+          {job.status === "completed" && customerById(job.customer_id) && (
+            <div className="row wrap">
+              <button className="btn" onClick={() => { const c = customerById(job.customer_id)!; const href = reviewRequest(business, c, "text"); if (!href) return toast("Add your Google review link in Settings first"); location.href = href; }}>Ask for a review (text)</button>
+              <button className="btn" onClick={() => { const c = customerById(job.customer_id)!; const href = reviewRequest(business, c, "email"); if (!href) return toast("Add your Google review link in Settings first"); location.href = href; }}>Ask for a review (email)</button>
+            </div>
+          )}
         </div>
       )}
 

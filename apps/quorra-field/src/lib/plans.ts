@@ -1,5 +1,5 @@
 export interface Plan {
-  id: "basic" | "essentials" | "max";
+  id: "basic" | "essentials" | "pro";
   name: string;
   price_cents: number;
   seats: number; // people who can sign in
@@ -14,7 +14,7 @@ export const TRIAL_DAYS = 14;
 export const PLANS: Plan[] = [
   { id: "basic", name: "Basic", price_cents: 30000, seats: 1, tagline: "For a one-person shop", extras: ["1 login (the owner)", "Online booking form for your website", "Estimates and invoices", "Scheduling and phone calendar sync", "Card payments and price book", "Email support"] },
   { id: "essentials", name: "Essentials", price_cents: 45000, seats: 5, tagline: "For a small crew", popular: true, extras: ["Everything in Basic", "Up to 5 logins with roles", "Technician view of their own jobs", "Timesheets and commission tracking", "QuickBooks Online sync", "Local price guide on every quote", "Priority email support"] },
-  { id: "max", name: "Max", price_cents: 65000, seats: 15, tagline: "For a growing company", extras: ["Everything in Essentials", "Up to 15 logins with roles", "Advanced reports", "Recurring service plans", "Onboarding call and data import help", "Phone support"] },
+  { id: "pro", name: "Pro", price_cents: 65000, seats: 15, tagline: "For a growing company", extras: ["Everything in Essentials", "Up to 15 logins with roles", "Advanced reports", "Recurring service plans", "Onboarding call and data import help", "Phone support"] },
 ];
 
 export const EVERY_PLAN = [

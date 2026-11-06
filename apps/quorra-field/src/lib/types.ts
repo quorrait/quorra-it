@@ -18,11 +18,13 @@ export interface Business {
   state?: string | null; // two-letter state, used by the local price guide
   address?: string; // mailing address shown on invoices
   doc_settings?: DocSettings; // invoice and estimate layout
+  review_url?: string; // Google review link, used by "Ask for a review"
   lead_form?: LeadFormSettings; // website request form wording and fields
 }
 
 export interface Customer {
   id: string;
+  portal_token?: string;
   name: string;
   phone: string;
   email: string;
