@@ -1,0 +1,149 @@
+import { useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { useData } from "../lib/app";
+import { invoiceTotals, lineTotal, money } from "../lib/money";
+import { fmtDate } from "../lib/dates";
+import { Icon, Spinner, useToast } from "../components/ui";
+import { EstimateBadge } from "./Estimates";
+import EstimateForm from "../components/EstimateForm";
+import JobForm from "../components/JobForm";
+import PrintHeader from "../components/PrintHeader";
+import type { EstimateStatus } from "../lib/types";
+
+export default function EstimateDetail() {
+  const { id } = useParams();
+  const { loading, store, business, estimates, invoices, customerById, refresh } = useData();
+  const nav = useNavigate();
+  const toast = useToast();
+  const [editing, setEditing] = useState(false);
+  const [scheduling, setScheduling] = useState(false);
+  const [busy, setBusy] = useState(false);
+
+  if (loading) return <Spinner />;
+  const est = estimates.find((e) => e.id === id);
+  if (!est) return <div className="empty">Estimate not found. <Link to="/estimates" style={{ color: "var(--brand)" }}>Back to estimates</Link></div>;
+
+  const customer = customerById(est.customer_id);
+  const totals = invoiceTotals(est);
+
+  async function setStatus(status: EstimateStatus, msg: string) {
+    setBusy(true);
+    try {
+      await store.saveRow("estimates", { ...est!, status });
+      await refresh();
+      toast(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createInvoice() {
+    setBusy(true);
+    try {
+      const inv = await store.saveInvoice({
+        number: Math.max(1000, ...invoices.map((i) => i.number)) + 1,
+        customer_id: est!.customer_id,
+        job_id: est!.job_id,
+        status: "draft",
+        items: est!.items,
+        tax_rate: est!.tax_rate,
+        issued_at: new Date().toISOString(),
+        due_at: new Date(Date.now() + 14 * 86400_000).toISOString(),
+        qbo_id: null,
+      });
+      await store.saveRow("estimates", { ...est!, invoice_id: inv.id });
+      await refresh();
+      toast("Draft invoice created");
+      nav(`/invoices/${inv.id}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const mail = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(`Estimate #${est.number} from ${business.name}`)}&body=${encodeURIComponent(`Hi ${customer?.name.split(" ")[0] ?? "there"},\n\nHere is your estimate for ${est.title}: ${money(totals.total)}. It's valid until ${fmtDate(est.valid_until)}.\n\nReply to approve and we'll get you on the schedule.\n\nThank you,\n${business.name}`)}`;
+
+  return (
+    <div className="stack">
+      <PrintHeader title={`Estimate #${est.number}`} />
+      <div className="page-head">
+        <div>
+          <Link to="/estimates" className="small muted bold no-print">← Estimates</Link>
+          <h1 className="page-title" style={{ fontSize: 24 }}>{est.title}</h1>
+          <p className="page-sub">#{est.number} · {customer?.name} · valid until {fmtDate(est.valid_until)}</p>
+        </div>
+        <EstimateBadge status={est.status} />
+      </div>
+
+      <div className="card">
+        <div className="card-title">Scope &amp; pricing</div>
+        {est.items.map((li, i) => (
+          <div key={i} className="row between" style={{ padding: "8px 0", borderTop: i ? "1px solid var(--line)" : 0 }}>
+            <div className="grow">
+              <div className="bold">{li.description || "Item"}</div>
+              <div className="small muted">{li.qty} × {money(li.unit_cents)}</div>
+            </div>
+            <div className="bold num">{money(lineTotal(li))}</div>
+          </div>
+        ))}
+        <div className="totals">
+          <div className="t muted"><span>Subtotal</span><span className="num">{money(totals.subtotal)}</span></div>
+          <div className="t muted"><span>Tax ({est.tax_rate}%)</span><span className="num">{money(totals.tax)}</span></div>
+          <div className="t grand"><span>Total</span><span className="num">{money(totals.total)}</span></div>
+        </div>
+        {est.notes && <p className="small" style={{ marginTop: 12, whiteSpace: "pre-wrap" }}>{est.notes}</p>}
+      </div>
+
+      <div className="card stack no-print">
+        {est.status === "draft" && (
+          <>
+            <div className="notice">Draft. Send it to the customer when it's ready.</div>
+            <div className="row wrap">
+              <a className="btn primary grow" href={mail} onClick={() => void setStatus("sent", "Estimate marked sent")}>{Icon.send} Email &amp; mark sent</a>
+              <button className="btn grow" disabled={busy} onClick={() => setStatus("sent", "Estimate marked sent")}>Mark sent only</button>
+            </div>
+          </>
+        )}
+        {est.status === "sent" && (
+          <>
+            <div className="card-title" style={{ margin: 0 }}>Customer's answer</div>
+            <div className="row wrap">
+              <button className="btn good grow" disabled={busy} onClick={() => setStatus("approved", "Approved. Nice work!")}>{Icon.check} Approved</button>
+              <button className="btn danger grow" disabled={busy} onClick={() => setStatus("declined", "Marked declined")}>Declined</button>
+              <a className="btn grow" href={mail}>Resend</a>
+            </div>
+          </>
+        )}
+        {est.status === "declined" && <button className="btn" disabled={busy} onClick={() => setStatus("sent", "Reopened")}>Reopen as sent</button>}
+        {est.status === "approved" && (
+          <>
+            <div className="card-title" style={{ margin: 0 }}>Next steps</div>
+            <div className="row wrap">
+              {est.job_id ? <Link className="btn grow" to={`/jobs/${est.job_id}`}>View job</Link> : <button className="btn primary grow" onClick={() => setScheduling(true)}>Schedule the job</button>}
+              {est.invoice_id && invoices.some((i) => i.id === est.invoice_id) ? <Link className="btn grow" to={`/invoices/${est.invoice_id}`}>View invoice</Link> : <button className="btn grow" disabled={busy} onClick={createInvoice}>Create invoice</button>}
+            </div>
+          </>
+        )}
+      </div>
+
+      <div className="row wrap no-print">
+        <button className="btn grow" onClick={() => window.print()}>Print / PDF</button>
+        <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
+        <button className="btn danger grow" onClick={async () => { if (confirm("Delete this estimate?")) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
+      </div>
+
+      {editing && <EstimateForm estimate={est} onClose={() => setEditing(false)} />}
+      {scheduling && (
+        <JobForm
+          defaultCustomer={est.customer_id}
+          defaultTitle={est.title}
+          onClose={() => setScheduling(false)}
+          onSaved={async (job) => {
+            await store.saveRow("estimates", { ...est, job_id: job.id });
+            await refresh();
+            nav(`/jobs/${job.id}`);
+          }}
+        />
+      )}
+    </div>
+  );
+}

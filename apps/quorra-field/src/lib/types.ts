@@ -1,0 +1,170 @@
+// Field names are snake_case so they map 1:1 to the Supabase tables.
+
+export type JobStatus = "scheduled" | "in_progress" | "completed" | "canceled";
+export type InvoiceStatus = "draft" | "sent" | "paid" | "void";
+export type PayMethod = "card" | "cash" | "check" | "other";
+
+export interface Business {
+  name: string;
+  phone: string;
+  email: string;
+  tax_rate: number; // percent, e.g. 7.75
+  qbo_connected: boolean;
+  qbo_company: string | null;
+  stripe_connected: boolean;
+  logo: string | null; // small data URL shown on printed invoices/estimates
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+}
+
+export interface Job {
+  id: string;
+  customer_id: string;
+  title: string;
+  description: string;
+  address: string;
+  status: JobStatus;
+  start_at: string; // ISO
+  end_at: string; // ISO
+  assigned_to: string;
+}
+
+export interface LineItem {
+  description: string;
+  qty: number;
+  unit_cents: number;
+}
+
+export interface Invoice {
+  id: string;
+  number: number;
+  customer_id: string;
+  job_id: string | null;
+  status: InvoiceStatus;
+  items: LineItem[];
+  tax_rate: number; // percent applied to this invoice
+  issued_at: string; // ISO
+  due_at: string; // ISO
+  qbo_id: string | null;
+}
+
+export interface Payment {
+  id: string;
+  invoice_id: string;
+  amount_cents: number;
+  method: PayMethod;
+  paid_at: string; // ISO
+}
+
+export type New<T> = Omit<T, "id"> & { id?: string };
+
+/* ---------------- Sales ---------------- */
+
+export type EstimateStatus = "draft" | "sent" | "approved" | "declined";
+export interface Estimate {
+  id: string;
+  number: number;
+  customer_id: string;
+  title: string;
+  status: EstimateStatus;
+  items: LineItem[];
+  tax_rate: number;
+  issued_at: string;
+  valid_until: string;
+  notes: string;
+  job_id: string | null;
+  invoice_id: string | null;
+}
+
+export type LeadStage = "new" | "contacted" | "quoted" | "won" | "lost";
+export interface Lead {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  address: string;
+  source: string;
+  service: string;
+  value_cents: number;
+  stage: LeadStage;
+  notes: string;
+  customer_id: string | null;
+  created_at: string;
+}
+
+export type PriceCategory = "Labor" | "Material" | "Service" | "Equipment";
+export interface PriceItem {
+  id: string;
+  name: string;
+  description: string;
+  category: PriceCategory;
+  unit_cents: number; // what the customer pays
+  cost_cents: number; // what it costs you
+}
+
+/* ---------------- Operations ---------------- */
+
+export interface ServicePlan {
+  id: string;
+  customer_id: string;
+  name: string;
+  visit_title: string;
+  price_cents: number; // charged per visit
+  interval_months: number;
+  next_visit: string; // YYYY-MM-DD
+  status: "active" | "paused" | "canceled";
+  notes: string;
+}
+
+export type Role = "Owner" | "Technician" | "Office" | "Sales";
+export interface TeamMember {
+  id: string;
+  name: string;
+  role: Role;
+  phone: string;
+  email: string;
+  hourly_cents: number; // labor cost per hour
+  commission_pct: number;
+  color: string;
+  active: boolean;
+}
+
+export interface TimeEntry {
+  id: string;
+  member_id: string;
+  job_id: string | null;
+  start_at: string;
+  end_at: string | null; // null = still clocked in
+  note: string;
+}
+
+export type POStatus = "draft" | "ordered" | "received" | "canceled";
+export interface PurchaseOrder {
+  id: string;
+  number: number;
+  vendor: string;
+  job_id: string | null;
+  status: POStatus;
+  items: LineItem[]; // unit_cents = your cost
+  ordered_at: string;
+  expected_at: string | null;
+  notes: string;
+}
+
+export interface Collections {
+  price_items: PriceItem;
+  estimates: Estimate;
+  leads: Lead;
+  service_plans: ServicePlan;
+  team_members: TeamMember;
+  time_entries: TimeEntry;
+  purchase_orders: PurchaseOrder;
+}
+export type CollectionName = keyof Collections;

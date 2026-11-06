@@ -1,0 +1,223 @@
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, PurchaseOrder, ServicePlan, TeamMember, TimeEntry } from "./types";
+import type { Store } from "./store";
+import { createDemoStore, resetDemoData } from "./demoStore";
+import { createSupabaseStore } from "./supabaseStore";
+import { hasSupabase, supabase } from "./supabase";
+
+/* ---------------- Auth ---------------- */
+
+interface AuthCtx {
+  ready: boolean;
+  email: string | null;
+  mode: "demo" | "supabase";
+  signIn(email: string, password: string): Promise<void>;
+  signUp(email: string, password: string): Promise<{ needsConfirm: boolean }>;
+  signOut(): Promise<void>;
+}
+
+const AuthContext = createContext<AuthCtx | null>(null);
+const DEMO_SESSION = "quorra-field-demo-session";
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [ready, setReady] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!supabase) {
+      try {
+        setEmail(localStorage.getItem(DEMO_SESSION));
+      } catch {
+        /* ignore */
+      }
+      setReady(true);
+      return;
+    }
+    supabase.auth.getSession().then(({ data }) => {
+      setEmail(data.session?.user.email ?? null);
+      setReady(true);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setEmail(session?.user.email ?? null));
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const value = useMemo<AuthCtx>(
+    () => ({
+      ready,
+      email,
+      mode: hasSupabase ? "supabase" : "demo",
+      async signIn(e, p) {
+        if (!supabase) {
+          try {
+            localStorage.setItem(DEMO_SESSION, e || "demo@example.com");
+          } catch {
+            /* ignore */
+          }
+          setEmail(e || "demo@example.com");
+          return;
+        }
+        const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
+        if (error) throw error;
+      },
+      async signUp(e, p) {
+        if (!supabase) {
+          await this.signIn(e, p);
+          return { needsConfirm: false };
+        }
+        const { data, error } = await supabase.auth.signUp({ email: e, password: p });
+        if (error) throw error;
+        return { needsConfirm: !data.session };
+      },
+      async signOut() {
+        if (!supabase) {
+          try {
+            localStorage.removeItem(DEMO_SESSION);
+          } catch {
+            /* ignore */
+          }
+          setEmail(null);
+          return;
+        }
+        await supabase.auth.signOut();
+      },
+    }),
+    [ready, email],
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export const useAuth = () => {
+  const v = useContext(AuthContext);
+  if (!v) throw new Error("AuthProvider missing");
+  return v;
+};
+
+/* ---------------- Data ---------------- */
+
+interface DataCtx {
+  store: Store;
+  loading: boolean;
+  error: string | null;
+  business: Business;
+  customers: Customer[];
+  jobs: Job[];
+  invoices: Invoice[];
+  payments: Payment[];
+  priceItems: PriceItem[];
+  estimates: Estimate[];
+  leads: Lead[];
+  plans: ServicePlan[];
+  team: TeamMember[];
+  timeEntries: TimeEntry[];
+  purchaseOrders: PurchaseOrder[];
+  refresh(): Promise<void>;
+  resetDemo(): void;
+  customerById(id: string): Customer | undefined;
+}
+
+const DataContext = createContext<DataCtx | null>(null);
+
+const EMPTY_BUSINESS: Business = {
+  name: "",
+  phone: "",
+  email: "",
+  tax_rate: 0,
+  qbo_connected: false,
+  qbo_company: null,
+  stripe_connected: false,
+  logo: null,
+};
+
+export function DataProvider({ children }: { children: ReactNode }) {
+  const store = useMemo<Store>(() => (hasSupabase ? createSupabaseStore() : createDemoStore()), []);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [business, setBusiness] = useState<Business>(EMPTY_BUSINESS);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
+  const [priceItems, setPriceItems] = useState<PriceItem[]>([]);
+  const [estimates, setEstimates] = useState<Estimate[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [plans, setPlans] = useState<ServicePlan[]>([]);
+  const [team, setTeam] = useState<TeamMember[]>([]);
+  const [timeEntries, setTimeEntries] = useState<TimeEntry[]>([]);
+  const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
+
+  const refresh = useCallback(async () => {
+    try {
+      const [b, c, j, i, p, pi, es, ld, sp, tm, te, po] = await Promise.all([
+        store.getBusiness(),
+        store.listCustomers(),
+        store.listJobs(),
+        store.listInvoices(),
+        store.listPayments(),
+        store.listRows("price_items"),
+        store.listRows("estimates"),
+        store.listRows("leads"),
+        store.listRows("service_plans"),
+        store.listRows("team_members"),
+        store.listRows("time_entries"),
+        store.listRows("purchase_orders"),
+      ]);
+      setBusiness(b);
+      setCustomers(c);
+      setJobs(j);
+      setInvoices(i);
+      setPayments(p);
+      setPriceItems(pi);
+      setEstimates(es);
+      setLeads(ld);
+      setPlans(sp);
+      setTeam(tm);
+      setTimeEntries(te);
+      setPurchaseOrders(po);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load data");
+    } finally {
+      setLoading(false);
+    }
+  }, [store]);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const value = useMemo<DataCtx>(
+    () => ({
+      store,
+      loading,
+      error,
+      business,
+      customers,
+      jobs,
+      invoices,
+      payments,
+      priceItems,
+      estimates,
+      leads,
+      plans,
+      team,
+      timeEntries,
+      purchaseOrders,
+      refresh,
+      resetDemo() {
+        resetDemoData();
+        location.reload();
+      },
+      customerById: (id) => customers.find((c) => c.id === id),
+    }),
+    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, refresh],
+  );
+
+  return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
+}
+
+export const useData = () => {
+  const v = useContext(DataContext);
+  if (!v) throw new Error("DataProvider missing");
+  return v;
+};

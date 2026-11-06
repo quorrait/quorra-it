@@ -1,0 +1,107 @@
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useData } from "../lib/app";
+import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import type { Customer } from "../lib/types";
+import { balanceDue, money } from "../lib/money";
+import JobForm from "../components/JobForm";
+
+function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): void }) {
+  const { store, refresh } = useData();
+  const toast = useToast();
+  const [f, setF] = useState({ name: customer?.name ?? "", phone: customer?.phone ?? "", email: customer?.email ?? "", address: customer?.address ?? "", notes: customer?.notes ?? "" });
+  const [busy, setBusy] = useState(false);
+  const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
+
+  async function save() {
+    if (!f.name.trim()) return toast("Add a name");
+    setBusy(true);
+    try {
+      await store.saveCustomer({ id: customer?.id, ...f, name: f.name.trim() });
+      await refresh();
+      toast(customer ? "Customer updated" : "Customer added");
+      onClose();
+    } catch (e) {
+      toast(e instanceof Error ? e.message : "Could not save");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Sheet title={customer ? "Edit customer" : "New customer"} onClose={onClose}>
+      <div className="stack">
+        <Field label="Name"><input className="input" value={f.name} onChange={(e) => set("name", e.target.value)} /></Field>
+        <div className="grid2 stack-sm">
+          <Field label="Phone"><input className="input" type="tel" value={f.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
+          <Field label="Email"><input className="input" type="email" value={f.email} onChange={(e) => set("email", e.target.value)} /></Field>
+        </div>
+        <Field label="Address"><input className="input" value={f.address} onChange={(e) => set("address", e.target.value)} /></Field>
+        <Field label="Notes"><textarea className="textarea" value={f.notes} onChange={(e) => set("notes", e.target.value)} /></Field>
+        <button className="btn primary block" onClick={save} disabled={busy}>{busy ? "Saving..." : "Save"}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+export default function Customers() {
+  const { loading, customers, jobs, invoices, payments } = useData();
+  const nav = useNavigate();
+  const [q, setQ] = useState("");
+  const [editing, setEditing] = useState<Customer | "new" | null>(null);
+  const [scheduling, setScheduling] = useState<Customer | null>(null);
+  const [open, setOpen] = useState<Customer | null>(null);
+
+  const rows = useMemo(() => {
+    const t = q.trim().toLowerCase();
+    return customers.filter((c) => !t || `${c.name} ${c.phone} ${c.address} ${c.email}`.toLowerCase().includes(t));
+  }, [customers, q]);
+
+  if (loading) return <Spinner />;
+
+  const owed = (cid: string) => invoices.filter((i) => i.customer_id === cid && i.status === "sent").reduce((s, i) => s + balanceDue(i, payments), 0);
+
+  return (
+    <div className="stack">
+      <div className="page-head">
+        <h1 className="page-title">Customers</h1>
+        <button className="btn primary" onClick={() => setEditing("new")}>{Icon.plus} Add</button>
+      </div>
+      <input className="input" placeholder="Search customers" value={q} onChange={(e) => setQ(e.target.value)} />
+      <div className="card flush">
+        {rows.length === 0 && <div className="empty">No customers found</div>}
+        <div className="list">
+          {rows.map((c) => (
+            <div key={c.id} className="list-item" onClick={() => setOpen(c)}>
+              <div className="grow">
+                <div className="title">{c.name}</div>
+                <div className="small muted">{c.address || c.phone}</div>
+              </div>
+              {owed(c.id) > 0 && <span className="badge warn">{money(owed(c.id))} due</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {open && (
+        <Sheet title={open.name} onClose={() => setOpen(null)}>
+          <div className="stack">
+            <div className="small muted">{open.address}<br />{open.phone} {open.email && `· ${open.email}`}</div>
+            {open.notes && <p className="small">{open.notes}</p>}
+            <div className="grid2">
+              <a className="btn" href={`tel:${open.phone}`}>{Icon.phone} Call</a>
+              <button className="btn" onClick={() => { setScheduling(open); setOpen(null); }}>{Icon.cal} Schedule job</button>
+            </div>
+            <div className="small muted bold">{jobs.filter((j) => j.customer_id === open.id).length} jobs · {invoices.filter((i) => i.customer_id === open.id).length} invoices · {money(owed(open.id))} outstanding</div>
+            <div className="row">
+              <button className="btn grow" onClick={() => { setEditing(open); setOpen(null); }}>Edit</button>
+              <button className="btn grow" onClick={() => { setOpen(null); nav("/invoices"); }}>Invoices</button>
+            </div>
+          </div>
+        </Sheet>
+      )}
+      {editing && <CustomerForm customer={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
+      {scheduling && <JobForm defaultCustomer={scheduling.id} onClose={() => setScheduling(null)} onSaved={(j) => nav(`/jobs/${j.id}`)} />}
+    </div>
+  );
+}
