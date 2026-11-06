@@ -5,6 +5,7 @@ import type { Estimate } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
+import PriceGuide from "./PriceGuide";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
 export default function EstimateForm({ estimate, customerId, title: defaultTitle, onClose, onSaved }: {
@@ -73,6 +74,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Replace 3-ton AC condenser" />
         </Field>
         <LineItemsEditor rows={rows} setRows={setRows} />
+        <PriceGuide title={title} items={items} estimateId={estimate?.id} />
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>
           <Field label="Valid until"><input className="input" type="date" value={valid} onChange={(e) => setValid(e.target.value)} /></Field>

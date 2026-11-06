@@ -31,32 +31,49 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
 
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the link and copy it manually."); } };
 
+  const steps = (
+    <div className="stack" style={{ gap: 6 }}>
+      <div className="bold small">How to connect your phone</div>
+      <div className="small"><b>iPhone:</b> tap "Add to phone calendar" and then Subscribe. Or: Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link.</div>
+      <div className="small"><b>Android / Google Calendar:</b> on a computer open calendar.google.com, Other calendars (+), From URL, paste the link. It then shows on the phone's Google Calendar app.</div>
+      <div className="small"><b>Outlook:</b> Add calendar, Subscribe from web, paste the link.</div>
+    </div>
+  );
+  const how = (
+    <div className="notice">
+      <b>Always up to date.</b> This is a live subscription, not a file. Add it once and every new, moved or cancelled job updates on its own. Apple Calendar refreshes about every 15 minutes to an hour. Google Calendar decides its own schedule and can take several hours to a day.
+    </div>
+  );
+
   if (!hasSupabase || !link) {
     const since = Date.now() - 30 * 86400_000;
     const mine = (member ? jobs.filter((j) => j.assigned_to === member.name) : jobs).filter((j) => new Date(j.start_at).getTime() >= since);
     return (
       <div className="stack">
-        <p className="small muted">Live accounts get a private link that keeps the phone's calendar up to date automatically (Apple Calendar, Google Calendar, Outlook). In this demo you can download a calendar file with the current jobs.</p>
-        <div><button className="btn primary" onClick={() => downloadIcs("jobs.ics", buildIcs(label, jobEvents(mine, customerById)))}>Download {label.toLowerCase()} (.ics)</button></div>
+        {how}
+        <div className="notice">Live accounts get a private calendar link for {label.toLowerCase()} with a one-tap "Add to phone calendar" button. The demo has no server, so the link is not available here.</div>
+        {steps}
+        <details className="small">
+          <summary className="bold">Demo only: download a one-time copy</summary>
+          <p>This file is a snapshot and will not update when jobs change.</p>
+          <button className="btn sm" onClick={() => downloadIcs("jobs.ics", buildIcs(label, jobEvents(mine, customerById)))}>Download snapshot (.ics)</button>
+        </details>
       </div>
     );
   }
 
   return (
     <div className="stack">
-      <p className="small muted">{label}. Add this once on the phone and new, moved and cancelled jobs appear on their own (phones refresh subscribed calendars about every hour).</p>
+      <p className="small muted" style={{ margin: 0 }}>Calendar: <b>{label}</b></p>
+      {how}
       <div className="row wrap">
         <a className="btn primary" href={webcalUrl(token)}>Add to phone calendar</a>
         <button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button>
-        {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar: ${webcalUrl(token)}`)}`}>Text link</a>}
+        {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar (updates automatically): ${webcalUrl(token)}`)}`}>Text link</a>}
       </div>
       <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
-      <details className="small">
-        <summary className="bold">How to add it by hand</summary>
-        <p><b>iPhone:</b> Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link.</p>
-        <p><b>Android / Google Calendar:</b> on a computer open calendar.google.com, Other calendars (+), From URL, paste the link. It then shows on the phone.</p>
-        <p><b>Outlook:</b> Add calendar, Subscribe from web, paste the link.</p>
-      </details>
+      {steps}
+      <div className="small muted">Anyone with this link can see these jobs, so keep it private. If it gets shared by mistake, reset it and add the new link on the phone.</div>
       <div><button className="btn sm danger" disabled={busy} onClick={reset}>Reset link</button></div>
     </div>
   );

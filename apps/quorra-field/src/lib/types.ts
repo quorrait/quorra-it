@@ -15,6 +15,7 @@ export interface Business {
   logo: string | null; // small data URL shown on printed invoices/estimates
   lead_key?: string | null; // public key for the website lead form
   calendar_token?: string | null; // private link for the all-jobs phone calendar feed
+  state?: string | null; // two-letter state, used by the local price guide
 }
 
 export interface Customer {

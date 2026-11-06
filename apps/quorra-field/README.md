@@ -91,3 +91,9 @@ Note: this hides screens in the app. Hard enforcement (so a technician can't rea
 - **Automatic sync:** Calendar, Sync to phone (and Settings, Phone calendar sync) gives a private subscription link for Apple Calendar, Google Calendar or Outlook. Jobs, reschedules and cancellations then update on the phone about hourly. Managers get an all-jobs link; each team member has a personal link (Team, open the member) showing only their assigned jobs, which can be texted to them. "Reset link" replaces a link that was shared by mistake.
 - **Setup:** run `supabase/migrations/0006_calendar_sync.sql`, then `supabase functions deploy calendar-feed --no-verify-jwt`.
 - **One-way:** the phone calendar shows the jobs; changes made on the phone don't flow back into the app. Two-way Google/Apple sync is a bigger build (OAuth review) and isn't included.
+
+## Local price guide
+The quote form shows what similar jobs usually cost. Figures are published national ranges (Angi cost guides, each linked with its year) scaled by the state price level from the BEA Regional Price Parities (2023), plus the contractor's own past quotes for the same job type. Set the state in Settings (migration `0007_price_guide.sql`). They are reference points, not live competitor quotes. Add or update entries in `src/lib/priceGuide.ts`.
+
+## Website lead form and calendar sync
+Settings shows a preview, a share link, copy-paste embed code and platform steps for the lead form. Phone calendar sync is a live subscription feed (refresh hint every 15 minutes; Google Calendar sets its own schedule).

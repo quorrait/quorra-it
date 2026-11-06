@@ -19,7 +19,7 @@ export function buildIcs(calName: string, events: CalEvent[]): string {
   const now = stamp(new Date().toISOString());
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Quorra Dispatch//Jobs//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
-    `X-WR-CALNAME:${esc(calName)}`, "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H",
+    `X-WR-CALNAME:${esc(calName)}`, "REFRESH-INTERVAL;VALUE=DURATION:PT15M", "X-PUBLISHED-TTL:PT15M",
   ];
   for (const e of events) {
     lines.push(

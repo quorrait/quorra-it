@@ -7,7 +7,9 @@ const root = () => `${location.origin}${import.meta.env.BASE_URL}`;
 
 /** Standalone, public pages (no login) that talk to the edge functions. */
 export const quoteUrl = (token?: string) => (hasSupabase && token ? `${root()}quote.html?t=${token}&api=${encodeURIComponent(apiBase())}` : "");
-export const leadFormUrl = (key?: string | null) => (hasSupabase && key ? `${root()}lead.html?k=${key}&api=${encodeURIComponent(apiBase())}` : "");
+export const leadFormUrl = (key?: string | null, name?: string) => (hasSupabase && key ? `${root()}lead.html?k=${key}&api=${encodeURIComponent(apiBase())}${name ? `&n=${encodeURIComponent(name)}` : ""}` : "");
+/** Preview of the form that does not send anything (used in demo mode and before going live). */
+export const leadFormPreviewUrl = (name?: string) => `${root()}lead.html?demo=1${name ? `&n=${encodeURIComponent(name)}` : ""}`;
 
 /** Subscribable calendar feed. webcal:// opens the phone's calendar app directly. */
 export const feedUrl = (token?: string | null) => (hasSupabase && token ? `${apiBase()}/calendar-feed/jobs.ics?t=${token}` : "");
