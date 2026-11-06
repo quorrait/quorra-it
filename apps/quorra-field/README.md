@@ -1,4 +1,4 @@
-# Quorra Field
+# Quorra Dispatch
 
 Field-service app for trades (HVAC, plumbing, electrical, construction): dashboard with money earned today / this week / this month, a calendar tied to jobs, invoices, card payments from the phone, and QuickBooks Online sync. Mobile-first PWA (installs to the home screen), React + TypeScript + Supabase.
 

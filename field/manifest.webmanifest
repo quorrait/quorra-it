@@ -1,6 +1,6 @@
 {
-  "name": "Quorra Field",
-  "short_name": "Quorra Field",
+  "name": "Quorra Dispatch",
+  "short_name": "Quorra Dispatch",
   "description": "Jobs, schedule and payments for the trades.",
   "start_url": "./",
   "display": "standalone",

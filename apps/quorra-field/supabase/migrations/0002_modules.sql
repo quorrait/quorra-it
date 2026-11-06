@@ -1,4 +1,4 @@
--- Quorra Field, part 2: price book, estimates, leads, service plans, team, timesheets, purchase orders.
+-- Quorra Dispatch, part 2: price book, estimates, leads, service plans, team, timesheets, purchase orders.
 -- Same rule as part 1: every row belongs to one owner and is protected by row level security.
 
 alter table public.business add column if not exists logo text; -- small data URL for printed documents

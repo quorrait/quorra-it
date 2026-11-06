@@ -1,4 +1,4 @@
--- Quorra Field: schema + row level security.
+-- Quorra Dispatch: schema + row level security.
 -- Every row belongs to one owner (a contractor business). Teams can come later by adding a members table.
 
 create table public.business (
