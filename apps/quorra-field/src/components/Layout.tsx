@@ -46,7 +46,7 @@ export default function Layout() {
     <div className="shell">
       <aside className="side">
         <div className="side-brand">
-          <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+          <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo-v2.png`} alt="" />
           {APP_NAME}
         </div>
         {GROUPS.map((g) => ({ ...g, links: g.links.filter(mine) })).filter((g) => g.links.length).map((g) => (

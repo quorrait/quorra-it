@@ -38,7 +38,7 @@ export default function Login() {
     <div className="auth">
       <form className="auth-card stack" onSubmit={submit}>
         <div className="auth-head">
-          <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo.png`} alt="" />
+          <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo-v2.png`} alt="" />
           <h1>{mode === "in" ? APP_NAME : "Create your account"}</h1>
           {mode === "up" && <p className="muted">{`Set up ${APP_NAME} for your business. It takes about a minute.`}</p>}
         </div>
