@@ -24,7 +24,8 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: {
         <div className="grow stack" style={{ gap: 4 }}>
           <div className="plan-name">{CUSTOM_PLAN.name}</div>
           <div className="small muted">{CUSTOM_PLAN.tagline}</div>
-          <div className="plan-price"><span className="num">{money(PLANS[2].price_cents).replace(".00", "")}</span><span className="muted"> / month for 15 logins, then </span><span className="num">{money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> per technician</span></div>
+          <div className="plan-price"><span className="num">{money(PLANS[2].price_cents).replace(".00", "")}</span><span className="muted"> / month, 15 logins included</span></div>
+          <div className="plan-price"><span className="num">+ {money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> / month per technician after 15</span></div>
           <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
         <a className="btn dark" href={`mailto:${CUSTOM_PLAN.contact_email}?subject=${encodeURIComponent("Quorra Dispatch custom plan")}&body=${encodeURIComponent("Hi, we have ___ technicians and would like a quote for a custom plan.")}`}>Contact us</a>
