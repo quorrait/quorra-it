@@ -1,4 +1,4 @@
-import { PLANS, EVERY_PLAN, TRIAL_DAYS, type Plan } from "../lib/plans";
+import { PLANS, CUSTOM_PLAN, EVERY_PLAN, TRIAL_DAYS, type Plan } from "../lib/plans";
 import { money } from "../lib/money";
 
 /** Plan comparison. Used on the public plans page and on the Billing screen. */
@@ -19,6 +19,15 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: {
             </button>
           </div>
         ))}
+      </div>
+      <div className="card plan-custom">
+        <div className="grow stack" style={{ gap: 4 }}>
+          <div className="plan-name">{CUSTOM_PLAN.name}</div>
+          <div className="small muted">{CUSTOM_PLAN.tagline}</div>
+          <div className="plan-price"><span className="num">{money(PLANS[2].price_cents).replace(".00", "")}</span><span className="muted"> / month for 15 logins, then </span><span className="num">{money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> per technician</span></div>
+          <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
+        </div>
+        <a className="btn dark" href={`mailto:${CUSTOM_PLAN.contact_email}?subject=${encodeURIComponent("Quorra Dispatch custom plan")}&body=${encodeURIComponent("Hi, we have ___ technicians and would like a quote for a custom plan.")}`}>Contact us</a>
       </div>
       <div className="card">
         <div className="card-title">Every plan includes</div>

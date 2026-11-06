@@ -352,3 +352,5 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .sub[open] > summary { margin-bottom: 12px; }
 .feature { border: 2px solid var(--brand, #f26b21); background: color-mix(in srgb, var(--brand, #f26b21) 7%, transparent); border-radius: 14px; padding: 14px; }
 .feature-title { font-weight: 800; font-size: 16px; }
+.plan-custom { display: flex; flex-direction: column; gap: 14px; align-items: stretch; border: 2px dashed var(--line); }
+@media (min-width: 820px) { .plan-custom { flex-direction: row; align-items: center; } }

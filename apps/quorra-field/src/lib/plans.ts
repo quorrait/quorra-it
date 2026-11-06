@@ -17,6 +17,15 @@ export const PLANS: Plan[] = [
   { id: "enterprise", name: "Enterprise", price_cents: 30000, seats: 15, tagline: "For a growing company", extras: ["Everything in Essentials", "Up to 15 logins with roles", "Onboarding call and data import help", "Phone support"] },
 ];
 
+/** Custom plan: more than 15 logins. Quoted by email, not bought online. Price per technician above the 15 included, per month. */
+export const CUSTOM_PLAN = {
+  name: "Custom",
+  tagline: "For crews of more than 15",
+  per_tech_cents: 2000,
+  contact_email: "quorrait@gmail.com",
+  extras: ["Everything in Enterprise", "Your 15 logins plus a flat rate for each technician after that", "Onboarding call and data import help", "Phone support"],
+};
+
 export const EVERY_PLAN = [
   "Job scheduling and calendar",
   "Estimates and invoices with PDF, email and text",
