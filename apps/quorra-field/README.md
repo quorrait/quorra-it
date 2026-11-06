@@ -65,3 +65,9 @@ Run `supabase/migrations/0002_modules.sql` after `0001_init.sql` to create these
 ## Not built yet
 
 Customer portal, separate logins/permissions for team members (everyone shares the owner's account), job photos/file storage, Tap to Pay (needs a native iOS/Android app), SMS/email sending from the app (estimates open your mail app), Stripe-fee reconciliation in QuickBooks.
+
+## Roles
+
+Owner and Manager see everything. Office, Sales and Technician see only what their job needs (Team, Timesheets, Reports, Settings and revenue are manager-only; technicians see only jobs assigned to them). Roles are matched by login email to the Team list; run `supabase/migrations/0003_manager_role.sql` to allow the Manager role.
+
+Note: this hides screens in the app. Hard enforcement (so a technician can't read data by calling the database directly) needs a separate Supabase login per person and business-wide row security. That is the next step.

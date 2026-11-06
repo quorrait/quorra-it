@@ -123,7 +123,7 @@ export interface ServicePlan {
   notes: string;
 }
 
-export type Role = "Owner" | "Technician" | "Office" | "Sales";
+export type Role = "Owner" | "Manager" | "Technician" | "Office" | "Sales";
 export interface TeamMember {
   id: string;
   name: string;

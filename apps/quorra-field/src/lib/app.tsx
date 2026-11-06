@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, PurchaseOrder, ServicePlan, TeamMember, TimeEntry } from "./types";
+import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, PurchaseOrder, Role, ServicePlan, TeamMember, TimeEntry } from "./types";
 import type { Store } from "./store";
+import { canAccess, type Feature } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
 import { createSupabaseStore } from "./supabaseStore";
 import { hasSupabase, supabase } from "./supabase";
@@ -96,6 +97,9 @@ export const useAuth = () => {
 /* ---------------- Data ---------------- */
 
 interface DataCtx {
+  me: { id: string | null; name: string; role: Role };
+  can(f: Feature): boolean;
+  viewAs(memberId: string): void;
   store: Store;
   loading: boolean;
   error: string | null;
@@ -130,6 +134,8 @@ const EMPTY_BUSINESS: Business = {
 };
 
 export function DataProvider({ children }: { children: ReactNode }) {
+  const { email } = useAuth();
+  const [asId, setAsId] = useState<string | null>(() => { try { return localStorage.getItem("qf-view-as"); } catch { return null; } });
   const store = useMemo<Store>(() => (hasSupabase ? createSupabaseStore() : createDemoStore()), []);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -186,14 +192,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
     void refresh();
   }, [refresh]);
 
+  // Who is using the app. Real accounts: match the login email to a team member (no match = the account owner).
+  // Demo: the "View as" switcher picks any team member so you can see each role's screens.
+  const meMember = hasSupabase
+    ? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase())
+    : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
+  const me = { id: meMember?.id ?? null, name: meMember?.name ?? "Owner", role: (meMember?.role ?? "Owner") as Role };
+  const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
+
   const value = useMemo<DataCtx>(
     () => ({
+      me,
+      can: (f) => canAccess(me.role, f),
+      viewAs(id) { try { localStorage.setItem("qf-view-as", id); } catch { /* ignore */ } setAsId(id); },
       store,
       loading,
       error,
       business,
       customers,
-      jobs,
+      jobs: visibleJobs,
       invoices,
       payments,
       priceItems,
@@ -210,7 +227,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       customerById: (id) => customers.find((c) => c.id === id),
     }),
-    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, refresh],
+    [store, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, refresh, me.id, me.role, me.name, visibleJobs],
   );
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;

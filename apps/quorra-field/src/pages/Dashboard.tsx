@@ -25,7 +25,8 @@ function delta(now: number, prev: number, label: string) {
 }
 
 export default function Dashboard() {
-  const { loading, business, jobs, invoices, payments, customerById } = useData();
+  const { loading, business, jobs, invoices, payments, customerById, can } = useData();
+  const money_ = can("money");
   const nav = useNavigate();
   const [range, setRange] = useState<"day" | "week" | "month">("day");
 
@@ -73,7 +74,7 @@ export default function Dashboard() {
         <Link to="/jobs?new=1" className="btn primary">+ New job</Link>
       </div>
 
-      <div className="earn-grid">
+      {money_ && <div className="earn-grid">
         <div className="earn hero">
           <div className="lbl">Earned today</div>
           <div className="amt num">{money(sum.today)}</div>
@@ -88,7 +89,7 @@ export default function Dashboard() {
           <div className="amt num">{money(sum.month)}</div>
           {delta(sum.month, sum.lastMonth, "same days last month")}
         </div>
-      </div>
+      </div>}
 
       <div className="home-cal">
         <div className="card flush">
@@ -154,6 +155,8 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {money_ && (
+        <>
       <div className="card">
         <div className="row between" style={{ marginBottom: 8 }}>
           <div className="card-title" style={{ margin: 0 }}>Revenue</div>
@@ -203,6 +206,9 @@ export default function Dashboard() {
       <p className="small muted" style={{ textAlign: "center" }}>
         {invoices.length} invoices · {money(invoices.reduce((s, i) => s + invoiceTotals(i).total, 0))} billed all time
       </p>
+        </>
+      )}
+
       {adding && <JobForm defaultStart={adding} onClose={() => setAdding(null)} onSaved={(j) => setPicked(startOfDay(new Date(j.start_at)))} />}
     </div>
   );

@@ -5,7 +5,7 @@ import { centsToStr, strToCents } from "../components/LineItems";
 import type { Role, TeamMember } from "../lib/types";
 
 const COLORS = ["#f26b21", "#2563eb", "#16a34a", "#9333ea", "#db2777", "#0891b2", "#ca8a04"];
-const ROLES: Role[] = ["Owner", "Technician", "Office", "Sales"];
+const ROLES: Role[] = ["Owner", "Manager", "Office", "Sales", "Technician"];
 
 export const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 

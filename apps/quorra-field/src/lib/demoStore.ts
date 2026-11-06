@@ -6,7 +6,7 @@ import { type Store, uid } from "./store";
 import { addDays, startOfDay } from "./dates";
 import { invoiceTotals, amountPaid } from "./money";
 
-const KEY = "quorra-field-demo-v2";
+const KEY = "quorra-field-demo-v3";
 
 interface DB {
   business: Business;
@@ -63,6 +63,7 @@ function seed(): DB {
     ["Marcus Cole", "Technician", 3600, 10, "#1b64d1"],
     ["Dana Whitfield", "Technician", 3400, 8, "#137a3c"],
     ["Jenny Park", "Office", 2400, 0, "#8b5cf6"],
+    ["Sam Rivera", "Manager", 4500, 0, "#0891b2"],
   ].map(([name, role, hourly_cents, commission_pct, color]) => ({
     id: uid(), name: name as string, role: role as TeamMember["role"], phone: "(916) 555-01" + String(10 + Math.floor(r() * 80)),
     email: (name as string).split(" ")[0].toLowerCase() + "@summithome.example.com", hourly_cents: hourly_cents as number,

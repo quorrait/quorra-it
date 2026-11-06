@@ -11,7 +11,7 @@ import type { JobStatus } from "../lib/types";
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { loading, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh } = useData();
+  const { loading, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const [editing, setEditing] = useState(false);
@@ -49,7 +49,7 @@ export default function JobDetail() {
         <button className="btn good block" style={{ minHeight: 54 }} onClick={() => setStatus("completed")}>{Icon.check} Mark complete</button>
       )}
 
-      {(() => {
+      {can("money") && (() => {
         const billed = jobInvoices.reduce((a, i) => a + invoiceTotals(i).total, 0);
         const paid = jobInvoices.reduce((a, i) => a + amountPaid(i.id, payments), 0);
         const mats = purchaseOrders.filter((p) => p.job_id === job.id && p.status !== "canceled").reduce((a, p) => a + p.items.reduce((b, li) => b + Math.round(li.qty * li.unit_cents), 0), 0);
@@ -81,7 +81,7 @@ export default function JobDetail() {
         {job.description && <p className="small" style={{ whiteSpace: "pre-wrap" }}>{job.description}</p>}
       </div>
 
-      <div className="card flush">
+      {can("invoices") && <div className="card flush">
         <div className="row between" style={{ padding: "16px 16px 8px" }}>
           <div className="card-title" style={{ margin: 0 }}>Invoices</div>
           <button className="btn sm primary" onClick={() => setInvoicing(true)}>{Icon.plus} Invoice</button>
@@ -96,14 +96,14 @@ export default function JobDetail() {
             </div>
           ))}
         </div>
-      </div>
+      </div>}
 
       <div className="row wrap">
         <button className="btn grow" onClick={() => setEditing(true)}>Edit job</button>
         {job.status !== "canceled" && job.status !== "completed" && (
           <button className="btn danger grow" onClick={() => { if (confirm("Cancel this job?")) void setStatus("canceled"); }}>Cancel job</button>
         )}
-        <button className="btn danger grow" onClick={async () => { if (confirm("Delete this job permanently?")) { await store.deleteJob(job.id); await refresh(); nav("/jobs"); } }}>Delete</button>
+        {can("settings") && <button className="btn danger grow" onClick={async () => { if (confirm("Delete this job permanently?")) { await store.deleteJob(job.id); await refresh(); nav("/jobs"); } }}>Delete</button>}
       </div>
 
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}

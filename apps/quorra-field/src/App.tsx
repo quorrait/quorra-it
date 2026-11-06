@@ -19,7 +19,16 @@ import PurchaseOrders from "./pages/PurchaseOrders";
 import Team from "./pages/Team";
 import Timesheets from "./pages/Timesheets";
 import Reports from "./pages/Reports";
+import { useData } from "./lib/app";
+import { ROUTE_FEATURE } from "./lib/access";
 import Settings, { More } from "./pages/Settings";
+
+function Guard({ path, children }: { path: string; children: JSX.Element }) {
+  const { can, loading } = useData();
+  const f = ROUTE_FEATURE[path];
+  if (loading || !f || can(f)) return children;
+  return <Navigate to="/" replace />;
+}
 
 function Gate() {
   const { ready, email } = useAuth();
@@ -33,19 +42,19 @@ function Gate() {
           <Route path="calendar" element={<Calendar />} />
           <Route path="jobs" element={<Jobs />} />
           <Route path="jobs/:id" element={<JobDetail />} />
-          <Route path="invoices" element={<Invoices />} />
-          <Route path="invoices/:id" element={<InvoiceDetail />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="leads" element={<Leads />} />
-          <Route path="estimates" element={<Estimates />} />
-          <Route path="estimates/:id" element={<EstimateDetail />} />
-          <Route path="pricebook" element={<PriceBook />} />
-          <Route path="plans" element={<ServicePlans />} />
-          <Route path="purchase-orders" element={<PurchaseOrders />} />
-          <Route path="team" element={<Team />} />
-          <Route path="timesheets" element={<Timesheets />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="settings" element={<Settings />} />
+          <Route path="invoices" element={<Guard path="/invoices"><Invoices /></Guard>} />
+          <Route path="invoices/:id" element={<Guard path="/invoices"><InvoiceDetail /></Guard>} />
+          <Route path="customers" element={<Guard path="/customers"><Customers /></Guard>} />
+          <Route path="leads" element={<Guard path="/leads"><Leads /></Guard>} />
+          <Route path="estimates" element={<Guard path="/estimates"><Estimates /></Guard>} />
+          <Route path="estimates/:id" element={<Guard path="/estimates"><EstimateDetail /></Guard>} />
+          <Route path="pricebook" element={<Guard path="/pricebook"><PriceBook /></Guard>} />
+          <Route path="plans" element={<Guard path="/plans"><ServicePlans /></Guard>} />
+          <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PurchaseOrders /></Guard>} />
+          <Route path="team" element={<Guard path="/team"><Team /></Guard>} />
+          <Route path="timesheets" element={<Guard path="/timesheets"><Timesheets /></Guard>} />
+          <Route path="reports" element={<Guard path="/reports"><Reports /></Guard>} />
+          <Route path="settings" element={<Guard path="/settings"><Settings /></Guard>} />
           <Route path="more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>

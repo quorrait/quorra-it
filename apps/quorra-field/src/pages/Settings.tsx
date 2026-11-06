@@ -6,25 +6,31 @@ import { APP_NAME } from "../lib/config";
 
 export function More() {
   const { email, signOut } = useAuth();
+  const { can, me, viewAs, team, store } = useData();
   return (
     <div className="stack">
       <h1 className="page-title">More</h1>
       <div className="card flush">
         <div className="list">
-          <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>
-          <Link to="/estimates" className="list-item">{Icon.invoice}<div className="grow title">Estimates</div>›</Link>
-          <Link to="/pricebook" className="list-item">{Icon.card}<div className="grow title">Price book</div>›</Link>
-          <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>›</Link>
-          <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>›</Link>
-          <Link to="/customers" className="list-item">{Icon.users}<div className="grow title">Customers</div>›</Link>
-          <Link to="/team" className="list-item">{Icon.users}<div className="grow title">Team</div>›</Link>
-          <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>›</Link>
-          <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>
-          <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings & integrations</div>›</Link>
+          {can("leads") && <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>}
+          {can("estimates") && <Link to="/estimates" className="list-item">{Icon.invoice}<div className="grow title">Estimates</div>›</Link>}
+          {can("pricebook") && <Link to="/pricebook" className="list-item">{Icon.card}<div className="grow title">Price book</div>›</Link>}
+          {can("plans") && <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>›</Link>}
+          {can("purchase_orders") && <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>›</Link>}
+          {can("customers") && <Link to="/customers" className="list-item">{Icon.users}<div className="grow title">Customers</div>›</Link>}
+          {can("team") && <Link to="/team" className="list-item">{Icon.users}<div className="grow title">Team</div>›</Link>}
+          {can("timesheets") && <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>›</Link>}
+          {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>}
+          {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings & integrations</div>›</Link>}
         </div>
       </div>
       <div className="card stack">
-        <div className="small muted">Signed in as {email}</div>
+        <div className="small muted">Signed in as {email} · {me.name} ({me.role})</div>
+        {store.mode === "demo" && (
+          <select className="select" value={me.id ?? ""} onChange={(e) => viewAs(e.target.value)} aria-label="View as">
+            {team.filter((t) => t.active).map((t) => <option key={t.id} value={t.id}>Demo: view as {t.name} ({t.role})</option>)}
+          </select>
+        )}
         <button className="btn block" onClick={signOut}>Sign out</button>
       </div>
     </div>
