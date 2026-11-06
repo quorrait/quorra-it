@@ -1,5 +1,5 @@
 // Starts a Stripe Checkout subscription for the business owner (Quorra Dispatch plan).
-// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_SOLO / _CREW / _COMPANY, APP_URL.
+// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_BASIC / _ESSENTIALS / _MAX, APP_URL.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 
@@ -7,9 +7,9 @@ handler(async (req) => {
   const user = await requireUser(req);
   if ((await accountOwner(user.id)) !== user.id) throw new HttpError(403, "Only the account owner can manage billing");
   const body = await req.json().catch(() => ({}));
-  // Secrets: STRIPE_PRICE_SOLO, STRIPE_PRICE_CREW, STRIPE_PRICE_COMPANY (the price ids from Stripe).
-  const plan = String(body.plan ?? "crew").toLowerCase();
-  if (!["solo", "crew", "company"].includes(plan)) throw new HttpError(400, "Unknown plan");
+  // Secrets: STRIPE_PRICE_BASIC, STRIPE_PRICE_ESSENTIALS, STRIPE_PRICE_MAX (the price ids from Stripe).
+  const plan = String(body.plan ?? "essentials").toLowerCase();
+  if (!["basic", "essentials", "max"].includes(plan)) throw new HttpError(400, "Unknown plan");
   const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}`);
 
   const db = admin();
@@ -28,7 +28,7 @@ handler(async (req) => {
     client_reference_id: user.id,
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
-    subscription_data: { metadata: { owner_id: user.id } },
+    subscription_data: { trial_period_days: 14, metadata: { owner_id: user.id } },
     success_url: `${appUrl()}/billing?subscribed=1`,
     cancel_url: `${appUrl()}/billing`,
   });

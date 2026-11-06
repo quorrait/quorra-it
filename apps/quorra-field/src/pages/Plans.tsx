@@ -12,8 +12,8 @@ export default function Plans() {
           <button className="btn" onClick={() => nav("/")}>Sign in</button>
         </div>
         <h1>Pick your plan</h1>
-        <p className="sub">One price per business. Create your account, pay securely with Stripe, and start dispatching. Cancel any time.</p>
-        <PlanCards onChoose={(p) => nav(`/start?plan=${p.id}`)} cta="Get" />
+        <p className="sub">Try any plan free for 14 days. Create your account, add a card, and start dispatching. Nothing is charged until the trial ends. Cancel any time.</p>
+        <PlanCards onChoose={(p) => nav(`/start?plan=${p.id}`)} cta="Start" />
       </div>
     </div>
   );

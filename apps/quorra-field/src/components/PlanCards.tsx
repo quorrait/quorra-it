@@ -1,4 +1,4 @@
-import { PLANS, EVERY_PLAN, type Plan } from "../lib/plans";
+import { PLANS, EVERY_PLAN, TRIAL_DAYS, type Plan } from "../lib/plans";
 import { money } from "../lib/money";
 
 /** Plan comparison. Used on the public plans page and on the Billing screen. */
@@ -12,9 +12,10 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: {
             <div className="plan-name">{p.name}</div>
             <div className="small muted">{p.tagline}</div>
             <div className="plan-price"><span className="num">{money(p.price_cents).replace(".00", "")}</span><span className="muted"> / month</span></div>
+            <div className="small bold" style={{ color: "var(--brand-dark, #c2410c)" }}>{TRIAL_DAYS}-day free trial</div>
             <ul className="plan-list">{p.extras.map((x) => <li key={x}>{x}</li>)}</ul>
             <button className={`btn block ${p.popular ? "primary" : ""}`} disabled={busy !== null && busy !== undefined} onClick={() => onChoose(p)}>
-              {current?.toLowerCase() === p.name.toLowerCase() ? "Your plan" : busy === p.id ? "One moment..." : `${cta} ${p.name}`}
+              {current?.toLowerCase() === p.name.toLowerCase() ? "Your plan" : busy === p.id ? "One moment..." : cta === "Start" ? `Start ${TRIAL_DAYS}-day free trial` : `${cta} ${p.name}`}
             </button>
           </div>
         ))}

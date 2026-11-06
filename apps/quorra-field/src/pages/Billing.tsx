@@ -46,7 +46,7 @@ export default function Billing() {
     <div className="stack">
       <div className="page-head"><div><h1 className="page-title">Billing</h1><p className="page-sub">Your Quorra Dispatch plan.</p></div></div>
 
-      {locked && <div className="error-banner" style={{ margin: 0 }}>Your plan is not active, so the rest of the app is locked. Start your plan below to continue.</div>}
+      {locked && <div className="error-banner" style={{ margin: 0 }}>Your plan is not active, so the rest of the app is locked. Start your free trial below to continue.</div>}
 
       <div className="card stack">
         <div className="row between wrap">

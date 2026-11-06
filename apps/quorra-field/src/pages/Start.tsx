@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { PLANS } from "../lib/plans";
+import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
 import { Field } from "../components/ui";
 
@@ -51,7 +52,7 @@ export default function Start() {
         <div className="auth-head">
           <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
           <h1>Create your account</h1>
-          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {money(plan.price_cents).replace(".00", "")} per month. You will pay on the next step.</p>
+          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {money(plan.price_cents).replace(".00", "")} per month after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and nothing is charged until the trial ends. Cancel any time before then.</p>
         </div>
         {!hasSupabase && <div className="notice">Demo mode: no payment is taken.</div>}
         <Field label="Business name"><input className="input" autoComplete="organization" value={biz} onChange={(e) => setBiz(e.target.value)} placeholder="Summit Home Services" required={hasSupabase} /></Field>
@@ -60,7 +61,7 @@ export default function Start() {
         <Field label="Confirm password"><input className="input" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={6} required={hasSupabase} placeholder="Type it again" /></Field>
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
-        <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : hasSupabase ? "Continue to payment" : "Open the demo"}</button>
+        <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : hasSupabase ? "Start free trial" : "Open the demo"}</button>
         <button type="button" className="btn block" onClick={() => nav("/plans")}>Back to plans</button>
       </form>
     </div>
