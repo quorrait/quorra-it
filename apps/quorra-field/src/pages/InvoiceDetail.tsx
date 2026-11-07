@@ -11,7 +11,7 @@ import { openPrintable, renderTemplate } from "../lib/customHtml";
 import { Icon, InvoiceBadge, Spinner, useToast, useConfirm } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
 import SendSheet from "../components/SendSheet";
-import { CardPaySheet, ManualPaySheet } from "../components/PaySheet";
+import { CardPaySheet, ManualPaySheet, TakePaymentSheet } from "../components/PaySheet";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
@@ -23,6 +23,7 @@ export default function InvoiceDetail() {
   const [cardOpen, setCardOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [takeOpen, setTakeOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [params, setParams] = useSearchParams();
 
@@ -110,13 +111,10 @@ export default function InvoiceDetail() {
         </div>
       </div>
 
-      {canCollect && inv.status === "sent" && (
+      {canCollect && (
         <div className="card">
-          <div className="card-title">Get paid · {money(balance)}</div>
-          <div className="pay-btns">
-            <button className="btn primary card-pay" onClick={() => setCardOpen(true)}>{Icon.card} Take card payment</button>
-            <button className="btn good" onClick={() => setManualOpen(true)}>{Icon.check} Mark paid</button>
-          </div>
+          <div className="card-title">Take payment · {money(balance)}</div>
+          <button className="btn primary block" style={{ minHeight: 56 }} onClick={() => setTakeOpen(true)}>{Icon.card} Take payment</button>
         </div>
       )}
 
@@ -126,7 +124,6 @@ export default function InvoiceDetail() {
           <div className="pay-btns">
             <button className="btn" onClick={() => setSendOpen(true)}>{Icon.send} Send (PDF, portal link or text)</button>
             <button className="btn" onClick={async () => void savePdf(await makePdf(), `Invoice-${inv.number}.pdf`)}>Download PDF</button>
-            {business.doc_settings?.custom_html && <button className="btn" onClick={() => openPrintable(renderTemplate(business.doc_settings!.custom_html!, { kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid, notes: inv.notes }))}>Print custom layout</button>}
           </div>
         </div>
       )}
@@ -138,7 +135,6 @@ export default function InvoiceDetail() {
             <button className="btn primary grow" onClick={() => setSendOpen(true)}>{Icon.send} Send invoice</button>
             <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
           </div>
-          <button className="btn good block" onClick={() => setManualOpen(true)}>{Icon.check} Mark paid</button>
         </div>
       )}
 
@@ -197,6 +193,7 @@ export default function InvoiceDetail() {
         />
       )}
       {editing && <InvoiceForm invoice={inv} onClose={() => setEditing(false)} />}
+      {takeOpen && <TakePaymentSheet invoice={inv} customer={customer} balance={balance} onClose={() => setTakeOpen(false)} />}
       {cardOpen && <CardPaySheet invoice={inv} customer={customer} balance={balance} onClose={() => setCardOpen(false)} />}
       {manualOpen && <ManualPaySheet invoice={inv} balance={balance} onClose={() => setManualOpen(false)} />}
     </div>

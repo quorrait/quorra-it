@@ -366,7 +366,12 @@ export function createDemoStore(): Store {
       const pay: Payment = { id: uid(), paid_at: new Date().toISOString(), ...p };
       db.payments.push(pay);
       const inv = db.invoices.find((x) => x.id === p.invoice_id);
-      if (inv && amountPaid(inv.id, db.payments) >= invoiceTotals(inv).total) inv.status = "paid";
+      if (inv && amountPaid(inv.id, db.payments) >= invoiceTotals(inv).total) {
+        inv.status = "paid";
+        const job = db.jobs.find((j) => j.id === inv.job_id);
+        if (job && job.status !== "canceled") job.status = "completed";
+        for (const l of (db.rows.leads ?? []) as { job_id: string | null; stage: string }[]) if (inv.job_id && l.job_id === inv.job_id && l.stage === "work_order") l.stage = "completed";
+      }
       save();
       return wait(pay);
     },

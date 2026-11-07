@@ -17,3 +17,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.qbo-callback]
 verify_jwt = false
+[functions.contact-request]
+verify_jwt = false
+[functions.send-reminders]
+verify_jwt = false

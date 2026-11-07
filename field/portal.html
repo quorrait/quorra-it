@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<link rel="icon" href="favicon-32.png" type="image/png" />
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <title>Customer portal</title>
 <style>
 .items{margin:-4px 0 12px;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:14px}.items>div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
@@ -71,12 +74,11 @@
       '<div><h1>' + esc(b.name) + '</h1><div class="muted">Customer portal</div></div></header>' +
       '<div class="contact">' + (b.phone ? '<a class="btn alt" href="tel:' + esc(b.phone) + '">Call</a>' : "") + (b.email ? '<a class="btn alt" href="mailto:' + esc(b.email) + '">Email</a>' : "") + "</div></div>";
     h += '<div class="due"><div class="muted">Hi ' + esc(d.customer) + "</div>" +
-      (totalDue > 0 ? '<div class="big">' + money(totalDue) + '</div><div class="muted">due across ' + openInv.length + (openInv.length === 1 ? " invoice" : " invoices") + "</div>" : '<div class="big">All paid up</div><div class="muted">You have nothing due right now.</div>') +
+      (totalDue > 0 ? '<div class="big">' + money(totalDue) + '</div><div class="muted">due across ' + openInv.length + (openInv.length === 1 ? " invoice" : " invoices") + "</div>" : d.invoices.length ? '<div class="big">All paid up</div><div class="muted">You have nothing due right now.</div>' : waiting ? '<div class="big">Your quote</div>' : '<div class="big">Welcome</div><div class="muted">Nothing here yet.</div>') +
       (waiting ? '<div class="muted" style="margin-top:8px">' + waiting + (waiting === 1 ? " quote is" : " quotes are") + " waiting for your answer.</div>" : "") + "</div>";
     if (q.get("paid")) h += '<div class="msg ok">Thank you. Your payment is being processed and will show here shortly.</div>';
     h += '<div id="out"></div>';
-    h += '<div class="card"><h2>Invoices</h2>';
-    if (!d.invoices.length) h += '<div class="muted">No invoices yet.</div>';
+    if (d.invoices.length) h += '<div class="card"><h2>Invoices</h2>';
     d.invoices.forEach(function (i) {
       var open = i.status === "sent" && i.balance_cents > 0;
       var late = open && i.due_at && String(i.due_at).slice(0, 10) < today;
@@ -90,7 +92,7 @@
         (i.items && i.items.length ? '<div class="items">' + i.items.map(function (li) { return "<div><span>" + esc(li.description || "Item") + ' <span class="muted">' + (li.qty !== 1 ? li.qty + " x " + money(li.unit_cents) : "") + "</span></span><span>" + money(Math.round(li.qty * li.unit_cents)) + "</span></div>"; }).join("") + "</div>" : "");
     });
     if (openInv.length && !d.can_pay) h += '<div class="msg info">To pay these, please contact ' + esc(b.name || "the business") + ".</div>";
-    h += "</div>";
+    if (d.invoices.length) h += "</div>";
     if (d.quotes.length) h += '<div class="card"><h2>Quotes</h2>';
     d.quotes.forEach(function (x) {
       var link = demo ? "#" : quoteBase + "?t=" + encodeURIComponent(x.token) + "&api=" + encodeURIComponent(q.get("api") || "");

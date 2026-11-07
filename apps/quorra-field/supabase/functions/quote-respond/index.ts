@@ -1,50 +1,77 @@
-// Public: the customer accepts (and picks a preferred date) or declines a quote. Deploy with --no-verify-jwt.
-// Accepting marks the quote approved, puts a job on the calendar, and moves the lead to "work_order".
+// Public: the customer accepts or declines a quote, then picks a time from the open slots. Deploy with --no-verify-jwt.
+// Accept -> quote approved. Schedule -> a job is put on the calendar and the customer gets a confirmation text with a reschedule link.
 import { admin, handler, HttpError, json } from "../_shared/util.ts";
-
-const WINDOWS: Record<string, number> = { morning: 9, afternoon: 13 };
+import { availableSlots, normHours } from "../_shared/schedule.ts";
+import { sendEmail, sendSms } from "../_shared/notify.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const b = await req.json().catch(() => null);
   const t = typeof b?.t === "string" ? b.t : "";
   const action = b?.action;
-  if (t.length < 16 || (action !== "accept" && action !== "decline")) throw new HttpError(400, "Invalid request");
+  if (t.length < 16 || !["accept", "decline", "schedule"].includes(action)) throw new HttpError(400, "Invalid request");
 
   const db = admin();
   const { data: est } = await db.from("estimates").select("*").eq("public_token", t).maybeSingle();
   if (!est) throw new HttpError(404, "This quote link is not valid");
-  if (est.status === "approved" || est.status === "declined") return json({ ok: true, status: est.status }); // already answered
-  if (est.status !== "sent") throw new HttpError(409, "This quote is not ready yet");
-
   const { data: lead } = await db.from("leads").select("*").eq("estimate_id", est.id).eq("owner_id", est.owner_id).maybeSingle();
 
   if (action === "decline") {
+    if (est.status === "approved" || est.status === "declined") return json({ ok: true, status: est.status });
+    if (est.status !== "sent") throw new HttpError(409, "This quote is not ready yet");
     const reason = typeof b.reason === "string" ? b.reason.slice(0, 200) : "";
     await db.from("estimates").update({ status: "declined" }).eq("id", est.id);
     if (lead) await db.from("leads").update({ stage: "declined", notes: `${lead.notes ? lead.notes + "\n" : ""}Declined by customer${reason ? `: ${reason}` : ""}` }).eq("id", lead.id);
     return json({ ok: true, status: "declined" });
   }
 
-  const date = typeof b.date === "string" ? b.date : "";
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!m) throw new HttpError(400, "Please choose a preferred date");
-  const hour = WINDOWS[b.window] ?? 9;
-  // The customer's browser sends its UTC offset in minutes (Date.getTimezoneOffset) so 9:00 means 9:00 their time.
-  const offsetMin = Number.isFinite(b.tz) ? Math.max(-840, Math.min(840, Number(b.tz))) : 480;
-  const start = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], hour, 0) + offsetMin * 60000);
-  const now = Date.now();
-  if (Number.isNaN(start.getTime()) || start.getTime() < now - 86400_000 || start.getTime() > now + 400 * 86400_000) throw new HttpError(400, "Please choose a date within the next year");
+  if (action === "accept") {
+    if (est.status === "approved") return json({ ok: true, status: "approved" });
+    if (est.status !== "sent") throw new HttpError(409, "This quote is not ready yet");
+    await db.from("estimates").update({ status: "approved" }).eq("id", est.id);
+    if (lead) await db.from("leads").update({ stage: "work_order" }).eq("id", lead.id);
+    return json({ ok: true, status: "approved" });
+  }
 
-  const { data: cust } = await db.from("customers").select("address").eq("id", est.customer_id).maybeSingle();
-  const { data: job, error } = await db.from("jobs").insert({
-    owner_id: est.owner_id, customer_id: est.customer_id, title: est.title, address: cust?.address ?? "",
-    description: `Accepted online. Customer's preferred ${b.window === "afternoon" ? "afternoon" : "morning"} arrival. Confirm the time with the customer.`,
-    status: "scheduled", start_at: start.toISOString(), end_at: new Date(start.getTime() + 2 * 3600_000).toISOString(),
-  }).select("id").single();
-  if (error) throw error;
+  // schedule (or reschedule)
+  if (est.status !== "approved") throw new HttpError(409, "Please accept the quote first");
+  const startMs = new Date(String(b.start)).getTime();
+  if (Number.isNaN(startMs)) throw new HttpError(400, "Please choose a time");
+  const [{ data: biz }, { data: cust }, { data: oldJob }] = await Promise.all([
+    db.from("business").select("name,phone,email,hours").eq("owner_id", est.owner_id).maybeSingle(),
+    db.from("customers").select("name,phone,email,address").eq("id", est.customer_id).maybeSingle(),
+    est.job_id ? db.from("jobs").select("id,status,start_at").eq("id", est.job_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  if (oldJob && oldJob.status !== "scheduled") throw new HttpError(409, "This visit can no longer be changed online. Please call us.");
+  const hours = normHours(biz?.hours);
+  if (oldJob && new Date(oldJob.start_at).getTime() - Date.now() < hours.notice_hours * 3600_000) throw new HttpError(409, `Visits can be changed online up to ${hours.notice_hours} hours ahead. Please call us.`);
+  const { slots } = await availableSlots(db, est.owner_id, biz?.hours, oldJob?.id);
+  if (!slots.includes(new Date(startMs).toISOString())) throw new HttpError(409, "Sorry, that time was just taken. Please pick another.");
+  const start = new Date(startMs), end = new Date(startMs + hours.job_minutes * 60000);
 
-  await db.from("estimates").update({ status: "approved", job_id: job.id }).eq("id", est.id);
-  if (lead) await db.from("leads").update({ stage: "work_order", job_id: job.id }).eq("id", lead.id);
-  return json({ ok: true, status: "approved", scheduled_for: start.toISOString() });
+  let jobId = oldJob?.id as string | undefined;
+  if (jobId) {
+    const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString() }).eq("id", jobId);
+    if (error) throw error;
+  } else {
+    const { data: job, error } = await db.from("jobs").insert({
+      owner_id: est.owner_id, customer_id: est.customer_id, title: est.title, address: cust?.address ?? "",
+      description: "Booked online by the customer after accepting the quote.", status: "scheduled", start_at: start.toISOString(), end_at: end.toISOString(),
+    }).select("id").single();
+    if (error) throw error;
+    jobId = job.id as string;
+    await db.from("estimates").update({ job_id: jobId }).eq("id", est.id);
+    if (lead) await db.from("leads").update({ stage: "work_order", job_id: jobId }).eq("id", lead.id);
+  }
+
+  // Confirmation text (and email) with a link to change the time.
+  const back = typeof b.return_to === "string" && b.return_to.startsWith("https://") ? b.return_to.split("?")[0] : "";
+  const link = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(typeof b.api === "string" ? b.api : "")}` : "";
+  const when = new Intl.DateTimeFormat("en-US", { timeZone: hours.tz, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(start);
+  const first = (cust?.name ?? "").split(" ")[0] || "there";
+  const msg = `Hi ${first}, your ${est.title} with ${biz?.name ?? "us"} is scheduled for ${when}.${link ? ` Need to change it? Reschedule here: ${link}` : ""}`;
+  const texted = cust?.phone ? await sendSms({ to: cust.phone, body: msg }) : { sent: false, reason: "No phone number" };
+  if (cust?.email) await sendEmail({ to: cust.email, subject: `Your visit is scheduled: ${when}`, text: msg });
+  if (biz?.email) await sendEmail({ to: biz.email, subject: `${oldJob ? "Rescheduled" : "Booked"}: ${est.title} for ${cust?.name ?? "customer"}`, text: `${cust?.name ?? "A customer"} ${oldJob ? "moved their visit to" : "booked"} ${when}.` });
+  return json({ ok: true, status: "approved", scheduled_for: start.toISOString(), texted: texted.sent });
 });

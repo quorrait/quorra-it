@@ -140,7 +140,6 @@ export default function EstimateDetail() {
       <div className="row wrap no-print">
         <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
         <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
-        {business.doc_settings?.custom_html && <button className="btn grow" onClick={() => openPrintable(renderTemplate(business.doc_settings!.custom_html!, { kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes }))}>Print custom layout</button>}
         {est.status !== "draft" && <button className="btn grow" onClick={() => setSendOpen(true)}>Email / Text</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
         <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "estimate", name: est.title, trade: "", title: est.title, notes: est.notes, items: est.items, hours: 2 }); await refresh(); toast("Saved as a template"); }}>Save as template</button>
@@ -148,7 +147,7 @@ export default function EstimateDetail() {
       </div>
 
       {sendOpen && (
-        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={portalUrl(customer?.portal_token) || portalPreviewUrl()} to={customer?.email} phone={customer?.phone} subject={subject} body={body}
+        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={link || portalPreviewUrl()} linkTitle="Online estimate link" linkDesc="No file. They tap a link that opens just this estimate, where they can accept it and pick a time." to={customer?.email} phone={customer?.phone} subject={subject} body={body}
           onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} confirmLabel="I sent it, mark as sent" onClose={() => setSendOpen(false)} />
       )}
       {editing && <EstimateForm estimate={est} onClose={() => setEditing(false)} />}

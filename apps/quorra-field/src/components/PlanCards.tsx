@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { PLANS, CUSTOM_PLAN, EVERY_PLAN, TRIAL_DAYS, type Plan } from "../lib/plans";
 import { money } from "../lib/money";
 
@@ -28,7 +29,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: {
           <div className="plan-price"><span className="num">+ {money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> / month per technician after 15</span></div>
           <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
-        <a className="btn dark" href={`mailto:${CUSTOM_PLAN.contact_email}?subject=${encodeURIComponent("Quorra Dispatch custom plan")}&body=${encodeURIComponent("Hi, we have ___ technicians and would like a quote for a custom plan.")}`}>Contact us</a>
+        <Link className="btn dark" to="/contact">Contact us</Link>
       </div>
       <div className="card">
         <div className="card-title">Every plan includes</div>

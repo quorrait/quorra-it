@@ -619,3 +619,48 @@ notify pgrst, 'reload schema';
 alter table public.time_entries add column if not exists overtime_minutes integer not null default 0;
 alter table public.time_entries add column if not exists edits jsonb not null default '[]'::jsonb;
 notify pgrst, 'reload schema';
+-- Preset vendors, pay period, and open hours (used by customer scheduling).
+alter table public.business add column if not exists vendors jsonb not null default '[]'::jsonb;
+alter table public.business add column if not exists pay_period jsonb not null default '{}'::jsonb;
+alter table public.business add column if not exists hours jsonb not null default '{}'::jsonb;
+grant update (vendors, pay_period, hours) on public.business to authenticated;
+notify pgrst, 'reload schema';
+-- Requests from the public "Contact us" form. Only the contact-request function (service role) writes here.
+create table if not exists public.contact_requests (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  company text not null default '',
+  email text not null default '',
+  phone text not null default '',
+  best_way text not null default '',
+  message text not null default '',
+  created_at timestamptz not null default now()
+);
+alter table public.contact_requests enable row level security;
+
+/* 0018 */
+-- Paid in full: the invoice is paid, the job moves to completed and the lead leaves the work orders list.
+alter table public.leads drop constraint if exists leads_stage_check;
+alter table public.leads add constraint leads_stage_check
+  check (stage in ('new','contacted','send_quote','quote_sent','work_order','declined','completed'));
+
+create or replace function public.mark_invoice_paid() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare inv public.invoices; paid bigint;
+begin
+  select * into inv from public.invoices where id = new.invoice_id;
+  select coalesce(sum(amount_cents), 0) into paid from public.payments where invoice_id = new.invoice_id;
+  if inv.status <> 'void' and paid >= public.invoice_total_cents(inv) then
+    update public.invoices set status = 'paid' where id = inv.id;
+    if inv.job_id is not null then
+      update public.jobs set status = 'completed' where id = inv.job_id and status <> 'canceled';
+      update public.leads set stage = 'completed' where job_id = inv.job_id and stage = 'work_order';
+    end if;
+  end if;
+  return null;
+end $$;
+notify pgrst, 'reload schema';
+-- Reminder bookkeeping so nobody is texted twice.
+alter table public.jobs add column if not exists reminder_sent_at timestamptz;
+alter table public.service_plans add column if not exists reminder_sent_at timestamptz;
+notify pgrst, 'reload schema';

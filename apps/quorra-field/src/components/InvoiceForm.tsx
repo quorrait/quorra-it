@@ -15,17 +15,24 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   onClose(): void;
   onSaved?(i: Invoice): void;
 }) {
-  const { store, customers, jobs, invoices, business, refresh } = useData();
+  const { store, customers, jobs, invoices, estimates, business, refresh } = useData();
   const toast = useToast();
   const job = jobs.find((j) => j.id === (invoice?.job_id ?? jobId));
 
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
+  // New invoices start from the customer's latest accepted estimate (or the one tied to this job).
+  const estFor = (cid: string) => invoice ? undefined : estimates
+    .filter((e) => e.status === "approved" && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
+    .sort((a, b) => Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number)[0];
+  const est0 = estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
+  const [fromEst, setFromEst] = useState(est0);
+  const [touched, setTouched] = useState(false);
   const [rows, setRows] = useState<Row[]>(
-    invoice ? invoice.items.map(toRow) : [{ description: job?.title ?? "", qty: "1", price: "" }],
+    invoice ? invoice.items.map(toRow) : est0 ? est0.items.map(toRow) : [{ description: job?.title ?? "", qty: "1", price: "" }],
   );
-  const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? business.tax_rate ?? 0));
+  const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? est0?.tax_rate ?? business.tax_rate ?? 0));
   const [due, setDue] = useState(toDateInput(invoice?.due_at ?? addDays(new Date(), 14).toISOString()));
   const [issued, setIssued] = useState(toDateInput(invoice?.issued_at ?? new Date().toISOString()));
   const [notes, setNotes] = useState(invoice?.notes ?? "");
@@ -47,7 +54,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
         id: invoice?.id,
         number: invoice?.number ?? n,
         customer_id: cid,
-        job_id: invoice?.job_id ?? job?.id ?? null,
+        job_id: invoice?.job_id ?? job?.id ?? fromEst?.job_id ?? null,
         status: invoice?.status ?? "draft",
         items,
         tax_rate: parseFloat(taxRate) || 0,
@@ -65,6 +72,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
         const fresh = await store.listInvoices();
         saved = await store.saveInvoice(build(Math.max(1000, ...fresh.map((i) => i.number)) + 1));
       }
+      if (fromEst && !invoice) await store.saveRow("estimates", { ...fromEst, invoice_id: saved.id });
       await refresh();
       toast(invoice ? "Invoice updated" : "Invoice created");
       onSaved?.(saved);
@@ -80,7 +88,10 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
     <Sheet title={invoice ? `Edit invoice #${invoice.number}` : "New invoice"} onClose={onClose}>
       <div className="stack">
         <Field label="Customer">
-          <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>
+          <select className="select" value={cust} onChange={(e) => {
+            setCust(e.target.value);
+            if (!touched && !invoice) { const e2 = estFor(e.target.value); setFromEst(e2); if (e2) { setRows(e2.items.map(toRow)); setTaxRate(String(e2.tax_rate)); } }
+          }}>
             <option value="__new__">+ New customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
@@ -92,8 +103,9 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
           </div>
         )}
 
-        {!invoice && <TemplatePicker kind="estimate" onPick={(t) => setRows(t.items.map(toRow))} />}
-        <LineItemsEditor rows={rows} setRows={setRows} />
+        {fromEst && <div className="notice">Filled in from accepted estimate #{fromEst.number}. Change anything you need.</div>}
+        {!invoice && <TemplatePicker kind="estimate" onPick={(t) => { setTouched(true); setFromEst(undefined); setRows(t.items.map(toRow)); }} />}
+        <LineItemsEditor rows={rows} setRows={(r) => { setTouched(true); setRows(r); }} />
 
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>

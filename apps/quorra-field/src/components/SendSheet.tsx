@@ -5,8 +5,8 @@ import { sendDoc, type Channel } from "../lib/sendDoc";
 import { savePdf } from "../lib/pdf";
 
 /** Send a document to the customer with its PDF attached. */
-export default function SendSheet({ title, filename, makePdf, to: toAddr, phone, subject, body, portalLink, confirmLabel, onConfirm, onClose }: {
-  title: string; filename: string; makePdf(): jsPDF | Promise<jsPDF>; to?: string; phone?: string; subject: string; body: string; portalLink?: string;
+export default function SendSheet({ title, filename, makePdf, to: toAddr, phone, subject, body, portalLink, linkTitle = "Customer portal link", linkDesc = "No file. They tap a link to view the invoice and pay online.", confirmLabel, onConfirm, onClose }: {
+  title: string; filename: string; makePdf(): jsPDF | Promise<jsPDF>; to?: string; phone?: string; subject: string; body: string; portalLink?: string; linkTitle?: string; linkDesc?: string;
   confirmLabel?: string; onConfirm?(): Promise<void>; onClose(): void;
 }) {
   const toast = useToast();
@@ -24,7 +24,7 @@ export default function SendSheet({ title, filename, makePdf, to: toAddr, phone,
     const to = channel === "email" ? (toAddr ?? "") : (phone ?? "");
     window.location.href = channel === "email" ? `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}` : `sms:${to}?&body=${encodeURIComponent(text)}`;
   }
-  const withLink = portalLink ? `${body}\n\nView and pay online: ${portalLink}` : body;
+  const withLink = portalLink ? `${body}\n\nOpen it online: ${portalLink}` : body;
 
   const S = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" } as const;
   const ico = {
@@ -54,7 +54,7 @@ export default function SendSheet({ title, filename, makePdf, to: toAddr, phone,
       <div className="stack">
         <div className="small muted">Sending to <b>{toAddr || "no email on file"}</b> · <b>{phone || "no phone on file"}</b>. Pick how you want it to arrive.</div>
         <Option icon={ico.pdf} title="PDF attached" desc="The invoice as a PDF file, looking exactly like your chosen layout." onEmail={() => void go("email")} onText={() => void go("text")} />
-        {portalLink && <Option icon={ico.link} title="Customer portal link" tag="Easiest to get paid" desc="No file. They tap a link to view the invoice and pay online." onEmail={() => plain("email", withLink)} onText={() => plain("text", withLink)} extra={<button className="btn block" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); toast("Portal link copied"); } catch { toast("Copy failed. Select the link and copy it."); } }}>Copy portal link</button>} />}
+        {portalLink && <Option icon={ico.link} title={linkTitle} tag="Easiest" desc={linkDesc} onEmail={() => plain("email", withLink)} onText={() => plain("text", withLink)} extra={<button className="btn block" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); toast("Link copied"); } catch { toast("Copy failed. Select the link and copy it."); } }}>Copy link</button>} />}
         <Option icon={ico.msg} title="Message only" desc="Just the short note with the amount. No PDF and no link." onEmail={() => plain("email", body)} onText={() => plain("text", body)} />
         {note ? <div className="notice">{note}</div> : <div className="small muted">On a phone the PDF attaches automatically. On a computer it downloads and your email app opens so you can attach it.</div>}
         <div className="row wrap" style={{ justifyContent: "space-between" }}>

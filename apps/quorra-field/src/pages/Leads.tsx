@@ -10,7 +10,7 @@ import JobForm from "../components/JobForm";
 import type { Lead, LeadStage } from "../lib/types";
 
 export const STAGE_LABEL: Record<LeadStage, string> = {
-  new: "New", contacted: "Contacted", send_quote: "Send quote", quote_sent: "Quote sent", work_order: "Work order", declined: "Declined",
+  new: "New", contacted: "Contacted", send_quote: "Send quote", quote_sent: "Quote sent", work_order: "Work order", declined: "Declined", completed: "Completed",
 };
 const PIPELINE: LeadStage[] = ["new", "contacted", "send_quote", "quote_sent"];
 const SOURCES = ["Website form", "Google", "Referral", "Yelp", "Facebook", "Nextdoor", "Repeat customer", "Other"];

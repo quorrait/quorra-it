@@ -1,5 +1,6 @@
 import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
+import { HoursCard, VendorsCard } from "../components/BusinessSetupCards";
 import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
 import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
@@ -141,6 +142,10 @@ function SettingsInner() {
         <div className="small muted" style={{ marginTop: -6 }}>Open your Yelp business page and copy the "Write a review" link. Both links go out together when you ask for a review.</div>
       </div>
 
+
+      <HoursCard />
+
+      <VendorsCard />
 
       <InvoiceLayoutCard />
 

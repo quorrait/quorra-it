@@ -3,6 +3,9 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="favicon-32.png" type="image/png" />
+<link rel="shortcut icon" href="favicon.ico" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
 <title>Your quote</title>
 <style>
   :root { --brand:#e8590c; --ink:#111827; --muted:#6b7280; --line:#e3e7ee; --bad:#b42318; --good:#137a3c; }
@@ -26,6 +29,9 @@
   button:disabled { opacity:.6; }
   .msg { padding:12px; border-radius:10px; font-weight:600; margin-top:12px; }
   .ok { background:#ecfdf3; color:var(--good); } .err { background:#fef3f2; color:var(--bad); }
+  .times { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:10px; }
+  .slot { margin:0; padding:11px 4px; background:#fff; border:1px solid var(--line); color:var(--ink); }
+  .slot.on { background:var(--ink); color:#fff; }
   details summary { cursor:pointer; color:var(--muted); font-size:13px; margin-top:12px; }
   @media print { body { background:#fff; } .actions { display:none; } }
 </style>
@@ -49,6 +55,8 @@
       .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Something went wrong"); return j; }); });
   }
 
+  var changing = false;
+  var fmtT = function (iso) { return new Date(iso).toLocaleString("en-US", { weekday: "long", month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }); };
   function render(d) {
     var b = d.business || {};
     var h = '<div class="card"><header>' + (b.logo ? '<img src="' + esc(b.logo) + '" alt="">' : "") +
@@ -63,15 +71,26 @@
     if (d.notes) h += '<p class="muted" style="white-space:pre-wrap;margin-top:12px">' + esc(d.notes) + "</p>";
     h += "</div>";
 
-    if (d.status === "approved") {
-      h += '<div class="card"><div class="msg ok">Quote accepted. ' + (d.scheduled_for ? "You are scheduled for " + fmt(d.scheduled_for) + ". We will confirm your arrival time." : "We will be in touch to schedule your service.") + "</div></div>";
+    var picking = d.status === "approved" && (!d.scheduled_for || changing);
+    if (d.status === "approved" && !picking) {
+      var canChange = d.job_status === "scheduled" && d.slots;
+      h += '<div class="card"><div class="msg ok">Quote accepted. You are scheduled for ' + fmtT(d.scheduled_for) + ".</div>" +
+        (d.job_status === "scheduled" ? '<button class="decline" id="chg">Reschedule</button>' : "") + "</div>";
+    } else if (picking) {
+      var days = {}, order = [];
+      (d.slots || []).forEach(function (iso) { var k = new Date(iso).toDateString(); if (!days[k]) { days[k] = []; order.push(k); } days[k].push(iso); });
+      h += '<div class="card actions"><b>' + (changing ? "Pick a new time" : "Quote accepted. Pick a time") + '</b><div class="muted">These are the times we have open. Pick one and we will text you a confirmation.</div>';
+      if (!order.length) h += '<div class="msg">No online times are open right now. Please call ' + esc(b.phone || "us") + " to schedule.</div>";
+      else {
+        h += '<label>Day<select id="day">' + order.map(function (k) { return '<option value="' + esc(k) + '">' + esc(new Date(days[k][0]).toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })) + "</option>"; }).join("") + "</select></label>";
+        h += '<div id="times" class="times"></div>';
+        h += '<button class="accept" id="book" disabled>Confirm time</button>';
+      }
+      h += (changing ? '<button class="decline" id="keep">Keep my current time</button>' : "") + '<div id="out" role="status"></div></div>';
     } else if (d.status === "declined") {
       h += '<div class="card"><div class="msg">This quote was declined. If you change your mind, please contact us.</div></div>';
     } else if (d.status === "sent") {
-      var min = new Date().toISOString().slice(0, 10);
-      h += '<div class="card actions"><b>Accept this quote</b><div class="muted">Choose when you would like us to come. We will confirm the exact time.</div>' +
-        '<label>Preferred date<input id="date" type="date" min="' + min + '"></label>' +
-        '<label>Preferred time<select id="win"><option value="morning">Morning</option><option value="afternoon">Afternoon</option></select></label>' +
+      h += '<div class="card actions"><b>Accept this quote</b><div class="muted">Next you will choose a time that works for you.</div>' +
         '<button class="accept" id="acc">Accept quote</button>' +
         '<details><summary>Decline this quote</summary><label>Reason (optional)<select id="why"><option value="">Select a reason</option><option>Price too high</option><option>Went with someone else</option><option>Not ready yet</option><option>Other</option></select></label><button class="decline" id="dec">Decline quote</button></details>' +
         '<div id="out" role="status"></div></div>';
@@ -80,16 +99,40 @@
     }
     app.innerHTML = h;
 
-    var out = function (cls, m) { var o = document.getElementById("out"); o.className = "msg " + cls; o.textContent = m; };
+    var out = function (cls, m) { var o = document.getElementById("out"); if (o) { o.className = "msg " + cls; o.textContent = m; } };
     var acc = document.getElementById("acc");
     if (acc) acc.onclick = function () {
-      var date = document.getElementById("date").value;
-      if (!date) return out("err", "Please choose a preferred date.");
       acc.disabled = true;
-      post({ action: "accept", date: date, window: document.getElementById("win").value, tz: new Date().getTimezoneOffset() })
-        .then(function () { return load(); })
-        .catch(function (e) { acc.disabled = false; out("err", e.message); });
+      post({ action: "accept" }).then(function () { return load(); }).catch(function (e) { acc.disabled = false; out("err", e.message); });
     };
+    var chg = document.getElementById("chg");
+    if (chg) chg.onclick = function () { changing = true; load(); };
+    var keep = document.getElementById("keep");
+    if (keep) keep.onclick = function () { changing = false; load(); };
+    var daySel = document.getElementById("day");
+    if (daySel) {
+      var chosen = "", book = document.getElementById("book");
+      var showTimes = function () {
+        chosen = ""; book.disabled = true;
+        document.getElementById("times").innerHTML = days[daySel.value].map(function (iso) {
+          return '<button type="button" class="slot" data-iso="' + iso + '">' + new Date(iso).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }) + "</button>";
+        }).join("");
+        Array.prototype.forEach.call(document.querySelectorAll(".slot"), function (el) {
+          el.onclick = function () {
+            chosen = el.getAttribute("data-iso"); book.disabled = false;
+            Array.prototype.forEach.call(document.querySelectorAll(".slot"), function (x) { x.classList.toggle("on", x === el); });
+          };
+        });
+      };
+      daySel.onchange = showTimes; showTimes();
+      book.onclick = function () {
+        if (!chosen) return;
+        book.disabled = true; book.textContent = "Booking...";
+        post({ action: "schedule", start: chosen, return_to: location.href.split("?")[0], api: api })
+          .then(function () { changing = false; return load(); })
+          .catch(function (e) { book.disabled = false; book.textContent = "Confirm time"; out("err", e.message); });
+      };
+    }
     var dec = document.getElementById("dec");
     if (dec) dec.onclick = function () {
       dec.disabled = true;
@@ -100,8 +143,8 @@
   }
 
   function load() {
-    return fetch(api + "/quote-view?t=" + encodeURIComponent(t))
-      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not load this quote"); return j; }); })
+    return fetch(api + "/quote-view?slots=1&t=" + encodeURIComponent(t))
+      .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || (r.status === 404 ? "The online quote is not switched on yet (the quote-view function is not deployed)." : r.status === 401 ? "The online quote needs to be redeployed with Verify JWT turned off." : (j.message || j.msg || "Could not load this quote (error " + r.status + ")"))); return j; }); })
       .then(render)
       .catch(function (e) { fail(e.message); });
   }

@@ -54,3 +54,12 @@ export async function acceptInvite(code: string): Promise<string | null> {
   const { error } = await supabase.rpc("accept_invite", { p_code: code });
   return error ? error.message : null;
 }
+
+/** Emails the invite link through the send-invite function. Returns an error message, or null when the email went out. */
+export async function emailInvite(code: string): Promise<string | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.functions.invoke("send-invite", { body: { code, link: inviteUrl(code) } });
+  if (error) return "Could not send the email. Copy the link instead.";
+  const r = data as { ok?: boolean; reason?: string } | null;
+  return r?.ok ? null : r?.reason?.includes("not set up") ? "Email sending is not set up yet. Copy the link instead." : r?.reason || "Could not send the email. Copy the link instead.";
+}

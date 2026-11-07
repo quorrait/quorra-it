@@ -3,12 +3,31 @@ import { useData } from "../lib/app";
 import { money } from "../lib/money";
 import { addDays, fmtDayShort, fmtTime, startOfWeek } from "../lib/dates";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
+import type { PayPeriod } from "../lib/types";
 import { isManager } from "../lib/access";
 import type { TimeEntry } from "../lib/types";
 import { initials } from "./Team";
 
 const hrs = (ms: number) => ms / 3600_000;
 const OT_RATE = 1.5;
+const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const PERIOD_NAMES: Record<NonNullable<PayPeriod["type"]>, string> = { weekly: "Weekly", biweekly: "Every 2 weeks", semimonthly: "Twice a month (1st-15th, 16th-end)", monthly: "Monthly" };
+/** The pay period that is `offset` periods before the current one. End is exclusive. */
+function periodFor(offset: number, pp: PayPeriod | undefined, now = new Date()): { start: Date; end: Date } {
+  const type = pp?.type ?? "weekly";
+  const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (type === "monthly") { const s = new Date(day.getFullYear(), day.getMonth() + offset, 1); return { start: s, end: new Date(s.getFullYear(), s.getMonth() + 1, 1) }; }
+  if (type === "semimonthly") {
+    const idx = day.getFullYear() * 24 + day.getMonth() * 2 + (day.getDate() >= 16 ? 1 : 0) + offset; // counts half-months
+    const y = Math.floor(idx / 24), mo = Math.floor((idx % 24) / 2), half = idx % 2;
+    return half === 0 ? { start: new Date(y, mo, 1), end: new Date(y, mo, 16) } : { start: new Date(y, mo, 16), end: new Date(y, mo + 1, 1) };
+  }
+  const len = type === "biweekly" ? 14 : 7;
+  const a = pp?.anchor ? new Date(pp.anchor + "T00:00:00") : startOfWeek(new Date());
+  const n = Math.floor((day.getTime() - a.getTime()) / 86400000 / len);
+  const start = addDays(a, (n + offset) * len);
+  return { start, end: addDays(start, len) };
+}
 const toLocal = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
 const stamp = (iso: string | null) => (iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "still clocked in");
 const otH = (t: { overtime_minutes?: number }) => (t.overtime_minutes ?? 0) / 60;
@@ -16,7 +35,7 @@ interface Form { id?: string; member_id: string; job_id: string; start: string; 
 const dur = (ms: number) => `${Math.floor(ms / 3600_000)}h ${String(Math.floor((ms % 3600_000) / 60_000)).padStart(2, "0")}m`;
 
 export default function Timesheets() {
-  const { loading, team, timeEntries, jobs, store, refresh, me: user } = useData();
+  const { loading, team, timeEntries, jobs, store, refresh, me: user, business } = useData();
   const canEdit = isManager(user.role);
   const [form, setForm] = useState<Form | null>(null);
   const [open, setOpen] = useState<string | null>(null);
@@ -25,6 +44,8 @@ export default function Timesheets() {
   const [who, setWho] = useState("");
   const [jobId, setJobId] = useState("");
   const [week, setWeek] = useState(0);
+  const [ppOpen, setPpOpen] = useState(false);
+  const [ppDraft, setPpDraft] = useState<PayPeriod>({});
   const [, tick] = useState(0);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30_000); return () => clearInterval(t); }, []);
 
@@ -32,8 +53,7 @@ export default function Timesheets() {
   const active = team.filter((m) => m.active);
   const me = who || active[0]?.id || "";
   const running = timeEntries.find((t) => t.member_id === me && !t.end_at);
-  const start = addDays(startOfWeek(new Date()), week * 7);
-  const end = addDays(start, 7);
+  const { start, end } = periodFor(week, business.pay_period);
   const inWeek = timeEntries.filter((t) => new Date(t.start_at) >= start && new Date(t.start_at) < end);
   const ms = (t: { start_at: string; end_at: string | null }) => (t.end_at ? new Date(t.end_at) : new Date()).getTime() - new Date(t.start_at).getTime();
 
@@ -107,7 +127,7 @@ export default function Timesheets() {
 
       <div className="row between">
         <button className="btn sm" onClick={() => setWeek(week - 1)}>‹ Prev</button>
-        <b>{fmtDayShort(start)} – {fmtDayShort(addDays(end, -1))}</b>
+        <b style={{ textAlign: "center" }}>{fmtDayShort(start)} – {fmtDayShort(addDays(end, -1))}<div className="small muted" style={{ fontWeight: 400 }}>{PERIOD_NAMES[business.pay_period?.type ?? "weekly"].split(" (")[0]} pay period{canEdit && <> · <button type="button" style={{ background: "none", border: 0, padding: 0, color: "var(--brand, #ea580c)", cursor: "pointer", font: "inherit" }} onClick={() => { setPpDraft(business.pay_period ?? {}); setPpOpen(true); }}>Change</button></>}</div></b>
         <button className="btn sm" onClick={() => setWeek(Math.min(0, week + 1))} disabled={week >= 0}>Next ›</button>
       </div>
 
@@ -171,6 +191,22 @@ export default function Timesheets() {
             <Field label="Note"><input className="input" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Reason for the change (optional)" /></Field>
             {form.id && <div className="small muted">Every change is logged with your name and what changed.</div>}
             <button className="btn primary block" disabled={saving} onClick={() => void saveForm()}>{saving ? "Saving..." : form.id ? "Save changes" : "Add time"}</button>
+          </div>
+        </Sheet>
+      )}
+      {ppOpen && (
+        <Sheet title="Pay period" onClose={() => setPpOpen(false)}>
+          <div className="stack">
+            <Field label="How often do you pay?">
+              <select className="select" value={ppDraft.type ?? "weekly"} onChange={(e) => setPpDraft({ ...ppDraft, type: e.target.value as PayPeriod["type"] })}>
+                {(Object.keys(PERIOD_NAMES) as (keyof typeof PERIOD_NAMES)[]).map((k) => <option key={k} value={k}>{PERIOD_NAMES[k]}</option>)}
+              </select>
+            </Field>
+            {(ppDraft.type ?? "weekly") !== "semimonthly" && (ppDraft.type ?? "weekly") !== "monthly" && (
+              <Field label="A date a pay period starts on"><input className="input" type="date" value={ppDraft.anchor ?? iso(startOfWeek(new Date()))} onChange={(e) => setPpDraft({ ...ppDraft, anchor: e.target.value })} /></Field>
+            )}
+            <div className="small muted">Pick any start date from a past or current pay period. Every period is counted from it. Timesheets, hours and labor cost are grouped by this period.</div>
+            <button className="btn primary block" onClick={async () => { await store.saveBusiness({ pay_period: ppDraft }); await refresh(); setWeek(0); setPpOpen(false); toast("Pay period updated"); }}>Save pay period</button>
           </div>
         </Sheet>
       )}

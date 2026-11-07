@@ -50,6 +50,9 @@ export default function PriceGuide({ title, items, estimateId }: { title: string
           </div>
         );
       })}
+      <details className="small"><summary className="bold">How this is figured</summary>
+        <p>The guide reads the estimate title and line items for the type of job (for example "50 gallon" or "tankless" water heater) and shows the published national range for that exact type. It then adjusts it for your state's cost of living, using the state set under Settings. For different equipment, put the type in the title or a line item to get that range.</p>
+      </details>
       <div className="small muted">Reference only. These are published averages scaled by state, not quotes from local competitors. Materials, access, permits and your own costs still decide the right price.</div>
     </div>
   );

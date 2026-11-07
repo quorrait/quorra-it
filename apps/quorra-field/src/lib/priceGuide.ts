@@ -52,10 +52,18 @@ export interface PriceRef {
 }
 
 const ANGI = "Angi cost guide";
+const FIXR = "Fixr cost guide";
+const F = (slug: string) => `https://www.fixr.com/costs/${slug}`;
 const U = (slug: string) => `https://www.angi.com/articles/${slug}.htm`;
 
 export const PRICE_REFS: PriceRef[] = [
-  { id: "water-heater", trade: "Plumbing", job: "Water heater replacement", keywords: ["water heater", "hot water heater", "tankless"], low: 837, avg: 1256, high: 1675, note: "Installed, materials and labor.", source: ANGI, url: U("how-much-does-water-heater-installation-cost"), asOf: "page last updated Nov 2022" },
+  { id: "water-heater", trade: "Plumbing", job: "Water heater replacement", keywords: ["water heater", "hot water heater"], low: 837, avg: 1256, high: 1675, note: "Installed, materials and labor.", source: ANGI, url: U("how-much-does-water-heater-installation-cost"), asOf: "page last updated Nov 2022" },
+  { id: "wh-tank-gas", trade: "Plumbing", job: "Water heater: gas tank", keywords: ["gas water heater", "natural gas water heater", "gas tank water heater", "gas tank"], low: 900, avg: 1400, high: 3000, note: "Installed, natural gas tank unit.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
+  { id: "wh-tank-electric", trade: "Plumbing", job: "Water heater: electric tank", keywords: ["electric water heater", "electric tank"], low: 500, avg: null, high: 3500, note: "Installed. Range is for electric units.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
+  { id: "wh-40", trade: "Plumbing", job: "Water heater: 40 gallon tank", keywords: ["40 gallon", "40-gallon", "40 gal"], low: 550, avg: null, high: 2300, note: "Installed, 40 gallon tank.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
+  { id: "wh-50", trade: "Plumbing", job: "Water heater: 50 gallon tank", keywords: ["50 gallon", "50-gallon", "50 gal"], low: 700, avg: null, high: 2500, note: "Installed, 50 gallon tank.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
+  { id: "wh-tankless", trade: "Plumbing", job: "Water heater: tankless", keywords: ["tankless"], low: 1000, avg: null, high: 4000, note: "Installed, all fuel types. Gas venting or a new gas line can add cost.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
+  { id: "wh-heatpump", trade: "Plumbing", job: "Water heater: heat pump / hybrid", keywords: ["heat pump water heater", "hybrid water heater", "heat pump"], low: 1200, avg: null, high: 4600, note: "Installed. Rebates may apply.", source: FIXR, url: F("install-water-heater"), asOf: "updated Jan 2026" },
   { id: "drain", trade: "Plumbing", job: "Drain cleaning", keywords: ["drain", "clog", "snake", "sewer"], low: 147, avg: 241, high: 345, note: "Typical clog. Main sewer line work can run higher.", source: ANGI, url: U("how-much-does-drain-cleaning-cost"), asOf: "2025" },
   { id: "toilet", trade: "Plumbing", job: "Toilet installation", keywords: ["toilet"], low: 224, avg: 373, high: 532, note: "Source is unclear whether the fixture is included.", source: ANGI, url: U("how-much-does-toilet-installation-cost"), asOf: "page last updated Nov 2022" },
   { id: "ac-replace", trade: "HVAC", job: "AC replacement", keywords: ["ac replacement", "replace ac", "condenser", "air conditioner", "a/c replacement", "new ac"], low: 3911, avg: 5989, high: 8067, note: "Assumes existing ductwork and electrical.", source: ANGI, url: U("how-much-does-installing-new-ac-cost"), asOf: "2026" },
@@ -68,14 +76,16 @@ export const PRICE_REFS: PriceRef[] = [
   { id: "recessed", trade: "Electrical", job: "Recessed lighting", keywords: ["recessed", "can light", "pot light"], low: 100, avg: null, high: 300, unit: "per light", source: ANGI, url: U("how-much-does-it-cost-install-recessed-lighting"), asOf: "2026" },
 ];
 
-export function matchRefs(text: string, max = 2): PriceRef[] {
+export function matchRefs(text: string, max = 3): PriceRef[] {
   const t = text.toLowerCase();
-  return PRICE_REFS
+  const found = PRICE_REFS
     .map((r) => ({ r, score: r.keywords.filter((k) => t.includes(k)).length * 10 + (t.includes(r.job.toLowerCase()) ? 5 : 0) }))
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
-    .slice(0, max)
     .map((x) => x.r);
+  // A specific water heater type (size, fuel, tankless) is more useful than the general range.
+  const specific = found.some((r) => r.id.startsWith("wh-"));
+  return found.filter((r) => !(specific && r.id === "water-heater")).slice(0, max);
 }
 
 const round = (n: number) => (n >= 1000 ? Math.round(n / 25) * 25 : Math.round(n / 5) * 5);

@@ -75,6 +75,10 @@ export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice:
               </div>
             )}
 
+            <details className="small muted">
+              <summary style={{ cursor: "pointer" }}>Tap to Pay or swipe a card (Square)</summary>
+              <p style={{ margin: "8px 0 0" }}>Tap to Pay on iPhone and Square card readers need a native app, which a web app cannot use. Take the card in your Square (or other) app, then come back and choose Cash, check or other, and pick Other so the invoice is marked paid here.</p>
+            </details>
             <div className="grid2">
               <a className="btn" href={`sms:${customer?.phone ?? ""}?&body=${smsBody}`}>{Icon.send} Text link</a>
               <button className="btn" onClick={async () => { await navigator.clipboard?.writeText(link.url); toast("Link copied"); }}>Copy link</button>
@@ -125,6 +129,38 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
           <input className="input" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </label>
         <button className="btn good block" onClick={save} disabled={busy}>{busy ? "Saving..." : "Mark paid"}</button>
+      </div>
+    </Sheet>
+  );
+}
+
+/** First step of taking payment on the spot: cash/check or card. */
+export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
+  const { store, refresh } = useData();
+  const toast = useToast();
+  const [step, setStep] = useState<"pick" | "cash" | "card">("pick");
+  const [busy, setBusy] = useState(false);
+
+  async function ensureSent(next: "cash" | "card") {
+    setBusy(true);
+    try {
+      if (invoice.status === "draft") { await store.saveInvoice({ ...invoice, status: "sent" }); await refresh(); }
+      setStep(next);
+    } catch (e) {
+      toast(errMsg(e, "Could not start payment"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (step === "cash") return <ManualPaySheet invoice={{ ...invoice, status: "sent" }} balance={balance} onClose={onClose} />;
+  if (step === "card") return <CardPaySheet invoice={{ ...invoice, status: "sent" }} customer={customer} balance={balance} onClose={onClose} />;
+  return (
+    <Sheet title={`Take payment · ${money(balance)}`} onClose={onClose}>
+      <div className="stack">
+        <button className="btn good block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("cash")}>{Icon.check} Cash, check or other</button>
+        <button className="btn primary block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("card")}>{Icon.card} Card</button>
+        <p className="small muted" style={{ margin: 0 }}>Card: the customer scans a code or opens a link and pays with their card, Apple Pay or Google Pay. Paid invoices move the job to Completed.</p>
       </div>
     </Sheet>
   );

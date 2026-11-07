@@ -88,22 +88,34 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
 
 /* ---------- Sheet (modal) ---------- */
 export function Sheet({ title, onClose, children }: { title: string; onClose(): void; children: ReactNode }) {
+  const confirm = useConfirm();
+  const dirty = useRef(false);
+  const closeRef = useRef<() => void>(() => {});
+  /** Closing by hand (X, outside tap, Escape) asks first if something was typed and not saved. */
+  closeRef.current = async () => {
+    if (dirty.current && !(await confirm({ title: "Leave without saving?", message: "You have changes that are not saved. If you leave now they will be lost.", confirmLabel: "Leave without saving", cancelLabel: "Keep editing" }))) return;
+    onClose();
+  };
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && closeRef.current();
     window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener("keydown", onKey);
     };
-  }, [onClose]);
+  }, []);
+  const mark = (e: React.SyntheticEvent) => {
+    const t = e.target as HTMLElement;
+    if (/^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName) && !(t as HTMLInputElement).readOnly && !t.hasAttribute("data-nodirty") && (t as HTMLInputElement).type !== "file") dirty.current = true;
+  };
   return (
-    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="sheet" role="dialog" aria-modal="true" aria-label={title}>
+    <div className="overlay" onMouseDown={(e) => e.target === e.currentTarget && closeRef.current()}>
+      <div className="sheet" role="dialog" aria-modal="true" aria-label={title} onInput={mark} onChange={mark}>
         <div className="sheet-head">
           <h2>{title}</h2>
-          <button className="x" onClick={onClose} aria-label="Close">×</button>
+          <button className="x" onClick={() => closeRef.current()} aria-label="Close">×</button>
         </div>
         {children}
       </div>
@@ -130,9 +142,9 @@ export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>,
       <input {...props} className="input" type={show ? "text" : "password"} />
       <button type="button" className="pw-eye" onClick={() => setShow((s) => !s)} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} tabIndex={-1}>
         {show ? (
-          <svg viewBox="0 0 24 24" {...P}><path d="M3 3l18 18M10.6 6.1A9.9 9.9 0 0112 6c5 0 9 4.5 10 6-.5.8-1.7 2.2-3.4 3.4M6.5 7.6C4.3 9 2.8 10.9 2 12c1 1.5 5 6 10 6 1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 004.2 4.2" /></svg>
+          <svg viewBox="0 0 24 24" {...P}><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
         ) : (
-          <svg viewBox="0 0 24 24" {...P}><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+          <svg viewBox="0 0 24 24" {...P}><path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12z" /><circle cx="12" cy="12" r="3" /><path d="M4 20L20 4" strokeWidth={2.4} /></svg>
         )}
       </button>
     </div>

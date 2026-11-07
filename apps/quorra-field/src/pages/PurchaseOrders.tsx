@@ -10,7 +10,7 @@ const badge: Record<POStatus, string> = { draft: "gray", ordered: "blue", receiv
 const total = (po: PurchaseOrder) => po.items.reduce((s, i) => s + lineTotal(i), 0);
 
 function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
-  const { store, jobs, purchaseOrders, customerById, refresh } = useData();
+  const { store, jobs, purchaseOrders, customerById, refresh, business } = useData();
   const toast = useToast();
   const ask = useConfirm();
   const [vendor, setVendor] = useState(po?.vendor ?? "");
@@ -21,7 +21,16 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
   return (
     <Sheet title={po ? `PO #${po.number}` : "New purchase order"} onClose={onClose}>
       <div className="stack">
-        <Field label="Vendor"><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. Ferguson, Home Depot" /></Field>
+        {(business.vendors ?? []).length > 0 && (
+          <Field label="Vendor">
+            <select className="select" value={(business.vendors ?? []).some((v) => v.name === vendor) ? vendor : vendor ? "__other" : ""} onChange={(e) => setVendor(e.target.value === "__other" ? "" : e.target.value)}>
+              <option value="">Choose a vendor</option>
+              {(business.vendors ?? []).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+              <option value="__other">Other (type it)</option>
+            </select>
+          </Field>
+        )}
+        {(!(business.vendors ?? []).length || !(business.vendors ?? []).some((v) => v.name === vendor)) && <Field label={(business.vendors ?? []).length ? "Other vendor" : "Vendor"}><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. Ferguson, Home Depot" /></Field>}
         <Field label="For job (optional)">
           <select className="select" value={jobId} onChange={(e) => setJobId(e.target.value)}>
             <option value="">No job</option>

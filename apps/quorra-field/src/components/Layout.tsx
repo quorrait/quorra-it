@@ -1,5 +1,7 @@
-import { NavLink, Outlet } from "react-router-dom";
-import { Icon } from "./ui";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { Icon, useConfirm } from "./ui";
+import { clearUnsaved, hasUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
 import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
@@ -41,6 +43,26 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 export default function Layout() {
   const { store, business, error, can, me, viewAs, team, leads, locked } = useData();
   const { signOut } = useAuth();
+  const nav = useNavigate();
+  const ask = useConfirm();
+  useEffect(() => {
+    // Leaving a screen with unsaved changes (tab bar, side menu or any in-app link) asks first.
+    const onClick = async (e: MouseEvent) => {
+      if (!hasUnsaved() || e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
+      const a = (e.target as HTMLElement).closest("a[href]") as HTMLAnchorElement | null;
+      if (!a || a.target === "_blank" || a.hasAttribute("download")) return;
+      const url = new URL(a.href, location.href);
+      if (url.origin !== location.origin) return;
+      const dest = url.hash.startsWith("#/") ? url.hash.slice(1) : url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ""), "") + url.search;
+      if (dest === (location.hash.startsWith("#/") ? location.hash.slice(1) : location.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ""), ""))) return;
+      e.preventDefault(); e.stopPropagation();
+      if (await ask({ title: "Leave without saving?", message: "You have changes that are not saved. If you leave now they will be lost.", confirmLabel: "Leave without saving", cancelLabel: "Stay here" })) { clearUnsaved(); nav(dest || "/"); }
+    };
+    const onUnload = (e: BeforeUnloadEvent) => { if (hasUnsaved()) { e.preventDefault(); e.returnValue = ""; } };
+    document.addEventListener("click", onClick, true);
+    window.addEventListener("beforeunload", onUnload);
+    return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("beforeunload", onUnload); };
+  }, [ask, nav]);
   const newLeads = leads.filter((l) => l.stage === "new").length;
   const mine = (l: NavItem) => (locked ? l.f === "billing" : !l.f || can(l.f));
   return (

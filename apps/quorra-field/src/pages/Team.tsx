@@ -5,7 +5,7 @@ import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components
 import ColorPick from "../components/ColorPick";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { Invite, Role, TeamMember } from "../lib/types";
-import { createInvite, inviteUrl, listInvites, revokeAccess } from "../lib/team";
+import { createInvite, emailInvite, inviteUrl, listInvites, revokeAccess } from "../lib/team";
 import { planByName } from "../lib/plans";
 import { hasSupabase } from "../lib/supabase";
 
@@ -31,7 +31,12 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
     const used = 1 + invites.filter((i) => i.status !== "revoked" && i.team_member_id !== m.id).length; // the owner plus everyone else with a login or open invite
     if (used >= seats) return toast(`Your ${subscription?.plan} plan includes ${seats} ${seats === 1 ? "login" : "logins"}. Upgrade under Billing to add more.`);
     setBusy(true);
-    try { await createInvite({ id: m.id, email: m.email, role: m.role }); await reload(); }
+    try {
+      const inv = await createInvite({ id: m.id, email: m.email, role: m.role });
+      await reload();
+      const bad = await emailInvite(inv.code);
+      toast(bad ?? `Invite emailed to ${m.email}`);
+    }
     catch (e) { toast(errMsg(e, "Could not create the invite")); }
     finally { setBusy(false); }
   }
@@ -57,7 +62,8 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
           <span className="badge blue">Invite sent, waiting for sign-up</span>
           <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Invite link" />
           <div className="row wrap">
-            <a className="btn primary" href={`mailto:${m.email}?subject=${encodeURIComponent(`Join ${business.name} on Quorra Dispatch`)}&body=${encodeURIComponent(msg)}`}>Email invite</a>
+            <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); const bad = mine && await emailInvite(mine.code); setBusy(false); toast(bad || `Invite emailed to ${m.email}`); }}>Resend email</button>
+            <a className="btn" href={`mailto:${m.email}?subject=${encodeURIComponent(`Join ${business.name} on Quorra Dispatch`)}&body=${encodeURIComponent(msg)}`}>Email invite</a>
             {m.phone && <a className="btn" href={`sms:${m.phone}?&body=${encodeURIComponent(msg)}`}>Text invite</a>}
             <button className="btn" onClick={async () => { try { await navigator.clipboard.writeText(link); toast("Invite link copied"); } catch { toast("Select the link and copy it"); } }}>Copy link</button>
           </div>

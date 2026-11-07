@@ -70,11 +70,18 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
     <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Calendar: <b>{label}</b></p>
       {how}
-      <div className="grid2">
-        <a className="btn primary" style={{ minHeight: 52 }} href={webcalUrl(token)}>Add to iPhone calendar</a>
-        <a className="btn primary" style={{ minHeight: 52 }} href={google} target="_blank" rel="noopener">Add to Google Calendar</a>
+      <div className="opt-group">
+        <h4>iPhone, iPad or Mac (Apple Calendar)</h4>
+        <a className="btn primary" style={{ minHeight: 48 }} href={webcalUrl(token)}>Add to Apple Calendar</a>
+        <div className="small muted">Open this in Safari and tap Subscribe. If it says it cannot open the link (this can happen from the home-screen app), tap Copy link below, then go to Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, and paste it.</div>
+        <div><button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button></div>
       </div>
-      <div className="small muted">Tap once and your phone's calendar opens with the subscription ready to confirm. After that, jobs stay up to date on their own.</div>
+      <div className="opt-group">
+        <h4>Google Calendar (Android, or the Google app)</h4>
+        <a className="btn primary" style={{ minHeight: 48 }} href={google} target="_blank" rel="noopener">Add to Google Calendar</a>
+        <div className="small muted">Google does not let its phone app add a calendar from a link, so this opens calendar.google.com. Confirm the subscription there once. After that it appears in the Google Calendar app on every phone signed in to that Google account. On a phone you can also tap Copy link, open Google Calendar in a browser, choose Other calendars, From URL, and paste it.</div>
+        <div><button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button></div>
+      </div>
       <details className="small">
         <summary className="bold">Other calendars or manual setup</summary>
         <div className="stack" style={{ marginTop: 8 }}>

@@ -115,7 +115,7 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:{{accent}}
     <label>Service address<input name="address" autocomplete="street-address"></label>
   </div>
   <label>Type of service<select name="service">{{service_options}}</select></label>
-  <label>What is going on?<textarea name="message" placeholder="Describe the problem or the work you want done"></textarea></label>
+  <label>How can we help you?<textarea name="message" placeholder="Describe the problem or the work you want done"></textarea></label>
   ${HP}
   <button type="submit">{{button|Request a call back}}</button>
 </form>

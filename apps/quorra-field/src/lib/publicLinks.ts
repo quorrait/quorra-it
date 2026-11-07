@@ -16,4 +16,4 @@ export const leadFormPreviewUrl = (name?: string, cfg?: object) => `${root()}lea
 
 /** Subscribable calendar feed. webcal:// opens the phone's calendar app directly. */
 export const feedUrl = (token?: string | null) => (hasSupabase && token ? `${apiBase()}/calendar-feed/jobs.ics?t=${token}` : "");
-export const webcalUrl = (token?: string | null) => feedUrl(token).replace(/^https?:/, "webcals:");
+export const webcalUrl = (token?: string | null) => feedUrl(token).replace(/^https?:/, "webcal:");

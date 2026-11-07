@@ -21,7 +21,14 @@ export interface Business {
   yelp_url?: string; // Yelp review link, also used by "Ask for a review"
   review_url?: string; // Google review link, used by "Ask for a review"
   lead_form?: LeadFormSettings; // website request form wording and fields
+  vendors?: Vendor[]; // preset vendors for purchase orders
+  pay_period?: PayPeriod; // how timesheets are grouped
+  hours?: BusinessHours; // open hours for customer scheduling
 }
+export interface Vendor { name: string; phone?: string; email?: string }
+export interface PayPeriod { type?: "weekly" | "biweekly" | "semimonthly" | "monthly"; anchor?: string } // anchor: a date a period starts on (weekly/biweekly)
+export interface DayHours { open: boolean; start: string; end: string } // "08:00" 24h
+export interface BusinessHours { days?: DayHours[]; job_minutes?: number; buffer_minutes?: number; notice_hours?: number; max_days?: number; tz?: string } // days[0] = Sunday
 
 export interface Customer {
   id: string;
@@ -98,7 +105,7 @@ export interface Estimate {
   public_token?: string; // lets the customer open and accept the quote from a link (live mode)
 }
 
-export type LeadStage = "new" | "contacted" | "send_quote" | "quote_sent" | "work_order" | "declined";
+export type LeadStage = "new" | "contacted" | "send_quote" | "quote_sent" | "work_order" | "declined" | "completed";
 export interface Lead {
   id: string;
   name: string;

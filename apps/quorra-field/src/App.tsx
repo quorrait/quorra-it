@@ -3,6 +3,7 @@ import { AuthProvider, DataProvider, useAuth } from "./lib/app";
 import { ConfirmProvider, Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
+import Contact from "./pages/Contact";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Jobs from "./pages/Jobs";
@@ -56,6 +57,7 @@ function Gate() {
   if (!email) return (
     <Routes>
       <Route path="plans" element={<Plans />} />
+      <Route path="contact" element={<Contact />} />
       <Route path="start" element={<Start />} />
       <Route path="join" element={<Login />} />
       <Route path="*" element={<Login />} />
@@ -65,6 +67,7 @@ function Gate() {
     <DataProvider>
       <Locked>
       <Routes>
+        <Route path="contact" element={<Contact />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<Calendar />} />

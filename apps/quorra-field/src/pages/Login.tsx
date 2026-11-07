@@ -32,7 +32,11 @@ export default function Login() {
     setErr(null);
     setInfo(null);
     try {
-      if (mode === "in") await auth.signIn(email, password);
+      if (mode === "in") {
+        await auth.signIn(email, password);
+        // Ask the browser to offer "save password" right now, not later when the screen changes.
+        try { const PC = (window as unknown as { PasswordCredential?: new (d: { id: string; password: string; name?: string }) => Credential }).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: email })); } catch { /* not supported */ }
+      }
       else {
         if (password !== confirm) throw new Error("The passwords do not match.");
         const r = await auth.signUp(email, password);
@@ -48,7 +52,7 @@ export default function Login() {
   const joining = Boolean(code);
   return (
     <div className="auth">
-      <form className="auth-card stack" onSubmit={submit}>
+      <form className="auth-card stack" method="post" action="#" onSubmit={submit}>
         <div className="auth-head">
           {mode === "in" ? (
             <img className="auth-wide" src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt={APP_NAME} />
@@ -65,10 +69,10 @@ export default function Login() {
         {joining && mode === "in" && <div className="notice">Sign in with the email you were invited with to join the team.</div>}
 
         <Field label="Email">
-          <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
+          <input className="input" type="email" name="email" id="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
         </Field>
         <Field label="Password">
-          <PasswordInput autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
+          <PasswordInput name="password" id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
         </Field>
         {mode === "up" && (
           <Field label="Confirm password">
