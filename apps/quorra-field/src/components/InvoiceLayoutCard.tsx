@@ -6,6 +6,8 @@ import { buildPdf } from "../lib/pdf";
 import { DOC_DEFAULTS, docSettings } from "../lib/docSettings";
 import type { DocSettings } from "../lib/types";
 import ColorPick from "./ColorPick";
+import TemplateGallery from "./TemplateGallery";
+import { INVOICE_TEMPLATES } from "../lib/invoiceTemplates";
 import { MAX_DOC_HTML, PLACEHOLDERS, STARTER_DOC, downloadText, openPrintable, renderTemplate } from "../lib/customHtml";
 
 const SWATCHES = ["#0F2742", "#E8590C", "#1D4ED8", "#047857", "#7C3AED", "#111827"];
@@ -19,6 +21,16 @@ export default function InvoiceLayoutCard() {
   const [busy, setBusy] = useState(false);
   const [custom, setCustom] = useState<string | null>(null);
   const set = <K extends keyof DocSettings>(k: K, v: DocSettings[K]) => setD((x) => ({ ...x, [k]: v }));
+  const norm = (o: DocSettings) => JSON.stringify(Object.entries(o).filter(([k, v]) => v !== undefined && !(k === "custom_html" && !v)).sort(([a], [b]) => (a < b ? -1 : 1)));
+  const dirty = norm(d) !== norm(docSettings(business.doc_settings));
+
+  /** Saves right away, so choosing, uploading or removing a layout never depends on finding the Save button. */
+  async function saveNow(next: DocSettings, msg = "Layout saved") {
+    setBusy(true);
+    try { await store.saveBusiness({ doc_settings: next }); await refresh(); toast(msg); return true; }
+    catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); return false; }
+    finally { setBusy(false); }
+  }
 
   function makePreview() {
     const inv = invoices.find((i) => i.status !== "void" && i.status !== "draft") ?? invoices[0];
@@ -32,14 +44,20 @@ export default function InvoiceLayoutCard() {
   function sampleData() {
     const inv = invoices.find((i) => i.status !== "void" && i.status !== "draft") ?? invoices[0];
     return inv
-      ? { kind: "Invoice" as const, number: inv.number, business, customer: customers.find((c) => c.id === inv.customer_id), items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, notes: inv.notes }
-      : { kind: "Invoice" as const, number: 1001, business, customer: undefined, items: [{ description: "Service call and diagnosis", qty: 1, unit_cents: 12500 }, { description: "Replacement part", qty: 1, unit_cents: 8900 }], tax_rate: business.tax_rate, issued: new Date().toISOString(), dateLabel: "Due", dateValue: new Date(Date.now() + 14 * 86400_000).toISOString(), notes: "" };
+      ? { kind: "Invoice" as const, number: inv.number, business: { ...business, doc_settings: d }, customer: customers.find((c) => c.id === inv.customer_id), items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, notes: inv.notes }
+      : { kind: "Invoice" as const, number: 1001, business: { ...business, doc_settings: d }, customer: undefined, items: [{ description: "Service call and diagnosis", qty: 1, unit_cents: 12500 }, { description: "Replacement part", qty: 1, unit_cents: 8900 }], tax_rate: business.tax_rate, issued: new Date().toISOString(), dateLabel: "Due", dateValue: new Date(Date.now() + 14 * 86400_000).toISOString(), notes: "" };
+  }
+  /** Fixed sample data so every template thumbnail looks complete. */
+  function galleryData() {
+    return { kind: "Invoice" as const, number: 1048, business: { ...business, doc_settings: d, name: business.name || "Your Business", phone: business.phone || "(555) 123-4567", email: business.email || "you@company.com" }, customer: { id: "x", name: "Dana Whitfield", phone: "(555) 987-6543", email: "dana@example.com", address: "214 Oak Street, Rocklin CA", notes: "" } as never, items: [{ description: "Service call and diagnosis", qty: 1, unit_cents: 12500 }, { description: "Replacement capacitor", qty: 1, unit_cents: 8900 }, { description: "Labor", qty: 2, unit_cents: 9500 }], tax_rate: business.tax_rate, issued: new Date().toISOString(), dateLabel: "Due", dateValue: new Date(Date.now() + 14 * 86400_000).toISOString(), notes: "Payment due within 14 days. Thank you!" };
   }
   async function upload(f?: File) {
     if (!f) return;
     if (f.size > MAX_DOC_HTML) return toast(`That file is too big. Keep it under ${Math.round(MAX_DOC_HTML / 1000)} KB.`);
-    set("custom_html", await f.text());
-    toast("Layout loaded. Preview it, then Save layout.");
+    const html = await f.text();
+    const next = { ...d, custom_html: html };
+    setD(next);
+    await saveNow(next, "Layout uploaded and saved");
   }
 
   const check = (k: "show_logo" | "show_address" | "show_phone" | "show_email" | "show_status", label: string) => (
@@ -52,14 +70,21 @@ export default function InvoiceLayoutCard() {
       <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Choose how your invoices and estimates look. Changes apply to every new PDF you send.</p>
       <div className="feature">
-        <div className="row between"><div className="feature-title">Use your own HTML layout</div><span className="badge blue">{d.custom_html ? "In use" : "Upload yours"}</span></div>
+        <div className="row between"><div className="feature-title">Ready-made and custom HTML layouts</div><span className="badge blue">{d.custom_html ? "In use" : "Pick one"}</span></div>
         <div className="stack">
+          <div className="bold small">Start from a ready-made layout</div>
+          <TemplateGallery items={INVOICE_TEMPLATES} pageW={816} pageH={1056} current={d.custom_html} busy={busy}
+            render={(h) => renderTemplate(h, galleryData())}
+            previewNote="Sample data shown. Your own customer and line items fill in when you print an invoice."
+            onPick={(t) => { const next = { ...d, custom_html: t.html }; setD(next); void saveNow(next, `${t.name} layout saved`); }} />
+          <p className="small muted" style={{ margin: 0 }}>After choosing one, open an invoice or estimate and tap <b>Print custom layout</b>. Colors follow your header color below. You can edit the code afterwards.</p>
+          <div className="bold small" style={{ marginTop: 6 }}>Or use your own</div>
           <p className="muted" style={{ margin: 0 }}>Upload an HTML file, or paste it, and use the placeholders below where each value should go. On an invoice or estimate, choose <b>Print custom layout</b> and save it as a PDF from the print window. Emailed PDFs keep the standard layout above. Scripts and forms are removed for safety.</p>
           <div className="row wrap">
             <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
             <button type="button" className="btn" onClick={() => downloadText("invoice-layout-starter.html", STARTER_DOC)}>Download a starter file</button>
             {d.custom_html && <button type="button" className="btn" onClick={() => setCustom(renderTemplate(d.custom_html as string, sampleData()))}>Preview my layout</button>}
-            {d.custom_html && <button type="button" className="btn" onClick={() => set("custom_html", "")}>Remove it</button>}
+            {d.custom_html && <button type="button" className="btn" disabled={busy} onClick={() => { const next = { ...d, custom_html: "" }; setD(next); void saveNow(next, "Custom layout removed"); }}>Remove it</button>}
           </div>
           <textarea className="textarea" rows={6} value={d.custom_html ?? ""} maxLength={MAX_DOC_HTML} onChange={(e) => set("custom_html", e.target.value)} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
           <div className="muted" style={{ columnGap: 16, display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(210px,1fr))" }}>
@@ -90,9 +115,15 @@ export default function InvoiceLayoutCard() {
       <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
       <div className="row wrap">
         <button className="btn" onClick={makePreview}>Preview invoice</button>
-        <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); try { await store.saveBusiness({ doc_settings: d }); await refresh(); toast("Layout saved"); } catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); } }}>Save layout</button>
+        <button className="btn primary" disabled={busy} onClick={() => void saveNow(d)}>Save layout</button>
         <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
       </div>
+      {dirty && (
+        <div className="savebar" role="status">
+          <span>You have unsaved changes</span>
+          <button className="btn primary sm" disabled={busy} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save layout"}</button>
+        </div>
+      )}
       {custom && (
         <Sheet title="Your layout (sample)" onClose={() => setCustom(null)}>
           <div className="stack">

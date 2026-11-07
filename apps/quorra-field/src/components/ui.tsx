@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type InputHTMLAttributes, type ReactNode } from "react";
 import type { Bar } from "../lib/stats";
 import { moneyShort } from "../lib/money";
 import type { InvoiceStatus, JobStatus } from "../lib/types";
@@ -107,6 +107,23 @@ export function Sheet({ title, onClose, children }: { title: string; onClose(): 
         </div>
         {children}
       </div>
+    </div>
+  );
+}
+
+/** Password box with an eye button to show or hide what was typed. */
+export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
+  const [show, setShow] = useState(false);
+  return (
+    <div className="pw">
+      <input {...props} className="input" type={show ? "text" : "password"} />
+      <button type="button" className="pw-eye" onClick={() => setShow((s) => !s)} aria-label={show ? "Hide password" : "Show password"} aria-pressed={show} tabIndex={-1}>
+        {show ? (
+          <svg viewBox="0 0 24 24" {...P}><path d="M3 3l18 18M10.6 6.1A9.9 9.9 0 0112 6c5 0 9 4.5 10 6-.5.8-1.7 2.2-3.4 3.4M6.5 7.6C4.3 9 2.8 10.9 2 12c1 1.5 5 6 10 6 1.6 0 3-.4 4.3-1M9.9 9.9a3 3 0 004.2 4.2" /></svg>
+        ) : (
+          <svg viewBox="0 0 24 24" {...P}><path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+        )}
+      </button>
     </div>
   );
 }

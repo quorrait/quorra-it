@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { APP_NAME } from "../lib/config";
-import { Field } from "../components/ui";
+import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
 
 /** Sign in. Creating a login here is only possible through a team invite; new businesses buy a plan first. */
@@ -68,11 +68,11 @@ export default function Login() {
           <input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
         </Field>
         <Field label="Password">
-          <input className="input" type="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
+          <PasswordInput autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
         </Field>
         {mode === "up" && (
           <Field label="Confirm password">
-            <input className="input" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} placeholder="Type it again" />
+            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} placeholder="Type it again" />
           </Field>
         )}
 

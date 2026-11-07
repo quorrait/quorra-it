@@ -6,7 +6,7 @@ import { hasSupabase, supabase } from "../lib/supabase";
 import { PLANS } from "../lib/plans";
 import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
-import { Field } from "../components/ui";
+import { Field, PasswordInput } from "../components/ui";
 
 /** Buy service: create the account, then go straight to Stripe to pay for the plan. */
 export default function Start() {
@@ -58,8 +58,8 @@ export default function Start() {
         {!hasSupabase && <div className="notice">Demo mode: no payment is taken.</div>}
         <Field label="Business name"><input className="input" autoComplete="organization" value={biz} onChange={(e) => setBiz(e.target.value)} placeholder="Summit Home Services" required={hasSupabase} /></Field>
         <Field label="Email"><input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required={hasSupabase} /></Field>
-        <Field label="Password"><input className="input" type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required={hasSupabase} placeholder="At least 6 characters" /></Field>
-        <Field label="Confirm password"><input className="input" type="password" autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={6} required={hasSupabase} placeholder="Type it again" /></Field>
+        <Field label="Password"><PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required={hasSupabase} placeholder="At least 6 characters" /></Field>
+        <Field label="Confirm password"><PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={6} required={hasSupabase} placeholder="Type it again" /></Field>
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
         <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : hasSupabase ? "Start free trial" : "Open the demo"}</button>

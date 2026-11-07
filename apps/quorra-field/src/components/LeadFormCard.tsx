@@ -6,6 +6,8 @@ import { leadFormPreviewUrl, leadFormUrl } from "../lib/publicLinks";
 import { Field, Sheet, useToast } from "./ui";
 import ColorPick from "./ColorPick";
 import { MAX_FORM_HTML, STARTER_FORM, downloadText } from "../lib/customHtml";
+import TemplateGallery from "./TemplateGallery";
+import { LEAD_FORM_TEMPLATES, fillFormTemplate } from "../lib/leadFormTemplates";
 
 /** Website lead form: explains how it works, previews it, and gives the link and embed code. */
 export default function LeadFormCard() {
@@ -18,17 +20,23 @@ export default function LeadFormCard() {
   const set = (p: Partial<LeadFormSettings>) => { setCfg((c) => ({ ...c, ...p })); setDirty(true); };
   const [servicesText, setServicesText] = useState((business.lead_form?.services ?? []).join("\n"));
   const previewSrc = useMemo(() => leadFormPreviewUrl(business.name, { ...cfg, services: servicesText.split("\n").map((x) => x.trim()).filter(Boolean) }), [business.name, cfg, servicesText]);
-  async function save() {
+  const [saving, setSaving] = useState(false);
+  /** Saves the form. Pass the new settings to save a change made a moment ago (state has not updated yet). */
+  async function save(override?: LeadFormSettings, msg = "Form saved. Your website form updates right away.") {
+    const base = override ?? cfg;
     const services = servicesText.split("\n").map((x) => x.trim()).filter(Boolean);
-    const next = { ...cfg, services: services.length ? services : undefined, custom_html: cfg.custom_html?.trim() ? cfg.custom_html : undefined };
-    try { await store.saveBusiness({ lead_form: next }); await refresh(); setDirty(false); toast("Form saved. Your website form updates right away."); }
+    const next = { ...base, services: services.length ? services : undefined, custom_html: base.custom_html?.trim() ? base.custom_html : undefined };
+    setSaving(true);
+    try { await store.saveBusiness({ lead_form: next }); await refresh(); setDirty(false); toast(msg); }
     catch (e) { toast(errMsg(e, "Could not save")); }
+    finally { setSaving(false); }
   }
   async function upload(f?: File) {
     if (!f) return;
     if (f.size > MAX_FORM_HTML) return toast(`That file is too big. Keep it under ${Math.round(MAX_FORM_HTML / 1000)} KB.`);
-    set({ custom_html: await f.text() });
-    toast("Form loaded. Check the preview, then Save form.");
+    const next = { ...cfg, custom_html: await f.text() };
+    setCfg(next);
+    await save(next, "Form uploaded and saved. Your website form updates right away.");
   }
   const embed = `<iframe src="${live || "https://your-form-link"}" title="Request service" style="width:100%;max-width:600px;height:760px;border:0" loading="lazy"></iframe>`;
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the text and copy it manually."); } };
@@ -63,18 +71,31 @@ export default function LeadFormCard() {
         <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
         <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
         <div className="feature">
-          <div className="row between"><div className="feature-title">Use your own HTML form</div><span className="badge blue">{cfg.custom_html ? "In use" : "Upload yours"}</span></div>
+          <div className="row between"><div className="feature-title">Ready-made and custom HTML forms</div><span className="badge blue">{cfg.custom_html ? "In use" : "Pick one"}</span></div>
           <div className="stack" style={{ marginTop: 10 }}>
-            <p className="muted" style={{ margin: 0 }}>Upload your own form design as an HTML file, or paste it. It replaces the form above. Give the fields these names so requests land in Leads: <code>name</code>, <code>phone</code>, <code>email</code>, <code>address</code>, <code>service</code>, <code>message</code>. Any other field is added to the lead's notes. Your page runs in a sealed box, so it can't touch your account.</p>
+            <div className="bold small">Start from a ready-made form</div>
+            <TemplateGallery items={LEAD_FORM_TEMPLATES} pageW={560} pageH={760} current={cfg.custom_html} busy={saving}
+              render={(h) => fillFormTemplate(h, business.name, cfg.accent)}
+              previewNote="Preview only. Your accent color and company name fill in automatically."
+              onPick={(t) => { const next = { ...cfg, custom_html: t.html }; setCfg(next); void save(next, `${t.name} form saved. Your website form updates right away.`); }} />
+            <p className="small muted" style={{ margin: 0 }}>Choosing one replaces the built-in form and goes live right away. The accent color above recolors it. Pick "Go back to the built-in form" any time.</p>
+            <div className="bold small" style={{ marginTop: 6 }}>Or use your own</div>
+            <p className="muted" style={{ margin: 0 }}>Upload your own form design as an HTML file, or paste it. It replaces the form above. You can use <code>{"{{accent}}"}</code> and <code>{"{{business_name}}"}</code> for your color and company name. Give the fields these names so requests land in Leads: <code>name</code>, <code>phone</code>, <code>email</code>, <code>address</code>, <code>service</code>, <code>message</code>. Any other field is added to the lead's notes. Your page runs in a sealed box, so it can't touch your account.</p>
             <div className="row wrap">
               <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
               <button type="button" className="btn" onClick={() => downloadText("lead-form-starter.html", STARTER_FORM)}>Download a starter file</button>
-              {cfg.custom_html && <button type="button" className="btn" onClick={() => set({ custom_html: "" })}>Go back to the built-in form</button>}
+              {cfg.custom_html && <button type="button" className="btn" disabled={saving} onClick={() => { const next = { ...cfg, custom_html: "" }; setCfg(next); void save(next, "Back to the built-in form"); }}>Go back to the built-in form</button>}
             </div>
             <textarea className="textarea" rows={6} value={cfg.custom_html ?? ""} maxLength={MAX_FORM_HTML} onChange={(e) => set({ custom_html: e.target.value })} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
           </div>
         </div>
-        <div><button className="btn primary" disabled={!dirty} onClick={() => void save()}>Save form</button></div>
+        <div><button className="btn primary" disabled={!dirty || saving} onClick={() => void save()}>Save form</button></div>
+        {dirty && (
+          <div className="savebar" role="status">
+            <span>You have unsaved changes</span>
+            <button className="btn primary sm" disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : "Save form"}</button>
+          </div>
+        )}
       </div>
 
       <div className="stack" style={{ gap: 6 }}>

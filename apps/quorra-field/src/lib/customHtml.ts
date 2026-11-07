@@ -49,7 +49,7 @@ export const PLACEHOLDERS: [string, string][] = [
   ["{{business_name}}", "Your business name"], ["{{business_phone}}", "Your phone"], ["{{business_email}}", "Your email"], ["{{business_address}}", "Your address"], ["{{logo}}", "Your logo (an image)"],
   ["{{customer_name}}", "Customer name"], ["{{customer_address}}", "Customer address"], ["{{customer_phone}}", "Customer phone"], ["{{customer_email}}", "Customer email"],
   ["{{items_table}}", "Whole table of line items"], ["{{items}}", "Just the table rows (<tr>), for your own table"],
-  ["{{subtotal}}", "Subtotal"], ["{{tax}}", "Tax"], ["{{total}}", "Total"], ["{{paid}}", "Amount paid"], ["{{balance}}", "Balance due"], ["{{status}}", "Paid or Unpaid"], ["{{notes}}", "Notes"],
+  ["{{subtotal}}", "Subtotal"], ["{{tax}}", "Tax"], ["{{total}}", "Total"], ["{{paid}}", "Amount paid"], ["{{balance}}", "Balance due"], ["{{status}}", "Paid or Unpaid"], ["{{notes}}", "Notes"], ["{{accent}}", "Your header color (for CSS)"],
 ];
 
 export function renderTemplate(tpl: string, d: DocData): string {
@@ -64,6 +64,7 @@ export function renderTemplate(tpl: string, d: DocData): string {
     customer_name: esc(d.customer?.name ?? ""), customer_address: esc(d.customer?.address ?? ""), customer_phone: esc(d.customer?.phone ?? ""), customer_email: esc(d.customer?.email ?? ""),
     items_table: table, items: rows,
     subtotal: esc(money(t.subtotal)), tax: esc(money(t.tax)), total: esc(money(t.total)), paid: esc(money(paid)), balance: esc(money(Math.max(0, t.total - paid))),
+    accent: /^#[0-9a-f]{6}$/i.test(d.business.doc_settings?.accent ?? "") ? (d.business.doc_settings!.accent as string) : "#0F2742",
     status: d.kind === "Invoice" ? (paid >= t.total && t.total > 0 ? "Paid" : "Unpaid") : "", notes: esc(d.notes ?? "").replace(/\n/g, "<br>"),
   };
   return sanitizeTemplate(tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => v[k.toLowerCase()] ?? ""));

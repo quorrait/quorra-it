@@ -1,0 +1,246 @@
+/**
+ * Ready-made invoice and estimate layouts. Each one is plain HTML that uses the same {{placeholders}} as an
+ * uploaded layout, so they can be edited after choosing. {{accent}} follows the header color picked in
+ * "Invoice and estimate layout", so every template can be recolored without touching the code.
+ */
+export interface DocTemplateChoice { id: string; name: string; desc: string; html: string }
+
+const PRINT = "@page{margin:12mm} body{-webkit-print-color-adjust:exact;print-color-adjust:exact}";
+
+const CLASSIC = `<!doctype html>
+<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Georgia,"Times New Roman",serif;color:#1a1a1a;margin:0;padding:40px;font-size:14px;line-height:1.45}
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:18px}
+.biz{font-size:13px;color:#444}.biz h2{margin:6px 0 2px;font-size:21px;color:#1a1a1a}
+.doc{text-align:right}.doc h1{margin:0;font-size:30px;letter-spacing:.14em;font-weight:normal;color:{{accent}}}
+.meta{display:flex;gap:44px;margin:24px 0 18px;flex-wrap:wrap}
+.k{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#777;margin-bottom:4px}
+table{width:100%;border-collapse:collapse}
+th{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:8px 6px;border-bottom:1px solid #1a1a1a}
+th.r{text-align:right}td{padding:10px 6px;border-bottom:1px solid #ddd;vertical-align:top}
+.totals{width:290px;margin:18px 0 0 auto}.totals div{display:flex;justify-content:space-between;padding:5px 0}
+.totals .due{border-top:2px solid #1a1a1a;margin-top:6px;padding-top:9px;font-size:17px;font-weight:bold}
+.notes{margin-top:28px;font-size:13px;color:#444}
+.thanks{margin-top:34px;text-align:center;font-style:italic;color:#666}
+${PRINT}
+</style></head>
+<body>
+<div class="top">
+  <div class="biz">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
+  <div class="doc"><h1>{{title}}</h1><div>No. {{number}}</div></div>
+</div>
+<div class="meta">
+  <div><div class="k">Bill to</div><b>{{customer_name}}</b><br>{{customer_address}}<br>{{customer_phone}}</div>
+  <div><div class="k">Issued</div>{{issued}}</div>
+  <div><div class="k">{{date_label}}</div>{{date_value}}</div>
+  <div><div class="k">Status</div><b>{{status}}</b></div>
+</div>
+<table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+<div class="totals">
+  <div><span>Subtotal</span><span>{{subtotal}}</span></div>
+  <div><span>Tax</span><span>{{tax}}</span></div>
+  <div><span>Paid</span><span>{{paid}}</span></div>
+  <div class="due"><span>Balance due</span><span>{{balance}}</span></div>
+</div>
+<div class="notes">{{notes}}</div>
+<div class="thanks">Thank you for your business.</div>
+</body></html>
+`;
+
+const MODERN = `<!doctype html>
+<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:"Segoe UI",Helvetica,Arial,sans-serif;color:#1f2937;margin:0;font-size:14px;line-height:1.45}
+.band{background:{{accent}};color:#fff;padding:30px 40px;display:flex;justify-content:space-between;align-items:center;gap:20px}
+.band h2{margin:0;font-size:22px}.band .sub{opacity:.85;font-size:13px;margin-top:2px}
+.band h1{margin:0;font-size:32px;letter-spacing:.1em;text-align:right}.band .no{text-align:right;opacity:.9}
+.wrap{padding:28px 40px 36px}
+.cols{display:flex;justify-content:space-between;gap:30px;flex-wrap:wrap;margin-bottom:24px}
+.k{font-size:11px;text-transform:uppercase;letter-spacing:.09em;color:#6b7280;font-weight:700;margin-bottom:4px}
+table{width:100%;border-collapse:collapse}
+th{background:#f3f4f6;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:#4b5563;padding:10px 12px}
+th.r{text-align:right}td{padding:12px;border-bottom:1px solid #eceff3;vertical-align:top}
+tbody tr:nth-child(even) td{background:#fafbfc}
+.totals{width:300px;margin:22px 0 0 auto;background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px 18px}
+.totals div{display:flex;justify-content:space-between;padding:4px 0}
+.totals .due{border-top:1px solid #d1d5db;margin-top:8px;padding-top:10px;font-size:18px;font-weight:700;color:{{accent}}}
+.pill{display:inline-block;padding:3px 12px;border-radius:99px;background:#eef2ff;font-weight:700;font-size:12px}
+.notes{margin-top:26px;color:#4b5563;font-size:13px}
+.foot{margin-top:30px;padding-top:14px;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;text-align:center}
+${PRINT}
+</style></head>
+<body>
+<div class="band">
+  <div>{{logo}}<h2>{{business_name}}</h2><div class="sub">{{business_phone}} &nbsp; {{business_email}}</div></div>
+  <div><h1>{{title}}</h1><div class="no">No. {{number}}</div></div>
+</div>
+<div class="wrap">
+  <div class="cols">
+    <div><div class="k">Billed to</div><b>{{customer_name}}</b><br>{{customer_address}}<br>{{customer_email}}</div>
+    <div><div class="k">Issued</div>{{issued}}<div class="k" style="margin-top:10px">{{date_label}}</div>{{date_value}}</div>
+    <div><div class="k">Status</div><span class="pill">{{status}}</span></div>
+  </div>
+  <table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+  <div class="totals">
+    <div><span>Subtotal</span><span>{{subtotal}}</span></div>
+    <div><span>Tax</span><span>{{tax}}</span></div>
+    <div><span>Paid</span><span>{{paid}}</span></div>
+    <div class="due"><span>Balance due</span><span>{{balance}}</span></div>
+  </div>
+  <div class="notes">{{notes}}</div>
+  <div class="foot">{{business_name}} &nbsp; {{business_address}}</div>
+</div>
+</body></html>
+`;
+
+const MINIMAL = `<!doctype html>
+<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:300;color:#222;margin:0;padding:56px 52px;font-size:14px;line-height:1.55}
+.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding-bottom:22px}
+.head h1{margin:0;font-size:13px;font-weight:600;letter-spacing:.3em}
+.head .no{font-size:30px;font-weight:200;margin-top:4px}
+.biz{text-align:right;font-size:12.5px;color:#555}.biz b{font-weight:600;color:#222;font-size:14px}
+.rule{height:2px;background:{{accent}};width:56px;margin:0 0 26px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:34px}
+.k{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#999;margin-bottom:5px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#999;font-weight:600;text-align:left;padding:0 0 10px;border-bottom:1px solid #ddd}
+th.r{text-align:right}td{padding:14px 0;border-bottom:1px solid #eee;vertical-align:top}
+.totals{width:260px;margin:22px 0 0 auto;font-size:13.5px}.totals div{display:flex;justify-content:space-between;padding:4px 0;color:#555}
+.totals .due{color:#111;font-size:26px;font-weight:200;border-top:1px solid #ddd;margin-top:10px;padding-top:14px;align-items:baseline}
+.totals .due span:first-child{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:#999}
+.notes{margin-top:44px;color:#666;font-size:12.5px;max-width:420px}
+${PRINT}
+</style></head>
+<body>
+<div class="head">
+  <div><h1>{{title}}</h1><div class="no">{{number}}</div></div>
+  <div class="biz">{{logo}}<br><b>{{business_name}}</b><br>{{business_address}}<br>{{business_phone}}<br>{{business_email}}</div>
+</div>
+<div class="rule"></div>
+<div class="grid">
+  <div><div class="k">For</div>{{customer_name}}<br>{{customer_address}}</div>
+  <div><div class="k">Issued</div>{{issued}}<div class="k" style="margin-top:12px">{{date_label}}</div>{{date_value}}</div>
+  <div><div class="k">Status</div>{{status}}</div>
+</div>
+<table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+<div class="totals">
+  <div><span>Subtotal</span><span>{{subtotal}}</span></div>
+  <div><span>Tax</span><span>{{tax}}</span></div>
+  <div><span>Paid</span><span>{{paid}}</span></div>
+  <div class="due"><span>Balance due</span><span>{{balance}}</span></div>
+</div>
+<div class="notes">{{notes}}</div>
+</body></html>
+`;
+
+const BOLD = `<!doctype html>
+<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:"Arial Black",Arial,Helvetica,sans-serif;color:#111;margin:0;padding:0;font-size:14px;line-height:1.45}
+.pad{padding:36px 40px 0}
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
+.top h1{margin:0;font-size:58px;line-height:.95;letter-spacing:-.02em;color:{{accent}};font-weight:900}
+.top .no{font-family:Arial,sans-serif;font-weight:700;color:#444;margin-top:8px}
+.due{background:#111;color:#fff;padding:16px 22px;border-radius:6px;text-align:right;min-width:200px}
+.due .l{font:700 11px Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#bbb}
+.due .v{font-size:30px;margin-top:2px}
+.sec{font-family:Arial,sans-serif;display:flex;gap:30px;flex-wrap:wrap;margin:30px 0 24px}
+.sec>div{border-left:5px solid {{accent}};padding-left:12px;min-width:160px}
+.k{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;color:#777;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif}
+th{background:#111;color:#fff;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:11px 12px}
+th.r{text-align:right}td{padding:12px;border-bottom:1px solid #e5e5e5;vertical-align:top}
+.totals{font-family:Arial,sans-serif;width:300px;margin:20px 0 0 auto}.totals div{display:flex;justify-content:space-between;padding:5px 12px}
+.totals .grand{background:{{accent}};color:#fff;font-weight:700;font-size:17px;padding:11px 12px;margin-top:8px;border-radius:4px}
+.notes{font-family:Arial,sans-serif;margin:26px 0 0;color:#444;font-size:13px}
+.bar{background:#111;color:#ddd;font:12px Arial,sans-serif;padding:16px 40px;margin-top:36px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+${PRINT}
+</style></head>
+<body>
+<div class="pad">
+  <div class="top">
+    <div><h1>{{title}}</h1><div class="no">No. {{number}} &middot; {{status}}</div></div>
+    <div class="due"><div class="l">Balance due</div><div class="v">{{balance}}</div></div>
+  </div>
+  <div class="sec">
+    <div><div class="k">Bill to</div><b>{{customer_name}}</b><br>{{customer_address}}</div>
+    <div><div class="k">Issued</div>{{issued}}</div>
+    <div><div class="k">{{date_label}}</div>{{date_value}}</div>
+  </div>
+  <table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+  <div class="totals">
+    <div><span>Subtotal</span><span>{{subtotal}}</span></div>
+    <div><span>Tax</span><span>{{tax}}</span></div>
+    <div><span>Paid</span><span>{{paid}}</span></div>
+    <div class="grand"><span>Total due</span><span>{{balance}}</span></div>
+  </div>
+  <div class="notes">{{notes}}</div>
+</div>
+<div class="bar"><span><b>{{business_name}}</b></span><span>{{business_phone}}</span><span>{{business_email}}</span><span>{{business_address}}</span></div>
+</body></html>
+`;
+
+const TRADE = `<!doctype html>
+<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
+<style>
+*{box-sizing:border-box}
+body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:32px;font-size:13.5px;line-height:1.4}
+.box{border:1.5px solid #222}
+.head{display:flex;border:1.5px solid #222}
+.head>div{padding:14px 16px}
+.head .biz{flex:1;border-right:1.5px solid #222}.head .biz h2{margin:6px 0 2px;font-size:20px}
+.head .doc{min-width:190px;text-align:center;background:{{accent}};color:#fff}
+.head .doc h1{margin:0;font-size:24px;letter-spacing:.1em}.head .doc .no{font-size:18px;margin-top:6px;font-weight:700}
+.two{display:flex;border:1.5px solid #222;border-top:0}
+.two>div{flex:1;padding:12px 16px}.two>div+div{border-left:1.5px solid #222}
+.k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#666;margin-bottom:3px}
+table{width:100%;border-collapse:collapse;margin-top:14px;border:1.5px solid #222}
+th{background:#e9ecef;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 10px;border:1px solid #222}
+th.r{text-align:right}td{padding:9px 10px;border:1px solid #999;vertical-align:top}
+.lower{display:flex;gap:16px;margin-top:14px;align-items:flex-start}
+.lower .n{flex:1;border:1.5px solid #222;padding:10px 12px;min-height:110px}
+.totals{width:270px;border:1.5px solid #222}.totals div{display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid #bbb}
+.totals .due{border-bottom:0;background:#111;color:#fff;font-weight:700;font-size:16px}
+.sign{display:flex;gap:30px;margin-top:38px}.sign div{flex:1;border-top:1.5px solid #222;padding-top:5px;font-size:11px;color:#555}
+.thanks{text-align:center;margin-top:20px;font-weight:700}
+${PRINT}
+</style></head>
+<body>
+<div class="head">
+  <div class="biz">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
+  <div class="doc"><h1>{{title}}</h1><div class="no">No. {{number}}</div></div>
+</div>
+<div class="two">
+  <div><div class="k">Bill to</div><b>{{customer_name}}</b><br>{{customer_address}}<br>{{customer_phone}}</div>
+  <div><div class="k">Date issued</div>{{issued}}<div class="k" style="margin-top:8px">{{date_label}}</div>{{date_value}}</div>
+  <div><div class="k">Payment status</div><b>{{status}}</b></div>
+</div>
+<table><thead><tr><th>Work performed / materials</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+<div class="lower">
+  <div class="n"><div class="k">Notes and terms</div>{{notes}}</div>
+  <div class="totals">
+    <div><span>Subtotal</span><span>{{subtotal}}</span></div>
+    <div><span>Tax</span><span>{{tax}}</span></div>
+    <div><span>Paid</span><span>{{paid}}</span></div>
+    <div class="due"><span>Balance due</span><span>{{balance}}</span></div>
+  </div>
+</div>
+<div class="sign"><div>Customer signature</div><div>Date</div></div>
+<div class="thanks">Thank you for choosing {{business_name}}!</div>
+</body></html>
+`;
+
+export const INVOICE_TEMPLATES: DocTemplateChoice[] = [
+  { id: "classic", name: "Classic", desc: "Traditional black and white with a clean rule", html: CLASSIC },
+  { id: "modern", name: "Modern band", desc: "Color header band, shaded totals box", html: MODERN },
+  { id: "minimal", name: "Minimal", desc: "Light, airy and simple", html: MINIMAL },
+  { id: "bold", name: "Bold", desc: "Big title and a balance-due highlight", html: BOLD },
+  { id: "trade", name: "Trade work order", desc: "Boxed layout with a signature line", html: TRADE },
+];
