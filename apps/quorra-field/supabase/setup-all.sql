@@ -613,3 +613,6 @@ alter table public.jobs add column if not exists arrived_lng double precision;
 
 -- Free trial flag on subscriptions.
 alter table public.subscriptions add column if not exists trialing boolean not null default false;
+alter table public.business add column if not exists yelp_url text not null default '';
+grant update (yelp_url) on public.business to authenticated;
+notify pgrst, 'reload schema';

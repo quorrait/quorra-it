@@ -4,6 +4,7 @@ import type { LeadFormSettings } from "../lib/types";
 import { useData } from "../lib/app";
 import { leadFormPreviewUrl, leadFormUrl } from "../lib/publicLinks";
 import { Field, Sheet, Step, useToast } from "./ui";
+import { useRegisterSave } from "../lib/saveAll";
 import ColorPick from "./ColorPick";
 import { MAX_FORM_HTML, STARTER_FORM, downloadText } from "../lib/customHtml";
 import TemplateGallery, { type GalleryItem } from "./TemplateGallery";
@@ -51,6 +52,7 @@ export default function LeadFormCard() {
     setCfg(next);
     void save(next, `${t.name} style saved. Your website form updates right away.`);
   }
+  useRegisterSave("lead", dirty, () => save());
   const embed = `<iframe src="${live || "https://your-form-link"}" title="Request service" style="width:100%;max-width:600px;height:760px;border:0" loading="lazy"></iframe>`;
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the text and copy it manually."); } };
 
@@ -84,7 +86,6 @@ export default function LeadFormCard() {
                 <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
                 <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
               </div>
-              <div><button className="btn primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Saving..." : "Save changes"}</button></div>
             </Step>
 
         <Step n={3} title="Put it to work">
@@ -124,12 +125,6 @@ export default function LeadFormCard() {
           </div>
         </details>
 
-        {dirty && (
-          <div className="savebar" role="status">
-            <span>You have unsaved changes</span>
-            <button className="btn primary sm" disabled={saving} onClick={() => void save()}>{saving ? "Saving..." : "Save changes"}</button>
-          </div>
-        )}
 
         {demoForm && (
           <Sheet title="Request service" onClose={() => setDemoForm(false)}>

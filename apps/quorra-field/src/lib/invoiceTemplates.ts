@@ -12,16 +12,16 @@ const CLASSIC = `<!doctype html>
 <style>
 *{box-sizing:border-box}
 body{font-family:Georgia,"Times New Roman",serif;color:#1a1a1a;margin:0;padding:40px;font-size:14px;line-height:1.45}
-.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:2px solid #1a1a1a;padding-bottom:18px}
-.biz{font-size:13px;color:#444}.biz h2{margin:6px 0 2px;font-size:21px;color:#1a1a1a}
+.top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;border-bottom:2px solid {{accent}};padding-bottom:18px}
+.biz{font-size:13px;color:#444}.biz h2{margin:6px 0 2px;font-size:21px;color:{{accent}}}
 .doc{text-align:right}.doc h1{margin:0;font-size:30px;letter-spacing:.14em;font-weight:normal;color:{{accent}}}
 .meta{display:flex;gap:44px;margin:24px 0 18px;flex-wrap:wrap}
 .k{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;color:#777;margin-bottom:4px}
 table{width:100%;border-collapse:collapse}
-th{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:8px 6px;border-bottom:1px solid #1a1a1a}
+th{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.08em;text-align:left;padding:8px 6px;border-bottom:1px solid {{accent}}}
 th.r{text-align:right}td{padding:10px 6px;border-bottom:1px solid #ddd;vertical-align:top}
 .totals{width:290px;margin:18px 0 0 auto}.totals div{display:flex;justify-content:space-between;padding:5px 0}
-.totals .due{border-top:2px solid #1a1a1a;margin-top:6px;padding-top:9px;font-size:17px;font-weight:bold}
+.totals .due{border-top:2px solid {{accent}};margin-top:6px;padding-top:9px;font-size:17px;font-weight:bold}
 .notes{margin-top:28px;font-size:13px;color:#444}
 .thanks{margin-top:34px;text-align:center;font-style:italic;color:#666}
 ${PRINT}
@@ -105,19 +105,19 @@ body{font-family:"Arial Black",Arial,Helvetica,sans-serif;color:#111;margin:0;pa
 .top{display:flex;justify-content:space-between;gap:24px;align-items:flex-start}
 .top h1{margin:0;font-size:58px;line-height:.95;letter-spacing:-.02em;color:{{accent}};font-weight:900}
 .top .no{font-family:Arial,sans-serif;font-weight:700;color:#444;margin-top:8px}
-.due{background:#111;color:#fff;padding:16px 22px;border-radius:6px;text-align:right;min-width:200px}
+.due{background:{{accent}};color:#fff;padding:16px 22px;border-radius:6px;text-align:right;min-width:200px}
 .due .l{font:700 11px Arial,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#bbb}
 .due .v{font-size:30px;margin-top:2px}
 .sec{font-family:Arial,sans-serif;display:flex;gap:30px;flex-wrap:wrap;margin:30px 0 24px}
 .sec>div{border-left:5px solid {{accent}};padding-left:12px;min-width:160px}
 .k{font:700 11px Arial,sans-serif;text-transform:uppercase;letter-spacing:.12em;color:#777;margin-bottom:3px}
 table{width:100%;border-collapse:collapse;font-family:Arial,sans-serif}
-th{background:#111;color:#fff;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:11px 12px}
+th{background:{{accent}};color:#fff;text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;padding:11px 12px}
 th.r{text-align:right}td{padding:12px;border-bottom:1px solid #e5e5e5;vertical-align:top}
 .totals{font-family:Arial,sans-serif;width:300px;margin:20px 0 0 auto}.totals div{display:flex;justify-content:space-between;padding:5px 12px}
 .totals .grand{background:{{accent}};color:#fff;font-weight:700;font-size:17px;padding:11px 12px;margin-top:8px;border-radius:4px}
 .notes{font-family:Arial,sans-serif;margin:26px 0 0;color:#444;font-size:13px}
-.bar{background:#111;color:#ddd;font:12px Arial,sans-serif;padding:16px 40px;margin-top:36px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.bar{background:{{accent}};color:#ddd;font:12px Arial,sans-serif;padding:16px 40px;margin-top:36px;display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
 ${PRINT}
 </style></head>
 <body>
@@ -149,23 +149,23 @@ const TRADE = `<!doctype html>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:0;padding:32px;font-size:13.5px;line-height:1.4}
-.box{border:1.5px solid #222}
-.head{display:flex;border:1.5px solid #222}
+.box{border:1.5px solid {{accent}}}
+.head{display:flex;border:1.5px solid {{accent}}}
 .head>div{padding:14px 16px}
-.head .biz{flex:1;border-right:1.5px solid #222}.head .biz h2{margin:6px 0 2px;font-size:20px}
+.head .biz{flex:1;border-right:1.5px solid {{accent}}}.head .biz h2{margin:6px 0 2px;font-size:20px}
 .head .doc{min-width:190px;text-align:center;background:{{accent}};color:#fff}
 .head .doc h1{margin:0;font-size:24px;letter-spacing:.1em}.head .doc .no{font-size:18px;margin-top:6px;font-weight:700}
-.two{display:flex;border:1.5px solid #222;border-top:0}
-.two>div{flex:1;padding:12px 16px}.two>div+div{border-left:1.5px solid #222}
+.two{display:flex;border:1.5px solid {{accent}};border-top:0}
+.two>div{flex:1;padding:12px 16px}.two>div+div{border-left:1.5px solid {{accent}}}
 .k{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:#666;margin-bottom:3px}
-table{width:100%;border-collapse:collapse;margin-top:14px;border:1.5px solid #222}
-th{background:#e9ecef;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 10px;border:1px solid #222}
+table{width:100%;border-collapse:collapse;margin-top:14px;border:1.5px solid {{accent}}}
+th{background:color-mix(in srgb,{{accent}} 14%,#fff);text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:9px 10px;border:1px solid {{accent}}}
 th.r{text-align:right}td{padding:9px 10px;border:1px solid #999;vertical-align:top}
 .lower{display:flex;gap:16px;margin-top:14px;align-items:flex-start}
-.lower .n{flex:1;border:1.5px solid #222;padding:10px 12px;min-height:110px}
-.totals{width:270px;border:1.5px solid #222}.totals div{display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid #bbb}
-.totals .due{border-bottom:0;background:#111;color:#fff;font-weight:700;font-size:16px}
-.sign{display:flex;gap:30px;margin-top:38px}.sign div{flex:1;border-top:1.5px solid #222;padding-top:5px;font-size:11px;color:#555}
+.lower .n{flex:1;border:1.5px solid {{accent}};padding:10px 12px;min-height:110px}
+.totals{width:270px;border:1.5px solid {{accent}}}.totals div{display:flex;justify-content:space-between;padding:7px 12px;border-bottom:1px solid #bbb}
+.totals .due{border-bottom:0;background:{{accent}};color:#fff;font-weight:700;font-size:16px}
+.sign{display:flex;gap:30px;margin-top:38px}.sign div{flex:1;border-top:1.5px solid {{accent}};padding-top:5px;font-size:11px;color:#555}
 .thanks{text-align:center;margin-top:20px;font-weight:700}
 ${PRINT}
 </style></head>
@@ -200,7 +200,7 @@ const DISPATCH = `<!doctype html>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
 <style>
-:root{--acc:{{accent}};--ink:#14232B;--dark:#2B1A10;--mute:#6B5F58;--line:#E4D6CC;--tint:color-mix(in srgb,{{accent}} 13%,#fff)}
+:root{--acc:{{accent}};--ink:#14232B;--dark:{{accent}};--mute:#6B5F58;--line:#E4D6CC;--tint:color-mix(in srgb,{{accent}} 13%,#fff)}
 *{box-sizing:border-box}
 body{margin:0;background:#e9e4e0;font-family:'IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--ink)}
 .page{width:816px;min-height:1056px;margin:0 auto;background:#fff;display:flex;flex-direction:column}

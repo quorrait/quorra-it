@@ -406,3 +406,6 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .adv { border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
 .adv > summary { cursor: pointer; font-weight: 700; font-size: 14px; color: var(--muted); }
 .adv[open] > summary { color: var(--ink); }
+.savebar2 { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; margin: 10px 0; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.savebar2.dirty { border-color: var(--brand, #ea580c); background: #fff7ed; }
+.savebar2[data-pos="top"] { position: sticky; top: 8px; z-index: 20; box-shadow: 0 4px 14px rgba(15,23,42,.08); }

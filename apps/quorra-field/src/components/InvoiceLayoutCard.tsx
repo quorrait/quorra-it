@@ -5,6 +5,7 @@ import { Field, Sheet, Step, useToast } from "./ui";
 import { buildPdf } from "../lib/pdf";
 import { DOC_DEFAULTS, docSettings } from "../lib/docSettings";
 import type { Customer, DocSettings } from "../lib/types";
+import { useRegisterSave } from "../lib/saveAll";
 import ColorPick from "./ColorPick";
 import TemplateGallery from "./TemplateGallery";
 import { INVOICE_TEMPLATES } from "../lib/invoiceTemplates";
@@ -14,10 +15,11 @@ const SWATCHES = ["#0F2742", "#E8590C", "#1D4ED8", "#047857", "#7C3AED", "#11182
 const SAMPLE_CUSTOMER: Customer = { id: "sample", name: "Dana Whitfield", phone: "(555) 987-6543", email: "dana@example.com", address: "214 Oak Street, Rocklin CA", notes: "" };
 
 
-/** Page-sized iframe scaled to fit its container width. */
+/** Page-width iframe scaled to fit its container, in a box that scrolls so the whole page (footer included) can be seen. */
 function Scaled({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const [w, setW] = useState(340);
+  const [h, setH] = useState(1056);
   useEffect(() => {
     const el = ref.current; if (!el) return;
     const ro = new ResizeObserver(() => setW(el.clientWidth || 340)); ro.observe(el); setW(el.clientWidth || 340);
@@ -25,8 +27,12 @@ function Scaled({ html }: { html: string }) {
   }, []);
   const k = w / 816;
   return (
-    <div ref={ref} style={{ width: "100%", height: 1056 * k, overflow: "hidden", border: "1px solid var(--line)", borderRadius: 10, background: "#fff" }}>
-      <iframe title="Live preview" sandbox="" srcDoc={html} style={{ width: 816, height: 1056, border: 0, transform: `scale(${k})`, transformOrigin: "0 0", pointerEvents: "none" }} />
+    <div ref={ref} style={{ width: "100%", height: "min(calc(100vh - 110px), 900px)", minHeight: 360, overflowY: "auto", overflowX: "hidden", border: "1px solid var(--line)", borderRadius: 10, background: "#fff" }}>
+      <div style={{ height: h * k, width: "100%", overflow: "hidden" }}>
+        <iframe title="Live preview" sandbox="allow-same-origin" srcDoc={html} scrolling="no"
+          onLoad={(e) => { try { const d = e.currentTarget.contentDocument; if (d) setH(Math.max(1056, d.documentElement.scrollHeight)); } catch { /* keep default */ } }}
+          style={{ width: 816, height: h, border: 0, transform: `scale(${k})`, transformOrigin: "0 0", display: "block" }} />
+      </div>
     </div>
   );
 }
@@ -81,6 +87,7 @@ export default function InvoiceLayoutCard() {
     const pdf = buildPdf({ kind: "Invoice", number: s.number, business: s.business, customer: s.customer, items: s.items, tax_rate: s.tax_rate, issued: s.issued, dateLabel: "Due", dateValue: s.dateValue, notes: s.notes });
     setPreview(pdf.output("bloburl").toString());
   }
+  useRegisterSave("invoice", dirty, () => saveNow(d));
   async function upload(f?: File) {
     if (!f) return;
     if (f.size > MAX_DOC_HTML) return toast(`That file is too big. Keep it under ${Math.round(MAX_DOC_HTML / 1000)} KB.`);
@@ -140,7 +147,6 @@ export default function InvoiceLayoutCard() {
           </div>
         </Step>
         <div className="row wrap">
-          <button className="btn primary" disabled={busy || !dirty} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save changes"}</button>
           <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
           {!isStandard && <button className="btn" onClick={() => openPrintable(renderTemplate(d.custom_html as string, sampleData()))}>Open to print</button>}
         </div>
@@ -160,12 +166,6 @@ export default function InvoiceLayoutCard() {
           </div>
         </details>
 
-        {dirty && (
-          <div className="savebar" role="status">
-            <span>You have unsaved changes</span>
-            <button className="btn primary sm" disabled={busy} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save changes"}</button>
-          </div>
-        )}
 
         {custom && (
           <Sheet title="Your layout (sample)" onClose={() => setCustom(null)}>

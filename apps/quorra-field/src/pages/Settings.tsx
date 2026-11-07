@@ -9,6 +9,7 @@ import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components
 import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
+import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
 
 export function More() {
   const { email, signOut } = useAuth();
@@ -47,12 +48,16 @@ export function More() {
 }
 
 export default function Settings() {
+  return <SaveAllProvider><SettingsInner /></SaveAllProvider>;
+}
+
+function SettingsInner() {
   const { loading, store, business, refresh, resetDemo } = useData();
   const { signOut, email } = useAuth();
   const toast = useToast();
   const ask = useConfirm();
   const [params, setParams] = useSearchParams();
-  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "", review_url: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "", review_url: "", yelp_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
 
@@ -70,7 +75,7 @@ export default function Settings() {
   }
 
   useEffect(() => {
-    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "" });
+    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "", yelp_url: business.yelp_url ?? "" });
   }, [business]);
 
   useEffect(() => {
@@ -83,6 +88,9 @@ export default function Settings() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const bizDirty = f.name !== business.name || f.phone !== business.phone || f.email !== business.email || (parseFloat(f.tax_rate) || 0) !== business.tax_rate || (f.state || "") !== (business.state ?? "") || f.address !== (business.address ?? "") || f.review_url.trim() !== (business.review_url ?? "") || f.yelp_url.trim() !== (business.yelp_url ?? "");
+  useRegisterSave("business", !loading && bizDirty, () => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address, review_url: f.review_url.trim(), yelp_url: f.yelp_url.trim() }); }, "Business details saved"));
 
   if (loading) return <Spinner />;
 
@@ -129,7 +137,8 @@ export default function Settings() {
         </div>
         <Field label="Google review link (for Ask for a review)"><input className="input" inputMode="url" value={f.review_url} onChange={(e) => setF({ ...f, review_url: e.target.value })} placeholder="https://g.page/r/your-business/review" /></Field>
         <div className="small muted" style={{ marginTop: -6 }}>In Google Business Profile, choose "Ask for reviews" and copy the link here.</div>
-        <button className="btn primary" disabled={busy === "save"} onClick={() => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address, review_url: f.review_url.trim() }); }, "Saved")}>Save</button>
+        <Field label="Yelp review link (optional)"><input className="input" inputMode="url" value={f.yelp_url} onChange={(e) => setF({ ...f, yelp_url: e.target.value })} placeholder="https://www.yelp.com/writeareview/biz/your-business" /></Field>
+        <div className="small muted" style={{ marginTop: -6 }}>Open your Yelp business page and copy the "Write a review" link. Both links go out together when you ask for a review.</div>
       </div>
 
 

@@ -91,11 +91,11 @@ const DARK = `<!doctype html>
 <style>
 *{box-sizing:border-box}
 body{margin:0;padding:12px;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:transparent}
-.card{max-width:580px;margin:0 auto;background:linear-gradient(160deg,#0b1626,#13263f);color:#e5edf7;border-radius:18px;padding:26px;border:1px solid #223a5c}
+.card{max-width:580px;margin:0 auto;background:linear-gradient(160deg,color-mix(in srgb,{{accent}} 14%,#050b14),color-mix(in srgb,{{accent}} 26%,#0a1422));color:#e5edf7;border-radius:18px;padding:26px;border:1px solid color-mix(in srgb,{{accent}} 40%,#0a1422)}
 .biz{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:#fff;background:{{accent}};padding:4px 10px;border-radius:99px;margin-bottom:12px}
 h1{margin:0 0 6px;font-size:26px;color:#fff;letter-spacing:-.01em}.sub{margin:0 0 20px;color:#9fb3cc;font-size:15px}
 label{display:block;font-weight:600;font-size:13px;color:#c5d3e5;margin:0 0 14px}
-input,select,textarea{display:block;width:100%;margin-top:6px;padding:12px;font:inherit;font-weight:400;border:1px solid #2d4668;border-radius:10px;background:#0e1d31;color:#fff}
+input,select,textarea{display:block;width:100%;margin-top:6px;padding:12px;font:inherit;font-weight:400;border:1px solid color-mix(in srgb,{{accent}} 35%,#2d4668);border-radius:10px;background:color-mix(in srgb,{{accent}} 12%,#07101c);color:#fff}
 input::placeholder,textarea::placeholder{color:#6b82a1}
 input:focus,select:focus,textarea:focus{outline:none;border-color:{{accent}};box-shadow:0 0 0 3px rgba(255,255,255,.1)}
 textarea{min-height:96px;resize:vertical}
@@ -157,7 +157,7 @@ const URGENT = `<!doctype html>
 *{box-sizing:border-box}
 body{margin:0;padding:12px;font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#111827;background:transparent}
 .card{max-width:560px;margin:0 auto;background:#fff;border:1px solid #e5e7eb;border-radius:14px;overflow:hidden;box-shadow:0 6px 22px rgba(17,24,39,.1)}
-.alert{background:#dc2626;color:#fff;padding:14px 22px;font-weight:700}.alert small{display:block;font-weight:400;opacity:.92;margin-top:2px}
+.alert{background:{{accent}};color:#fff;padding:14px 22px;font-weight:700}.alert small{display:block;font-weight:400;opacity:.92;margin-top:2px}
 form{padding:20px 22px 22px}
 h1{margin:0 0 14px;font-size:22px}
 label.f{display:block;font-weight:600;font-size:14px;margin:0 0 14px}
