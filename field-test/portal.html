@@ -113,7 +113,7 @@
   }
   if (demo) return render(SAMPLE);
   fetch(api + "/portal-view?t=" + encodeURIComponent(t))
-    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || "Could not load"); return j; }); })
+    .then(function (r) { return r.json().then(function (j) { if (!r.ok) throw new Error(j.error || (r.status === 404 ? "The customer portal is not switched on for this business yet (the portal-view function is not deployed)." : r.status === 401 ? "The customer portal needs to be redeployed with --no-verify-jwt." : (j.message || j.msg || "Could not load (error " + r.status + ")"))); return j; }); })
     .then(render).catch(function (e) { fail(e.message); });
 })();
 </script>
