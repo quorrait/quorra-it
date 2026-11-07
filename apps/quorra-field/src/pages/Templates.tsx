@@ -1,3 +1,4 @@
+import DurationField from "../components/DurationField";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { useData } from "../lib/app";
@@ -26,7 +27,7 @@ function TemplateForm({ tpl, kind, onClose }: { tpl?: DocTemplate; kind: Templat
         <Field label={kind === "estimate" ? "Default title" : "Default job title"}><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></Field>
         {kind === "estimate" && <LineItemsEditor rows={rows} setRows={setRows} />}
         {kind === "job" && (
-          <Field label="Duration"><select className="select" value={hours} onChange={(e) => setHours(e.target.value)}>{[0.5, 1, 1.5, 2, 3, 4, 6, 8, 16].map((h) => <option key={h} value={h}>{h} hrs</option>)}</select></Field>
+          <DurationField value={hours} onChange={setHours} />
         )}
         <Field label={kind === "estimate" ? "Customer notes / terms" : "Job notes"}><textarea className="textarea" value={notes} onChange={(e) => setNotes(e.target.value)} /></Field>
         <Field label="Trade (optional)"><input className="input" value={trade} onChange={(e) => setTrade(e.target.value)} placeholder="HVAC" /></Field>

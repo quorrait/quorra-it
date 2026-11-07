@@ -1,3 +1,4 @@
+import DurationField from "./DurationField";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
@@ -107,18 +108,14 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
             ))}
           </div>
         </Field>
-        <div className="grid2 stack-sm">
+        <div>
           <Field label="Start time">
             <select className="select" value={time} onChange={(e) => setTime(e.target.value)}>
               {timeOptions.map((t) => <option key={t.v} value={t.v}>{t.label}</option>)}
             </select>
           </Field>
-          <Field label="Duration">
-            <select className="select" value={hours} onChange={(e) => setHours(e.target.value)}>
-              {[0.5, 1, 1.5, 2, 3, 4, 6, 8].map((h) => <option key={h} value={h}>{h} hr{h === 1 ? "" : "s"}</option>)}
-            </select>
-          </Field>
         </div>
+        <DurationField value={hours} onChange={setHours} />
         <Field label="Assigned to">
           <select className="select" value={assigned} onChange={(e) => setAssigned(e.target.value)}>
             <option value="">Unassigned</option>
