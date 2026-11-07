@@ -216,6 +216,7 @@ export interface DocSettings {
   title_estimate?: string;
   default_notes?: string; // printed on every invoice unless the invoice has its own
   default_estimate_notes?: string;
+  portal_items?: boolean; // show line items on invoices in the customer portal (default on)
   logo_pos?: "left" | "center" | "right"; // where the logo sits in the header
   company_align?: "left" | "center" | "right"; // where the company name and details sit
   logo_size?: "small" | "medium" | "large";

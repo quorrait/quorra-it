@@ -6,6 +6,7 @@ import { buildPdf } from "../lib/pdf";
 import { DOC_DEFAULTS, docSettings } from "../lib/docSettings";
 import type { Customer, DocSettings } from "../lib/types";
 import { useRegisterSave } from "../lib/saveAll";
+import { portalPreviewUrl } from "../lib/publicLinks";
 import ColorPick from "./ColorPick";
 import TemplateGallery from "./TemplateGallery";
 import { INVOICE_TEMPLATES } from "../lib/invoiceTemplates";
@@ -134,6 +135,13 @@ export default function InvoiceLayoutCard() {
             <div className="opt-row"><span className="lbl">Logo size</span><Seg value={d.logo_size ?? "medium"} opts={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]} onChange={(v) => set("logo_size", v)} /></div>
             <div className="opt-row"><span className="lbl">Company name and contact details</span><Seg value={d.company_align ?? "left"} opts={[["left", "Left"], ["center", "Center"], ["right", "Right"]]} onChange={(v) => set("company_align", v)} /></div>
             <span className="help small muted">Upload your logo under Business details above. Pick where it and your company text sit in the header.</span>
+          </div>
+
+          <div className="opt-group">
+            <h4>Customer portal</h4>
+            <label className="row"><input type="checkbox" checked={d.portal_items !== false} onChange={(e) => set("portal_items", e.target.checked)} /> Show line items on invoices in the portal</label>
+            <span className="help small muted">When off, customers see only the invoice number, dates and total.</span>
+            <a className="small" href={portalPreviewUrl()} target="_blank" rel="noopener">Preview the customer portal</a>
           </div>
 
           <div className="opt-group">

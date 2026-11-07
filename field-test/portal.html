@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Customer portal</title>
 <style>
+.items{margin:-4px 0 12px;padding:8px 12px;background:#f8fafc;border-radius:10px;font-size:14px}.items>div{display:flex;justify-content:space-between;gap:12px;padding:4px 0}
   :root { --brand:#e8590c; --ink:#111827; --muted:#6b7280; --line:#e3e7ee; --bad:#b42318; --good:#137a3c; }
   * { box-sizing: border-box; }
   html, body { overflow-x: hidden; max-width: 100%; touch-action: pan-y; -webkit-text-size-adjust: 100%; }
@@ -53,7 +54,7 @@
     customer: "Dana Whitfield", can_pay: true,
     business: { name: "Summit Home Services", phone: "(916) 555-0142", email: "office@summithome.example" },
     invoices: [
-      { id: "d1", number: 1042, status: "sent", issued_at: day(-20), due_at: day(-6), total_cents: 184000, paid_cents: 50000, balance_cents: 134000, payments: [{ amount_cents: 50000, date: day(-18), method: "card" }] },
+      { id: "d1", number: 1042, status: "sent", issued_at: day(-20), due_at: day(-6), items: [{ description: "Replace kitchen faucet", qty: 1, unit_cents: 98000 }, { description: "Labor", qty: 6, unit_cents: 14333 }], total_cents: 184000, paid_cents: 50000, balance_cents: 134000, payments: [{ amount_cents: 50000, date: day(-18), method: "card" }] },
       { id: "d2", number: 1051, status: "sent", issued_at: day(-3), due_at: day(11), total_cents: 42500, paid_cents: 0, balance_cents: 42500, payments: [] },
       { id: "d3", number: 1018, status: "paid", issued_at: day(-70), due_at: day(-56), total_cents: 96000, paid_cents: 96000, balance_cents: 0, payments: [{ amount_cents: 96000, date: day(-60), method: "card" }] }
     ],
@@ -85,18 +86,18 @@
         (pays ? '<div class="pays">' + pays + "</div>" : "") + "</div>" +
         '<div class="right"><b>' + money(open ? i.balance_cents : i.total_cents) + "</b>" +
         (open && i.paid_cents > 0 ? '<div class="muted">of ' + money(i.total_cents) + "</div>" : "") +
-        (open && d.can_pay ? '<div><button data-pay="' + esc(i.id) + '" style="margin-top:8px">Pay now</button></div>' : "") + "</div></div>";
+        (open && d.can_pay ? '<div><button data-pay="' + esc(i.id) + '" style="margin-top:8px">Pay now</button></div>' : "") + "</div></div>" +
+        (i.items && i.items.length ? '<div class="items">' + i.items.map(function (li) { return "<div><span>" + esc(li.description || "Item") + ' <span class="muted">' + (li.qty !== 1 ? li.qty + " x " + money(li.unit_cents) : "") + "</span></span><span>" + money(Math.round(li.qty * li.unit_cents)) + "</span></div>"; }).join("") + "</div>" : "");
     });
     if (openInv.length && !d.can_pay) h += '<div class="msg info">To pay these, please contact ' + esc(b.name || "the business") + ".</div>";
     h += "</div>";
-    h += '<div class="card"><h2>Quotes</h2>';
-    if (!d.quotes.length) h += '<div class="muted">No quotes yet.</div>';
+    if (d.quotes.length) h += '<div class="card"><h2>Quotes</h2>';
     d.quotes.forEach(function (x) {
       var link = demo ? "#" : quoteBase + "?t=" + encodeURIComponent(x.token) + "&api=" + encodeURIComponent(q.get("api") || "");
       h += '<div class="row"><div><b>' + esc(x.title || "Quote #" + x.number) + '</b> <span class="badge ' + esc(x.status) + '">' + esc(x.status === "approved" ? "Accepted" : x.status === "sent" ? "Awaiting your answer" : x.status) + '</span><div class="muted">Quote #' + x.number + "</div></div>" +
         '<div class="right"><b>' + money(x.total_cents) + '</b><div><a class="btn alt' + (demo ? ' dq' : '') + '" style="margin-top:8px" href="' + link + '">' + (x.status === "sent" ? "Review" : "View") + "</a></div></div></div>";
     });
-    h += "</div>";
+    if (d.quotes.length) h += "</div>";
     app.innerHTML = h;
     Array.prototype.forEach.call(document.querySelectorAll(".dq"), function (a) {
       a.onclick = function (e) { e.preventDefault(); document.getElementById("out").innerHTML = '<div class="msg info">Preview only: on a live account this opens the quote so the customer can accept it.</div>'; };
