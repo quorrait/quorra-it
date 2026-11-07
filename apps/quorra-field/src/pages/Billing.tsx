@@ -26,6 +26,7 @@ export default function Billing() {
   const [charges, setCharges] = useState<Charge[] | null>(null);
 
   useEffect(() => {
+    if (params.get("canceled")) { toast("Your plan is canceled. You keep access until the end of the period you paid for."); setParams({}, { replace: true }); void refresh(); return; }
     if (params.get("subscribed")) { toast("Thanks. Your plan can take a few seconds to show as active."); setParams({}, { replace: true }); const t = [3000, 8000].map((ms) => setTimeout(() => void refresh(), ms)); void refresh(); return () => t.forEach(clearTimeout); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

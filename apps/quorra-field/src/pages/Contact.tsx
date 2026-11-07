@@ -37,7 +37,8 @@ export default function Contact() {
 
   if (done) return (
     <div className="auth"><div className="auth-card stack">
-      <h1>Thank you</h1>
+      <img src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt="Quorra Dispatch" style={{ maxWidth: 240, margin: "0 auto", display: "block" }} />
+      <h1 style={{ textAlign: "center" }}>Thank you</h1>
       <p className="muted">Our response time is 1-2 business days. We will reach out by {f.best_way.toLowerCase()}. Taking you back to {backName}...</p>
       <Link className="btn primary block" to={back}>Back to {backName}</Link>
     </div></div>
