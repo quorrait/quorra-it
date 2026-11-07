@@ -238,6 +238,7 @@ export interface Subscription {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   comped: boolean;
+  trialing?: boolean; // still in the 14-day free trial
 }
 
 export interface Invite {

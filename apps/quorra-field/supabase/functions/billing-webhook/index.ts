@@ -33,6 +33,7 @@ async function save(sub: Stripe.Subscription) {
     billing_interval: item?.price?.recurring?.interval ?? "month",
     current_period_end: new Date((sub.current_period_end ?? 0) * 1000).toISOString(),
     cancel_at_period_end: sub.cancel_at_period_end,
+    trialing: sub.status === "trialing",
     stripe_customer_id: String(sub.customer),
     stripe_subscription_id: sub.id,
     updated_at: new Date().toISOString(),

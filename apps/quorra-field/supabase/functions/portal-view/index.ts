@@ -13,9 +13,13 @@ handler(async (req) => {
     db.from("invoices").select("id,number,status,items,tax_rate,issued_at,due_at").eq("customer_id", cust.id).neq("status", "draft").order("issued_at", { ascending: false }),
   ]);
   const ids = (invs ?? []).map((i) => i.id);
-  const { data: pays } = ids.length ? await db.from("payments").select("invoice_id,amount_cents").in("invoice_id", ids) : { data: [] as { invoice_id: string; amount_cents: number }[] };
+  const { data: pays } = ids.length ? await db.from("payments").select("invoice_id,amount_cents,paid_at,method").in("invoice_id", ids).order("paid_at", { ascending: true }) : { data: [] as { invoice_id: string; amount_cents: number; paid_at: string; method: string }[] };
   const paidBy = new Map<string, number>();
-  for (const p of pays ?? []) paidBy.set(p.invoice_id, (paidBy.get(p.invoice_id) ?? 0) + p.amount_cents);
+  const payList = new Map<string, { amount_cents: number; date: string; method: string }[]>();
+  for (const p of pays ?? []) {
+    paidBy.set(p.invoice_id, (paidBy.get(p.invoice_id) ?? 0) + p.amount_cents);
+    payList.set(p.invoice_id, [...(payList.get(p.invoice_id) ?? []), { amount_cents: p.amount_cents, date: p.paid_at, method: p.method }]);
+  }
   return json({
     customer: cust.name,
     business: biz ?? { name: "" },
@@ -24,7 +28,7 @@ handler(async (req) => {
     invoices: (invs ?? []).map((i) => {
       const total = invoiceTotalCents(i.items as LineItem[], Number(i.tax_rate));
       const paid = paidBy.get(i.id) ?? 0;
-      return { id: i.id, number: i.number, status: i.status, issued_at: i.issued_at, due_at: i.due_at, total_cents: total, paid_cents: paid, balance_cents: Math.max(0, total - paid) };
+      return { id: i.id, number: i.number, status: i.status, issued_at: i.issued_at, due_at: i.due_at, total_cents: total, paid_cents: paid, balance_cents: Math.max(0, total - paid), payments: payList.get(i.id) ?? [] };
     }),
   });
 });

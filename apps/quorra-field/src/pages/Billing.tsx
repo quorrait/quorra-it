@@ -73,7 +73,7 @@ export default function Billing() {
             <div style={{ fontSize: 22, fontWeight: 800, marginTop: 6 }}>{planLabel}</div>
           </div>
           <span className={`badge ${sub?.comped ? "blue" : status === "active" ? "good" : status === "past_due" ? "bad" : "gray"}`}>
-            {sub?.comped ? "Complimentary" : status === "active" ? (sub?.cancel_at_period_end ? "Cancels at period end" : "Active") : status === "past_due" ? "Payment failed" : status === "canceled" ? "Canceled" : "Not started"}
+            {sub?.comped ? "Complimentary" : status === "active" ? (sub?.cancel_at_period_end ? "Cancels at period end" : sub?.trialing ? "Free trial" : "Active") : status === "past_due" ? "Payment failed" : status === "canceled" ? "Canceled" : "Not started"}
           </span>
         </div>
         {!sub?.comped && (
@@ -83,7 +83,7 @@ export default function Billing() {
           </>
         )}
         {sub?.current_period_end && active && !sub.comped && (
-          <div className="row between"><span className="muted">{sub.cancel_at_period_end ? "Access until" : "Next payment"}</span><b>{fmtDate(sub.current_period_end)}</b></div>
+          <div className="row between"><span className="muted">{sub.cancel_at_period_end ? "Access until" : sub.trialing ? "Free trial ends, first charge" : "Next payment"}</span><b>{fmtDate(sub.current_period_end)}</b></div>
         )}
         {status === "past_due" && <div className="notice">The last payment did not go through. Update your card to keep your access.</div>}
         {sub?.comped && <div className="small muted">This account is on a complimentary plan. No payment is needed.</div>}

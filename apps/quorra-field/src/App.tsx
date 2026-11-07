@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, DataProvider, useAuth } from "./lib/app";
 import { Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
@@ -40,6 +40,13 @@ function Locked({ children }: { children: JSX.Element }) {
   const { locked, me, loading } = useData();
   if (loading || !locked) return children;
   if (!me.isOwner) return <div className="auth"><div className="auth-card stack"><h1>Plan not active</h1><p className="muted">Your company's Quorra Dispatch plan is not active. Ask the account owner to restart it under Billing.</p></div></div>;
+  return <LockedOwner>{children}</LockedOwner>;
+}
+
+/** Owner of a business with no active plan: every screen except Billing sends them to Billing to start the trial. */
+function LockedOwner({ children }: { children: JSX.Element }) {
+  const { pathname } = useLocation();
+  if (pathname !== "/billing") return <Navigate to="/billing" replace />;
   return children;
 }
 

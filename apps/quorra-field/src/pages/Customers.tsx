@@ -5,7 +5,7 @@ import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
 import type { Customer } from "../lib/types";
 import { balanceDue, money } from "../lib/money";
 import JobForm from "../components/JobForm";
-import { portalUrl } from "../lib/publicLinks";
+import { portalPreviewUrl, portalUrl } from "../lib/publicLinks";
 
 function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): void }) {
   const { store, refresh } = useData();
@@ -105,7 +105,13 @@ export default function Customers() {
                   <a className="btn" href={`mailto:${open.email}?subject=${encodeURIComponent("Your quotes and invoices")}&body=${encodeURIComponent(`Here is your private page for quotes, invoices and payments: ${portalUrl(open.portal_token)}`)}`}>Email link</a>
                 </div>
               </div>
-            ) : <div className="small muted">Customer portal (quotes, invoices and card payments) is available on live accounts.</div>}
+            ) : (
+              <div className="stack" style={{ gap: 6 }}>
+                <div className="bold small">Customer portal</div>
+                <div className="small muted">On live accounts each customer gets a private link to see quotes, accept them, view invoices and pay by card. This is a sample of what they see.</div>
+                <a className="btn" href={portalPreviewUrl()} target="_blank" rel="noreferrer">Preview customer portal</a>
+              </div>
+            )}
             <div className="row">
               <button className="btn grow" onClick={() => { setEditing(open); setOpen(null); }}>Edit</button>
               <button className="btn grow" onClick={() => { setOpen(null); nav("/invoices"); }}>Invoices</button>

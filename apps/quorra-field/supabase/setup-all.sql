@@ -610,3 +610,6 @@ alter table public.jobs add column if not exists en_route_lng double precision;
 alter table public.jobs add column if not exists arrived_at timestamptz;
 alter table public.jobs add column if not exists arrived_lat double precision;
 alter table public.jobs add column if not exists arrived_lng double precision;
+
+-- Free trial flag on subscriptions.
+alter table public.subscriptions add column if not exists trialing boolean not null default false;

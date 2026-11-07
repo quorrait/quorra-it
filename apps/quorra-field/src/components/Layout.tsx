@@ -39,10 +39,10 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 ];
 
 export default function Layout() {
-  const { store, business, error, can, me, viewAs, team, leads } = useData();
+  const { store, business, error, can, me, viewAs, team, leads, locked } = useData();
   const { signOut } = useAuth();
   const newLeads = leads.filter((l) => l.stage === "new").length;
-  const mine = (l: NavItem) => !l.f || can(l.f);
+  const mine = (l: NavItem) => (locked ? l.f === "billing" : !l.f || can(l.f));
   return (
     <div className="shell">
       <aside className="side">
@@ -87,10 +87,12 @@ export default function Layout() {
             {l.label}
           </NavLink>
         ))}
-        <NavLink to="/more" className={({ isActive }) => `tab${isActive ? " active" : ""}`}>
-          {Icon.more}
-          More
-        </NavLink>
+        {!locked && (
+          <NavLink to="/more" className={({ isActive }) => `tab${isActive ? " active" : ""}`}>
+            {Icon.more}
+            More
+          </NavLink>
+        )}
       </nav>
     </div>
   );
