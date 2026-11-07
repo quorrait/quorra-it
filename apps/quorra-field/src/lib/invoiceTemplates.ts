@@ -96,49 +96,6 @@ ${PRINT}
 </body></html>
 `;
 
-const MINIMAL = `<!doctype html>
-<html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
-<style>
-*{box-sizing:border-box}
-body{font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;font-weight:300;color:#222;margin:0;padding:56px 52px;font-size:14px;line-height:1.55}
-.head{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding-bottom:22px}
-.head h1{margin:0;font-size:13px;font-weight:600;letter-spacing:.3em}
-.head .no{font-size:30px;font-weight:200;margin-top:4px}
-.biz{text-align:right;font-size:12.5px;color:#555}.biz b{font-weight:600;color:#222;font-size:14px}
-.rule{height:2px;background:{{accent}};width:56px;margin:0 0 26px}
-.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-bottom:34px}
-.k{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#999;margin-bottom:5px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;color:#999;font-weight:600;text-align:left;padding:0 0 10px;border-bottom:1px solid #ddd}
-th.r{text-align:right}td{padding:14px 0;border-bottom:1px solid #eee;vertical-align:top}
-.totals{width:260px;margin:22px 0 0 auto;font-size:13.5px}.totals div{display:flex;justify-content:space-between;padding:4px 0;color:#555}
-.totals .due{color:#111;font-size:26px;font-weight:200;border-top:1px solid #ddd;margin-top:10px;padding-top:14px;align-items:baseline}
-.totals .due span:first-child{font-size:10.5px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;color:#999}
-.notes{margin-top:44px;color:#666;font-size:12.5px;max-width:420px}
-${PRINT}
-</style></head>
-<body>
-<div class="head">
-  <div><h1>{{title}}</h1><div class="no">{{number}}</div></div>
-  <div class="biz">{{logo}}<br><b>{{business_name}}</b><br>{{business_address}}<br>{{business_phone}}<br>{{business_email}}</div>
-</div>
-<div class="rule"></div>
-<div class="grid">
-  <div><div class="k">For</div>{{customer_name}}<br>{{customer_address}}</div>
-  <div><div class="k">Issued</div>{{issued}}<div class="k" style="margin-top:12px">{{date_label}}</div>{{date_value}}</div>
-  <div><div class="k">Status</div>{{status}}</div>
-</div>
-<table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Price</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
-<div class="totals">
-  <div><span>Subtotal</span><span>{{subtotal}}</span></div>
-  <div><span>Tax</span><span>{{tax}}</span></div>
-  <div><span>Paid</span><span>{{paid}}</span></div>
-  <div class="due"><span>Balance due</span><span>{{balance}}</span></div>
-</div>
-<div class="notes">{{notes}}</div>
-</body></html>
-`;
-
 const BOLD = `<!doctype html>
 <html><head><meta charset="utf-8"><title>{{title}} {{number}}</title>
 <style>
@@ -237,10 +194,92 @@ ${PRINT}
 </body></html>
 `;
 
+const DISPATCH = `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}} {{number}}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--acc:{{accent}};--ink:#14232B;--dark:#2B1A10;--mute:#6B5F58;--line:#E4D6CC;--tint:color-mix(in srgb,{{accent}} 13%,#fff)}
+*{box-sizing:border-box}
+body{margin:0;background:#e9e4e0;font-family:'IBM Plex Sans',system-ui,-apple-system,"Segoe UI",Arial,sans-serif;font-size:14px;line-height:1.5;color:var(--ink)}
+.page{width:816px;min-height:1056px;margin:0 auto;background:#fff;display:flex;flex-direction:column}
+.top{height:12px;background:var(--acc)}
+.head{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:40px 56px 0}
+.brand{display:flex;align-items:center;gap:14px}
+.brand img{max-height:56px;max-width:120px;object-fit:contain}
+.brand .n{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:26px;line-height:1.1;color:var(--dark)}
+.inv{text-align:right}
+.inv .t{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:40px;line-height:1;color:var(--dark);text-transform:capitalize}
+.inv .no{font-size:15px;font-weight:500;color:var(--acc);margin-top:8px}
+svg.wave{display:block;margin-top:22px}
+.three{display:grid;grid-template-columns:1fr .9fr 1.3fr;gap:28px;padding:14px 56px 0;align-items:stretch}
+.lbl{font-size:13px;font-weight:600;color:var(--mute);margin-bottom:8px}
+.cust{font-size:17px;font-weight:600;color:var(--dark)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:4px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}.row span:first-child{color:var(--mute)}
+.due{background:var(--dark);color:#fff;border-radius:10px;padding:22px 20px;display:flex;flex-direction:column;justify-content:center}
+.due .a{font-size:13px;color:rgba(255,255,255,.72)}
+.due .m{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:30px;line-height:1.15;margin-top:4px}
+.items{margin:40px 56px 0}
+table{width:100%;border-collapse:separate;border-spacing:0}
+th{background:var(--tint);padding:11px 16px;font-size:13px;font-weight:600;color:var(--dark);text-align:left}
+th:first-child{border-radius:6px 0 0 6px}th:last-child{border-radius:0 6px 6px 0}th.r{text-align:right}
+td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--dark)}
+.tot{margin:20px 56px 0 auto;width:312px;padding-right:16px}
+.tot .l{display:flex;justify-content:space-between;padding:4px 0;color:var(--mute)}
+.tot .final{display:flex;justify-content:space-between;align-items:baseline;padding-top:12px;margin-top:6px;border-top:2px solid var(--dark)}
+.tot .final span:first-child{font-weight:600;color:var(--dark)}
+.tot .final span:last-child{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:22px;color:var(--dark)}
+.sp{flex:1;min-height:40px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:40px;padding:0 56px 28px}
+.foot{display:flex;justify-content:space-between;gap:12px;margin:0 56px;padding:16px 0 34px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.foot b{font-weight:500;color:var(--dark)}
+@page{size:letter;margin:0}
+@media print{body{background:#fff}.page{width:100%;min-height:100vh}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+@media(max-width:840px){.page{width:100%}.head,.three,.two{padding-left:20px;padding-right:20px}.items,.foot{margin-left:20px;margin-right:20px}.three,.two{grid-template-columns:1fr}.tot{margin-right:20px}.inv .t{font-size:30px}}
+</style></head>
+<body>
+<div class="page">
+<div class="top"></div>
+<div class="head">
+  <div class="brand">{{logo}}<div class="n">{{business_name}}</div></div>
+  <div class="inv"><div class="t">{{title}}</div><div class="no">No. {{number}}</div></div>
+</div>
+<svg class="wave" width="100%" height="30" viewBox="0 0 816 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 15 C 68 -2, 136 -2, 204 15 S 340 32, 408 15 S 544 -2, 612 15 S 748 32, 816 15" fill="none" stroke="{{accent}}" stroke-opacity=".45" stroke-width="2"/></svg>
+<div class="three">
+  <div><div class="lbl">Billed to</div>
+    <div class="cust">{{customer_name}}</div>
+    <div style="margin-top:4px">{{customer_address}}<br>{{customer_phone}}<br>{{customer_email}}</div></div>
+  <div><div class="lbl">Details</div>
+    <div class="row"><span>Issued</span><span>{{issued}}</span></div>
+    <div class="row"><span>{{date_label}}</span><span>{{date_value}}</span></div>
+    <div class="row"><span>Status</span><span style="font-weight:500">{{status}}</span></div></div>
+  <div class="due"><div class="a">Amount due</div><div class="m">{{balance}}</div><div class="a" style="margin-top:6px">{{date_label}} {{date_value}}</div></div>
+</div>
+<div class="items">
+  <table><thead><tr><th>Description</th><th class="r">Qty</th><th class="r">Rate</th><th class="r">Amount</th></tr></thead><tbody>{{items}}</tbody></table>
+</div>
+<div class="tot">
+  <div class="l"><span>Subtotal</span><span>{{subtotal}}</span></div>
+  <div class="l"><span>Tax</span><span>{{tax}}</span></div>
+  <div class="l"><span>Paid</span><span>{{paid}}</span></div>
+  <div class="final"><span>Total due</span><span>{{balance}}</span></div>
+</div>
+<div class="sp"></div>
+<div class="two">
+  <div><div class="lbl">How to pay</div><div>Please include invoice number {{number}} with your payment.</div><div style="margin-top:4px">{{business_phone}} &nbsp; {{business_email}}</div></div>
+  <div><div class="lbl">Notes</div><div>{{notes}}</div></div>
+</div>
+<div class="foot"><div>{{business_name}} &nbsp; {{business_address}}</div><b>Thank you for your business.</b></div>
+</div>
+</body></html>
+`;
+
 export const INVOICE_TEMPLATES: DocTemplateChoice[] = [
+  { id: "dispatch", name: "Dispatch", desc: "Warm wave header and an amount-due panel", html: DISPATCH },
   { id: "classic", name: "Classic", desc: "Traditional black and white with a clean rule", html: CLASSIC },
   { id: "modern", name: "Modern band", desc: "Color header band, shaded totals box", html: MODERN },
-  { id: "minimal", name: "Minimal", desc: "Light, airy and simple", html: MINIMAL },
   { id: "bold", name: "Bold", desc: "Big title and a balance-due highlight", html: BOLD },
   { id: "trade", name: "Trade work order", desc: "Boxed layout with a signature line", html: TRADE },
 ];

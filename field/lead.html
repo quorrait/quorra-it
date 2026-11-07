@@ -72,9 +72,15 @@
   var BRIDGE = '<scr' + 'ipt>(function(){var known={name:1,phone:1,email:1,address:1,service:1,message:1,hp:1};function status(t,ok){var s=document.getElementById("quorra-status");if(!s){s=document.createElement("div");s.id="quorra-status";s.style.cssText="margin:12px 0;padding:10px 12px;border-radius:8px;font:600 14px system-ui,sans-serif";document.body.appendChild(s)}s.textContent=t;s.style.background=ok?"#ecfdf3":"#fef3f2";s.style.color=ok?"#137a3c":"#b42318"}document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd=new FormData(f),d={},extra=[];fd.forEach(function(v,k){if(typeof v!=="string")return;if(known[k])d[k]=v;else if(v.trim())extra.push(k+": "+v)});if(extra.length)d.message=((d.message||"")+"\\n"+extra.join("\\n")).trim();parent.postMessage({quorraLead:d},"*");status("Sending...",true)},true);window.addEventListener("message",function(e){var m=e.data&&e.data.quorraResult;if(!m)return;status(m.text,m.ok);if(m.ok){document.querySelectorAll("form").forEach(function(f){f.reset()})}});function size(){parent.postMessage({quorraHeight:document.documentElement.scrollHeight},"*")}window.addEventListener("load",size);if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement)})();</scr' + 'ipt>';
   var frame = document.getElementById("custom");
   function useCustom(html) {
-    // {{accent}} and {{business_name}} work in any custom form.
+    // Placeholders: {{accent}} {{business_name}} {{service_options}} and {{heading|Fallback}} {{intro|Fallback}} {{button|Fallback}}.
     var acc = cfg.accent && /^#[0-9a-f]{6}$/i.test(cfg.accent) ? cfg.accent : "#ea580c";
-    html = html.replace(/\{\{\s*accent\s*\}\}/gi, acc).replace(/\{\{\s*business_name\s*\}\}/gi, escHtml(bizName || "Our team"));
+    var svc = (cfg.services || []).filter(function (x) { return String(x).trim(); });
+    var opts = svc.length ? '<option value="">Choose one</option>' + svc.map(function (x) { return "<option>" + escHtml(String(x).trim()) + "</option>"; }).join("")
+      : '<option value="">Choose one</option><option>Repair</option><option>Installation or replacement</option><option>Maintenance or tune-up</option><option>Inspection or estimate</option><option>Something else</option>';
+    html = html.replace(/\{\{\s*accent\s*\}\}/gi, acc)
+      .replace(/\{\{\s*business_name\s*\}\}/gi, escHtml(bizName || "Our team"))
+      .replace(/\{\{\s*service_options\s*\}\}/gi, opts)
+      .replace(/\{\{\s*(heading|intro|button)\s*(?:\|([^}]*))?\}\}/gi, function (m, k, fb) { var v = String(cfg[k.toLowerCase()] || "").trim(); return v ? escHtml(v) : String(fb || "").trim(); });
     document.getElementById("builtin").style.display = "none";
     frame.style.display = "block";
     frame.srcdoc = html + BRIDGE;

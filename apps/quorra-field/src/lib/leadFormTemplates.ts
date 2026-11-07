@@ -2,20 +2,32 @@
  * Ready-made website lead forms. Each is plain HTML using the field names Quorra Dispatch understands
  * (name, phone, email, address, service, message). Any other field, such as urgency or property, is added to
  * the lead's notes. {{accent}} follows the Accent color chosen in the form settings and {{business_name}} is
- * the company name, both filled in when the form is shown.
+ * the company name, both filled in when the form is shown. Heading, intro and button text come from the form settings.
  */
 export interface FormTemplateChoice { id: string; name: string; desc: string; html: string }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-/** Fills the two placeholders. The live form page (lead.html) does the same thing. */
-export function fillFormTemplate(html: string, businessName?: string, accent?: string): string {
-  const a = /^#[0-9a-f]{6}$/i.test(accent ?? "") ? (accent as string) : "#ea580c";
-  return html.replace(/\{\{\s*accent\s*\}\}/gi, a).replace(/\{\{\s*business_name\s*\}\}/gi, esc(businessName || "Our team"));
+export interface FormWording { accent?: string; heading?: string; intro?: string; button?: string; services?: string[] }
+export const DEFAULT_SERVICE_OPTIONS = `<option value="">Choose one</option><option>Repair</option><option>Installation or replacement</option><option>Maintenance or tune-up</option><option>Inspection or estimate</option><option>Something else</option>`;
+
+/**
+ * Fills the placeholders. {{heading|Fallback}}, {{intro|Fallback}} and {{button|Fallback}} show the wording typed in
+ * the form settings, or the fallback when it is empty; {{service_options}} becomes the service choices.
+ * The live form page (lead.html) does the same thing.
+ */
+export function fillFormTemplate(html: string, businessName?: string, w: FormWording = {}): string {
+  const a = /^#[0-9a-f]{6}$/i.test(w.accent ?? "") ? (w.accent as string) : "#ea580c";
+  const services = (w.services ?? []).map((x) => x.trim()).filter(Boolean);
+  const opts = services.length ? `<option value="">Choose one</option>${services.map((x) => `<option>${esc(x)}</option>`).join("")}` : DEFAULT_SERVICE_OPTIONS;
+  return html
+    .replace(/\{\{\s*accent\s*\}\}/gi, a)
+    .replace(/\{\{\s*business_name\s*\}\}/gi, esc(businessName || "Our team"))
+    .replace(/\{\{\s*service_options\s*\}\}/gi, opts)
+    .replace(/\{\{\s*(heading|intro|button)\s*(?:\|([^}]*))?\}\}/gi, (_m, k: string, fb?: string) => ((w[k.toLowerCase() as "heading" | "intro" | "button"] ?? "").trim() ? esc((w[k.toLowerCase() as "heading" | "intro" | "button"] as string).trim()) : (fb ?? "").trim()));
 }
 
 const HP = `<div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Leave blank<input name="hp" tabindex="-1" autocomplete="off"></label></div>`;
-const SERVICE_OPTIONS = `<option value="">Choose one</option><option>Repair</option><option>Installation or replacement</option><option>Maintenance or tune-up</option><option>Inspection or estimate</option><option>Something else</option>`;
 
 const CLEAN = `<!doctype html>
 <html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -35,7 +47,7 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:{{accent}}
 </style></head>
 <body><div class="card">
 <p class="biz">{{business_name}}</p>
-<h1>Request service</h1><p class="sub">Tell us what you need and we will get back to you shortly.</p>
+<h1>{{heading|Request service}}</h1><p class="sub">{{intro|Tell us what you need and we will get back to you shortly.}}</p>
 <form>
   <div class="row">
     <label>Full name *<input name="name" autocomplete="name" required placeholder="Jane Smith"></label>
@@ -43,10 +55,10 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:{{accent}}
   </div>
   <label>Email<input name="email" type="email" autocomplete="email" placeholder="you@example.com"></label>
   <label>Service address<input name="address" autocomplete="street-address" placeholder="Street, city"></label>
-  <label>What do you need?<select name="service">${SERVICE_OPTIONS}</select></label>
+  <label>What do you need?<select name="service">{{service_options}}</select></label>
   <label>Details<textarea name="message" placeholder="Anything that will help us prepare"></textarea></label>
   ${HP}
-  <button type="submit">Request service</button>
+  <button type="submit">{{button|Request service}}</button>
   <p class="fine">Please give a phone number or email so we can reach you.</p>
 </form>
 </div></body></html>
@@ -70,7 +82,7 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:{{accent}}
 </style></head>
 <body><div class="card">
 <span class="biz">{{business_name}}</span>
-<h1>Book a service call</h1><p class="sub">Send us the details and a technician will contact you to confirm a time.</p>
+<h1>{{heading|Book a service call}}</h1><p class="sub">{{intro|Send us the details and a technician will contact you to confirm a time.}}</p>
 <form>
   <div class="row">
     <label>Full name *<input name="name" autocomplete="name" required></label>
@@ -80,10 +92,10 @@ button{width:100%;padding:14px;border:0;border-radius:10px;background:{{accent}}
     <label>Email<input name="email" type="email" autocomplete="email"></label>
     <label>Service address<input name="address" autocomplete="street-address"></label>
   </div>
-  <label>Type of service<select name="service">${SERVICE_OPTIONS}</select></label>
+  <label>Type of service<select name="service">{{service_options}}</select></label>
   <label>What is going on?<textarea name="message" placeholder="Describe the problem or the work you want done"></textarea></label>
   ${HP}
-  <button type="submit">Request a call back</button>
+  <button type="submit">{{button|Request a call back}}</button>
 </form>
 </div></body></html>
 `;
@@ -104,14 +116,14 @@ button{width:100%;padding:16px;border:0;border-radius:99px;background:{{accent}}
 .fine{margin:12px 0 0;text-align:center;font-size:12px;color:#9ca3af}
 </style></head>
 <body><div class="card">
-<h1>Get a fast quote</h1>
-<p class="sub">{{business_name}} replies <b>quickly</b>. Just three things:</p>
+<h1>{{heading|Get a fast quote}}</h1>
+<p class="sub">{{intro|{{business_name}} replies quickly. Just three things:}}</p>
 <form>
   <input name="name" autocomplete="name" required placeholder="Your name">
   <input name="phone" type="tel" autocomplete="tel" required placeholder="Best phone number">
   <textarea name="message" placeholder="What do you need done?"></textarea>
   ${HP}
-  <button type="submit">Get my quote</button>
+  <button type="submit">{{button|Get my quote}}</button>
   <p class="fine">No spam. We only use this to contact you about your request.</p>
 </form>
 </div></body></html>
@@ -141,7 +153,7 @@ button{width:100%;padding:15px;border:0;border-radius:10px;background:{{accent}}
 <body><div class="card">
 <div class="alert">Need help right now?<small>Choose "Emergency" below and {{business_name}} will prioritize your request.</small></div>
 <form>
-  <h1>Request urgent service</h1>
+  <h1>{{heading|Request urgent service}}</h1>
   <label class="f">Your name *<input type="text" name="name" autocomplete="name" required></label>
   <label class="f">Phone number *<input type="tel" name="phone" autocomplete="tel" required placeholder="So we can call you back"></label>
   <label class="f">Where is the problem?<input type="text" name="address" autocomplete="street-address" placeholder="Street address"></label>
@@ -154,7 +166,7 @@ button{width:100%;padding:15px;border:0;border-radius:10px;background:{{accent}}
   </div>
   <label class="f">What happened?<textarea name="message" placeholder="Briefly describe the problem"></textarea></label>
   ${HP}
-  <button type="submit">Send urgent request</button>
+  <button type="submit">{{button|Send urgent request}}</button>
 </form>
 </div></body></html>
 `;
@@ -178,8 +190,8 @@ button{width:100%;margin-top:10px;padding:15px;border:0;border-radius:10px;backg
 .fine{margin:10px 0 0;text-align:center;font-size:12px;color:#9ca3af}
 </style></head>
 <body><div class="card">
-<h1>Request a free estimate</h1>
-<p class="sub">Answer a few quick questions and {{business_name}} will follow up with a price.</p>
+<h1>{{heading|Request a free estimate}}</h1>
+<p class="sub">{{intro|Answer a few quick questions and {{business_name}} will follow up with a price.}}</p>
 <form>
   <div class="sec"><i>1</i>About you</div>
   <div class="row">
@@ -192,12 +204,12 @@ button{width:100%;margin-top:10px;padding:15px;border:0;border-radius:10px;backg
   <label>Property type<select name="property"><option value="">Choose one</option><option>House</option><option>Townhome or condo</option><option>Apartment</option><option>Commercial building</option></select></label>
   <div class="sec"><i>3</i>The work</div>
   <div class="row">
-    <label>Type of work<select name="service">${SERVICE_OPTIONS}</select></label>
+    <label>Type of work<select name="service">{{service_options}}</select></label>
     <label>When do you need it?<select name="timeline"><option value="">Choose one</option><option>As soon as possible</option><option>Within 2 weeks</option><option>Within a month</option><option>Just getting prices</option></select></label>
   </div>
   <label>Tell us more<textarea name="message" placeholder="Size of the job, what you have now, anything we should know"></textarea></label>
   ${HP}
-  <button type="submit">Request my free estimate</button>
+  <button type="submit">{{button|Request my free estimate}}</button>
   <p class="fine">We will reach out by phone or email, usually within one business day.</p>
 </form>
 </div></body></html>

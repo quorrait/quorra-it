@@ -111,6 +111,17 @@ export function Sheet({ title, onClose, children }: { title: string; onClose(): 
   );
 }
 
+/** A numbered step heading used to break the setup into short sections. */
+export function Step({ n, title, hint, children }: { n?: number; title: string; hint?: string; children: ReactNode }) {
+  return (
+    <section className="set-sec">
+      <div className="set-head">{n ? <i>{n}</i> : null}{title}</div>
+      {hint && <p className="set-hint">{hint}</p>}
+      {children}
+    </section>
+  );
+}
+
 /** Password box with an eye button to show or hide what was typed. */
 export function PasswordInput(props: Omit<InputHTMLAttributes<HTMLInputElement>, "type">) {
   const [show, setShow] = useState(false);
