@@ -49,7 +49,7 @@ export const PLACEHOLDERS: [string, string][] = [
   ["{{business_name}}", "Your business name"], ["{{business_phone}}", "Your phone"], ["{{business_email}}", "Your email"], ["{{business_address}}", "Your address"], ["{{logo}}", "Your logo (an image)"],
   ["{{customer_name}}", "Customer name"], ["{{customer_address}}", "Customer address"], ["{{customer_phone}}", "Customer phone"], ["{{customer_email}}", "Customer email"],
   ["{{items_table}}", "Whole table of line items"], ["{{items}}", "Just the table rows (<tr>), for your own table"],
-  ["{{subtotal}}", "Subtotal"], ["{{tax}}", "Tax"], ["{{total}}", "Total"], ["{{paid}}", "Amount paid"], ["{{balance}}", "Balance due"], ["{{status}}", "Paid or Unpaid"], ["{{notes}}", "Notes"], ["{{accent}}", "Your header color (for CSS)"],
+  ["{{subtotal}}", "Subtotal"], ["{{tax}}", "Tax"], ["{{total}}", "Total"], ["{{paid}}", "Amount paid"], ["{{balance}}", "Balance due"], ["{{status}}", "Paid or Unpaid"], ["{{notes}}", "Notes"], ["{{accent}}", "Your header color (for CSS)"], ["{{footer}}", "Your footer line"],
 ];
 
 export function renderTemplate(tpl: string, d: DocData): string {
@@ -58,14 +58,17 @@ export function renderTemplate(tpl: string, d: DocData): string {
   const rows = d.items.map((li) => `<tr><td>${esc(li.description || "Item")}</td><td style="text-align:right">${esc(li.qty)}</td><td style="text-align:right">${esc(money(li.unit_cents))}</td><td style="text-align:right">${esc(money(lineTotal(li)))}</td></tr>`).join("");
   const table = `<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left">Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>`;
   const logo = d.business.logo && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(d.business.logo) ? `<img src="${esc(d.business.logo)}" alt="" style="max-height:60px">` : "";
+  const ds = d.business.doc_settings ?? {};
+  const defTitle = (d.kind === "Invoice" ? ds.title_invoice : ds.title_estimate)?.trim() || d.kind.toUpperCase();
   const v: Record<string, string> = {
-    title: esc(d.title ?? d.kind.toUpperCase()), number: esc(d.number), issued: esc(fmtDate(d.issued)), date_label: esc(d.dateLabel), date_value: esc(fmtDate(d.dateValue)),
-    business_name: esc(d.business.name), business_phone: esc(d.business.phone), business_email: esc(d.business.email), business_address: esc(d.business.address ?? ""), logo,
+    title: esc(d.title ?? defTitle), number: esc(d.number), issued: esc(fmtDate(d.issued)), date_label: esc(d.dateLabel), date_value: esc(fmtDate(d.dateValue)),
+    business_name: esc(d.business.name), business_phone: ds.show_phone === false ? "" : esc(d.business.phone), business_email: ds.show_email === false ? "" : esc(d.business.email), business_address: ds.show_address === false ? "" : esc(d.business.address ?? ""), logo: ds.show_logo === false ? "" : logo,
+    footer: esc(ds.footer ?? ""),
     customer_name: esc(d.customer?.name ?? ""), customer_address: esc(d.customer?.address ?? ""), customer_phone: esc(d.customer?.phone ?? ""), customer_email: esc(d.customer?.email ?? ""),
     items_table: table, items: rows,
     subtotal: esc(money(t.subtotal)), tax: esc(money(t.tax)), total: esc(money(t.total)), paid: esc(money(paid)), balance: esc(money(Math.max(0, t.total - paid))),
     accent: /^#[0-9a-f]{6}$/i.test(d.business.doc_settings?.accent ?? "") ? (d.business.doc_settings!.accent as string) : "#0F2742",
-    status: d.kind === "Invoice" ? (paid >= t.total && t.total > 0 ? "Paid" : "Unpaid") : "", notes: esc(d.notes ?? "").replace(/\n/g, "<br>"),
+    status: d.kind === "Invoice" && ds.show_status !== false ? (paid >= t.total && t.total > 0 ? "Paid" : "Unpaid") : "", notes: esc(d.notes ?? "").replace(/\n/g, "<br>"),
   };
   return sanitizeTemplate(tpl.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => v[k.toLowerCase()] ?? ""));
 }

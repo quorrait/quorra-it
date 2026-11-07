@@ -276,10 +276,12 @@ td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;colo
 </body></html>
 `;
 
-export const INVOICE_TEMPLATES: DocTemplateChoice[] = [
-  { id: "dispatch", name: "Dispatch", desc: "Warm wave header and an amount-due panel", html: DISPATCH },
+const withFooter = (h: string) => h.replace(/<\/body>/i, '<div style="text-align:center;font:11px/1.4 system-ui,Arial,sans-serif;color:#777;margin-top:10px">{{footer}}</div>\n</body>');
+
+export const INVOICE_TEMPLATES: DocTemplateChoice[] = ([
   { id: "classic", name: "Classic", desc: "Traditional black and white with a clean rule", html: CLASSIC },
+  { id: "dispatch", name: "Warm Wave", desc: "Soft wave header and a dark amount-due panel", html: DISPATCH },
   { id: "modern", name: "Modern band", desc: "Color header band, shaded totals box", html: MODERN },
   { id: "bold", name: "Bold", desc: "Big title and a balance-due highlight", html: BOLD },
-  { id: "trade", name: "Trade work order", desc: "Boxed layout with a signature line", html: TRADE },
-];
+  { id: "trade", name: "Job ticket", desc: "Boxed layout with a signature line", html: TRADE },
+] as DocTemplateChoice[]).map((t) => ({ ...t, html: withFooter(t.html) }));

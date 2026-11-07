@@ -71,6 +71,24 @@
   // A small bridge catches its form, and this page sends the request, so the intake rules stay the same.
   var BRIDGE = '<scr' + 'ipt>(function(){var known={name:1,phone:1,email:1,address:1,service:1,message:1,hp:1};function status(t,ok){var s=document.getElementById("quorra-status");if(!s){s=document.createElement("div");s.id="quorra-status";s.style.cssText="margin:12px 0;padding:10px 12px;border-radius:8px;font:600 14px system-ui,sans-serif";document.body.appendChild(s)}s.textContent=t;s.style.background=ok?"#ecfdf3":"#fef3f2";s.style.color=ok?"#137a3c":"#b42318"}document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd=new FormData(f),d={},extra=[];fd.forEach(function(v,k){if(typeof v!=="string")return;if(known[k])d[k]=v;else if(v.trim())extra.push(k+": "+v)});if(extra.length)d.message=((d.message||"")+"\\n"+extra.join("\\n")).trim();parent.postMessage({quorraLead:d},"*");status("Sending...",true)},true);window.addEventListener("message",function(e){var m=e.data&&e.data.quorraResult;if(!m)return;status(m.text,m.ok);if(m.ok){document.querySelectorAll("form").forEach(function(f){f.reset()})}});function size(){parent.postMessage({quorraHeight:document.documentElement.scrollHeight},"*")}window.addEventListener("load",size);if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement)})();</scr' + 'ipt>';
   var frame = document.getElementById("custom");
+  function applyFieldOptions(html) {
+    var hideEmail = cfg.show_email === false, hideAddr = cfg.show_address === false, reqPhone = !!cfg.require_phone, extra = String(cfg.extra_label || "").trim();
+    if (!hideEmail && !hideAddr && !reqPhone && !extra) return html;
+    var doc = new DOMParser().parseFromString(html, "text/html");
+    function drop(n) { Array.prototype.forEach.call(doc.querySelectorAll('[name="' + n + '"]'), function (el) { (el.closest("label") || el).remove(); }); }
+    if (hideEmail) drop("email");
+    if (hideAddr) drop("address");
+    var ph = doc.querySelector('input[name="phone"]');
+    if (reqPhone && ph) ph.required = true;
+    if (extra && ph) {
+      var lab = ph.closest("label"), node = (lab || ph).cloneNode(true), inp = node.matches("input") ? node : node.querySelector("input");
+      inp.name = extra; inp.type = "text"; inp.required = false; inp.removeAttribute("autocomplete"); inp.placeholder = lab ? "" : extra;
+      if (lab) { Array.prototype.forEach.call(node.childNodes, function (c) { if (c.nodeType === 3) c.textContent = ""; }); node.insertBefore(doc.createTextNode(extra), node.firstChild); }
+      var btn = doc.querySelector('button[type="submit"],button:not([type])');
+      if (btn) btn.parentNode.insertBefore(node, btn);
+    }
+    return "<!doctype html>" + doc.documentElement.outerHTML;
+  }
   function useCustom(html) {
     // Placeholders: {{accent}} {{business_name}} {{service_options}} and {{heading|Fallback}} {{intro|Fallback}} {{button|Fallback}}.
     var acc = cfg.accent && /^#[0-9a-f]{6}$/i.test(cfg.accent) ? cfg.accent : "#ea580c";
@@ -81,6 +99,7 @@
       .replace(/\{\{\s*business_name\s*\}\}/gi, escHtml(bizName || "Our team"))
       .replace(/\{\{\s*service_options\s*\}\}/gi, opts)
       .replace(/\{\{\s*(heading|intro|button)\s*(?:\|([^}]*))?\}\}/gi, function (m, k, fb) { var v = String(cfg[k.toLowerCase()] || "").trim(); return v ? escHtml(v) : String(fb || "").trim(); });
+    html = applyFieldOptions(html);
     document.getElementById("builtin").style.display = "none";
     frame.style.display = "block";
     frame.srcdoc = html + BRIDGE;

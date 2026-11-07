@@ -9,15 +9,13 @@ import { MAX_FORM_HTML, STARTER_FORM, downloadText } from "../lib/customHtml";
 import TemplateGallery, { type GalleryItem } from "./TemplateGallery";
 import { LEAD_FORM_TEMPLATES, fillFormTemplate } from "../lib/leadFormTemplates";
 
-const STANDARD = "standard";
-
 /** Website lead form: pick a style, adjust the wording, then share the link or embed it. */
 export default function LeadFormCard() {
   const { store, business, refresh } = useData();
   const toast = useToast();
   const [demoForm, setDemoForm] = useState(false);
   const live = leadFormUrl(business.lead_key, business.name);
-  const [cfg, setCfg] = useState<LeadFormSettings>(business.lead_form ?? {});
+  const [cfg, setCfg] = useState<LeadFormSettings>(() => ({ ...(business.lead_form ?? {}), custom_html: business.lead_form?.custom_html?.trim() ? business.lead_form.custom_html : LEAD_FORM_TEMPLATES[0].html }));
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const set = (p: Partial<LeadFormSettings>) => { setCfg((c) => ({ ...c, ...p })); setDirty(true); };
@@ -25,18 +23,12 @@ export default function LeadFormCard() {
   const services = useMemo(() => servicesText.split("\n").map((x) => x.trim()).filter(Boolean), [servicesText]);
   const preview = useMemo(() => ({ ...cfg, services }), [cfg, services]);
   const previewSrc = useMemo(() => leadFormPreviewUrl(business.name, preview), [business.name, preview]);
-  const standardThumb = useMemo(() => leadFormPreviewUrl(business.name, { ...preview, custom_html: "" }), [business.name, preview]);
 
   const activeTpl = LEAD_FORM_TEMPLATES.find((t) => t.html === cfg.custom_html);
-  const isStandard = !cfg.custom_html?.trim();
-  const isCustom = !isStandard && !activeTpl;
-  const currentId = isStandard ? STANDARD : activeTpl?.id;
-  const styleName = isStandard ? "Standard form" : activeTpl ? `${activeTpl.name} style` : "Your custom HTML design";
-
-  const items: GalleryItem[] = [
-    { id: STANDARD, name: "Standard", desc: "The built-in form with optional fields", html: "", src: standardThumb },
-    ...LEAD_FORM_TEMPLATES,
-  ];
+  const isCustom = !activeTpl;
+  const currentId = activeTpl?.id;
+  const styleName = activeTpl ? `${activeTpl.name} style` : "Your custom HTML design";
+  const items: GalleryItem[] = LEAD_FORM_TEMPLATES;
 
   /** Saves the form. Pass the new settings to save a change made a moment ago (state has not updated yet). */
   async function save(override?: LeadFormSettings, msg = "Form saved. Your website form updates right away.") {
@@ -55,9 +47,9 @@ export default function LeadFormCard() {
     await save(next, "Design uploaded and saved. Your website form updates right away.");
   }
   function pick(t: GalleryItem) {
-    const next = { ...cfg, custom_html: t.id === STANDARD ? "" : t.html };
+    const next = { ...cfg, custom_html: t.html };
     setCfg(next);
-    void save(next, t.id === STANDARD ? "Standard form is back" : `${t.name} style saved. Your website form updates right away.`);
+    void save(next, `${t.name} style saved. Your website form updates right away.`);
   }
   const embed = `<iframe src="${live || "https://your-form-link"}" title="Request service" style="width:100%;max-width:600px;height:760px;border:0" loading="lazy"></iframe>`;
   const copy = async (text: string, msg: string) => { try { await navigator.clipboard.writeText(text); toast(msg); } catch { toast("Copy failed. Select the text and copy it manually."); } };
@@ -86,16 +78,12 @@ export default function LeadFormCard() {
               </div>
               <Field label="Thank-you message"><input className="input" value={cfg.thanks ?? ""} placeholder="Thank you. Your request was sent and we will contact you shortly." onChange={(e) => set({ thanks: e.target.value })} /></Field>
               <Field label="Service choices (one per line)"><textarea className="textarea" rows={4} value={servicesText} placeholder={"AC repair\nFurnace repair\nNew install"} onChange={(e) => { setServicesText(e.target.value); setDirty(true); }} /></Field>
-              {isStandard ? (
-                <div className="stack" style={{ gap: 8 }}>
-                  <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>
-                  <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
-                  <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
-                  <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
-                </div>
-              ) : (
-                <p className="small muted" style={{ margin: 0 }}>Which fields are asked is part of the style. Pick <b>Standard</b> above if you want to switch email, address and phone on or off.</p>
-              )}
+              <div className="stack" style={{ gap: 8 }}>
+                <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>
+                <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
+                <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
+                <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
+              </div>
               <div><button className="btn primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Saving..." : "Save changes"}</button></div>
             </Step>
 
@@ -130,7 +118,7 @@ export default function LeadFormCard() {
             <div className="row wrap">
               <label className="btn">Upload .html<input type="file" accept=".html,.htm,text/html" hidden onChange={(e) => { void upload(e.target.files?.[0]); e.target.value = ""; }} /></label>
               <button type="button" className="btn" onClick={() => downloadText("lead-form-starter.html", STARTER_FORM)}>Download a starter file</button>
-              {cfg.custom_html && <button type="button" className="btn" disabled={saving} onClick={() => { const next = { ...cfg, custom_html: "" }; setCfg(next); void save(next, "Standard form is back"); }}>Switch back to Standard</button>}
+              {isCustom && <button type="button" className="btn" disabled={saving} onClick={() => pick(LEAD_FORM_TEMPLATES[0])}>Switch back to {LEAD_FORM_TEMPLATES[0].name}</button>}
             </div>
             <textarea className="textarea" rows={6} value={cfg.custom_html ?? ""} maxLength={MAX_FORM_HTML} onChange={(e) => set({ custom_html: e.target.value })} placeholder="Or paste your HTML here" style={{ fontFamily: "monospace", fontSize: 12 }} />
           </div>

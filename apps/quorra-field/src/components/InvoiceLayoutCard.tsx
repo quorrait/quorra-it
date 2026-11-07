@@ -108,7 +108,7 @@ export default function InvoiceLayoutCard() {
           {isStandard && <div className="notice">You are using the <b>standard PDF layout</b>. Pick a layout above to use a designed one when printing.</div>}
           {isCustom && <div className="notice">You are using your own HTML design (see Advanced below). Pick a layout above to replace it.</div>}
           {!isStandard && <div><button type="button" className="btn sm" disabled={busy} onClick={() => { const next = { ...d, custom_html: "" }; setD(next); void saveNow(next, "Back to the standard layout"); }}>Use the standard PDF layout instead</button></div>}
-          <p className="small muted" style={{ margin: 0 }}>The PDF that is emailed to customers always uses the standard layout, set up in step 2 and the standard options below.</p>
+          <p className="small muted" style={{ margin: 0 }}>The PDF that is emailed to customers always uses the standard layout, and uses these same options.</p>
         </Step>
 
         <Step n={2} title="Color and wording">
@@ -118,15 +118,13 @@ export default function InvoiceLayoutCard() {
           </div>
           <Field label="Default notes and payment terms on invoices"><textarea className="textarea" value={d.default_notes} onChange={(e) => set("default_notes", e.target.value)} placeholder="Payment due within 14 days. We accept card, check or cash." /></Field>
           <Field label="Default notes on estimates"><textarea className="textarea" value={d.default_estimate_notes} onChange={(e) => set("default_estimate_notes", e.target.value)} placeholder="Estimate valid for 30 days. 50% deposit to schedule." /></Field>
-          <details className="adv">
-            <summary>Standard PDF options</summary>
-            <div className="stack" style={{ marginTop: 10 }}>
-              <Field label="Header style">
+          <div className="stack">
+              {isStandard && <Field label="Header style">
                 <select className="select" value={d.header} onChange={(e) => set("header", e.target.value as "band" | "plain")}>
                   <option value="band">Color band across the top</option>
                   <option value="plain">White with a color line</option>
                 </select>
-              </Field>
+              </Field>}
               <div className="grid2 stack-sm">
                 <Field label="Invoice title"><input className="input" value={d.title_invoice} onChange={(e) => set("title_invoice", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_invoice} /></Field>
                 <Field label="Estimate title"><input className="input" value={d.title_estimate} onChange={(e) => set("title_estimate", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_estimate} /></Field>
@@ -139,8 +137,7 @@ export default function InvoiceLayoutCard() {
                 {check("show_status", "Show Paid / Unpaid status on invoices")}
               </div>
               <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
-            </div>
-          </details>
+          </div>
         </Step>
         <div className="row wrap">
           <button className="btn primary" disabled={busy || !dirty} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save changes"}</button>

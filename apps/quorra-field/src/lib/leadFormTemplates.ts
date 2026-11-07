@@ -8,7 +8,7 @@ export interface FormTemplateChoice { id: string; name: string; desc: string; ht
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-export interface FormWording { accent?: string; heading?: string; intro?: string; button?: string; services?: string[] }
+export interface FormWording { accent?: string; heading?: string; intro?: string; button?: string; services?: string[]; show_email?: boolean; show_address?: boolean; require_phone?: boolean; extra_label?: string }
 export const DEFAULT_SERVICE_OPTIONS = `<option value="">Choose one</option><option>Repair</option><option>Installation or replacement</option><option>Maintenance or tune-up</option><option>Inspection or estimate</option><option>Something else</option>`;
 
 /**
@@ -20,11 +20,33 @@ export function fillFormTemplate(html: string, businessName?: string, w: FormWor
   const a = /^#[0-9a-f]{6}$/i.test(w.accent ?? "") ? (w.accent as string) : "#ea580c";
   const services = (w.services ?? []).map((x) => x.trim()).filter(Boolean);
   const opts = services.length ? `<option value="">Choose one</option>${services.map((x) => `<option>${esc(x)}</option>`).join("")}` : DEFAULT_SERVICE_OPTIONS;
-  return html
+  return applyFieldOptions(html
     .replace(/\{\{\s*accent\s*\}\}/gi, a)
     .replace(/\{\{\s*business_name\s*\}\}/gi, esc(businessName || "Our team"))
     .replace(/\{\{\s*service_options\s*\}\}/gi, opts)
-    .replace(/\{\{\s*(heading|intro|button)\s*(?:\|([^}]*))?\}\}/gi, (_m, k: string, fb?: string) => ((w[k.toLowerCase() as "heading" | "intro" | "button"] ?? "").trim() ? esc((w[k.toLowerCase() as "heading" | "intro" | "button"] as string).trim()) : (fb ?? "").trim()));
+    .replace(/\{\{\s*(heading|intro|button)\s*(?:\|([^}]*))?\}\}/gi, (_m, k: string, fb?: string) => ((w[k.toLowerCase() as "heading" | "intro" | "button"] ?? "").trim() ? esc((w[k.toLowerCase() as "heading" | "intro" | "button"] as string).trim()) : (fb ?? "").trim())), w);
+}
+
+/** Applies the field options (ask for email / address, require phone, extra question) to any style. lead.html has the same logic. */
+export function applyFieldOptions(html: string, w: FormWording): string {
+  const hideEmail = w.show_email === false, hideAddr = w.show_address === false, reqPhone = Boolean(w.require_phone), extra = (w.extra_label ?? "").trim();
+  if (!hideEmail && !hideAddr && !reqPhone && !extra) return html;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const drop = (n: string) => doc.querySelectorAll(`[name="${n}"]`).forEach((el) => (el.closest("label") ?? el).remove());
+  if (hideEmail) drop("email");
+  if (hideAddr) drop("address");
+  const ph = doc.querySelector<HTMLInputElement>('input[name="phone"]');
+  if (reqPhone && ph) ph.required = true;
+  if (extra && ph) {
+    const lab = ph.closest("label");
+    const node = (lab ?? ph).cloneNode(true) as HTMLElement;
+    const inp = (node.matches("input") ? node : node.querySelector("input")) as HTMLInputElement;
+    inp.name = extra; inp.type = "text"; inp.required = false; inp.removeAttribute("autocomplete"); inp.placeholder = lab ? "" : extra;
+    if (lab) Array.from(node.childNodes).forEach((c) => { if (c.nodeType === 3) c.textContent = ""; }), node.insertBefore(doc.createTextNode(extra), node.firstChild);
+    const btn = doc.querySelector('button[type="submit"],button:not([type])');
+    if (btn) btn.parentNode!.insertBefore(node, btn);
+  }
+  return "<!doctype html>" + doc.documentElement.outerHTML;
 }
 
 const HP = `<div style="position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden" aria-hidden="true"><label>Leave blank<input name="hp" tabindex="-1" autocomplete="off"></label></div>`;
