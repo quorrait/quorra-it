@@ -435,3 +435,4 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .bell-panel { position: absolute; right: 0; top: 48px; width: min(340px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; background: #fff; color: #0f172a; border: 1px solid var(--line, #e2e8f0); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.2); }
 .bell-item { padding: 10px 12px; border-top: 1px solid var(--line, #e2e8f0); cursor: pointer; display: grid; gap: 2px; }
 .appfoot .pubfoot { color: var(--muted, #64748b) !important; padding-top: 28px; } .appfoot .pubfoot .pf-name { color: var(--ink, #0f172a) !important; }
+.main { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; } .appfoot { margin-top: auto; }

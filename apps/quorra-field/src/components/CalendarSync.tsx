@@ -2,7 +2,7 @@ import { useConfirm } from "./ui";
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
-import { feedUrl, webcalUrl } from "../lib/publicLinks";
+import { feedUrl } from "../lib/publicLinks";
 import { buildIcs, downloadIcs } from "../lib/ics";
 import { jobEvents } from "../lib/jobEvents";
 import { useToast } from "./ui";
@@ -37,7 +37,7 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
   const steps = (
     <div className="stack" style={{ gap: 6 }}>
       <div className="bold small">How to connect your phone</div>
-      <div className="small"><b>iPhone:</b> tap "Add to phone calendar" and then Subscribe. Or: Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link.</div>
+      <div className="small"><b>iPhone:</b> Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, paste the link.</div>
       <div className="small"><b>Android / Google Calendar:</b> on a computer open calendar.google.com, Other calendars (+), From URL, paste the link. It then shows on the phone's Google Calendar app.</div>
       <div className="small"><b>Outlook:</b> Add calendar, Subscribe from web, paste the link.</div>
     </div>
@@ -65,32 +65,39 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
     );
   }
 
-  const google = `https://calendar.google.com/calendar/r?cid=${feedUrl(token).replace(/^https?:/, "webcal:")}`;
   return (
     <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Calendar: <b>{label}</b></p>
       {how}
       <div className="opt-group">
-        <h4>iPhone, iPad or Mac (Apple Calendar)</h4>
-        <a className="btn primary" style={{ minHeight: 48 }} href="calshow://" onClick={() => { void navigator.clipboard?.writeText(link); toast("Link copied. Opening Calendar: add it as a subscribed calendar."); }}>Open Apple Calendar (copies link)</a>
-        <a className="btn" href={webcalUrl(token)}>Subscribe directly (Safari)</a>
-        <div className="small muted">Open this in Safari and tap Subscribe. If it says it cannot open the link (this can happen from the home-screen app), tap Copy link below, then go to Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, and paste it.</div>
-        <div><button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button></div>
+        <h4>Step 1: copy your calendar link</h4>
+        <button className="btn primary" style={{ minHeight: 48 }} onClick={() => copy(link, "Calendar link copied")}>Copy calendar link</button>
+        <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
       </div>
       <div className="opt-group">
-        <h4>Google Calendar (Android, or the Google app)</h4>
-        <a className="btn primary" style={{ minHeight: 48 }} href={google} target="_blank" rel="noopener">Add to Google Calendar</a>
-        <div className="small muted">Google does not let its phone app add a calendar from a link, so this opens calendar.google.com. Confirm the subscription there once. After that it appears in the Google Calendar app on every phone signed in to that Google account. On a phone you can also tap Copy link, open Google Calendar in a browser, choose Other calendars, From URL, and paste it.</div>
-        <div><button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button></div>
+        <h4>Step 2 on iPhone or iPad (Apple Calendar)</h4>
+        <ol className="small" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 4 }}>
+          <li>Open <b>Settings</b>, then <b>Calendar</b>, then <b>Accounts</b>.</li>
+          <li>Tap <b>Add Account</b>, then <b>Other</b>, then <b>Add Subscribed Calendar</b>.</li>
+          <li>Paste the link into <b>Server</b> and tap <b>Next</b>, then <b>Save</b>.</li>
+        </ol>
+        <div className="small muted">Apple does not allow an app to add a calendar for you, so this one-time paste is the reliable way. After that it updates on its own.</div>
+      </div>
+      <div className="opt-group">
+        <h4>Step 2 on Android or Google Calendar</h4>
+        <ol className="small" style={{ margin: 0, paddingLeft: 18, display: "grid", gap: 4 }}>
+          <li>In a browser (Chrome) open <b>calendar.google.com</b> and choose <b>Desktop site</b> from the browser menu.</li>
+          <li>Next to <b>Other calendars</b> tap <b>+</b>, then <b>From URL</b>.</li>
+          <li>Paste the link and tap <b>Add calendar</b>.</li>
+        </ol>
+        <div className="small muted">Google's phone app cannot add a calendar from a link. Once added on the website it shows in the Google Calendar app on every phone signed in to that account. Google refreshes on its own schedule, which can take hours.</div>
       </div>
       <details className="small">
-        <summary className="bold">Other calendars or manual setup</summary>
+        <summary className="bold">Outlook and sharing</summary>
         <div className="stack" style={{ marginTop: 8 }}>
           <div className="row wrap">
-            <button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button>
-            {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar (updates automatically): ${webcalUrl(token)}`)}`}>Text link</a>}
+            {member?.phone && <a className="btn" href={`sms:${member.phone}?&body=${encodeURIComponent(`Your job calendar (updates automatically). Add it as a subscribed calendar: ${link}`)}`}>Text link</a>}
           </div>
-          <input className="input" readOnly value={link} onFocus={(e) => e.currentTarget.select()} aria-label="Calendar link" />
           <div><b>Outlook:</b> Add calendar, Subscribe from web, paste the link.</div>
         </div>
       </details>
