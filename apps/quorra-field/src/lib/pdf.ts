@@ -2,6 +2,7 @@ import { jsPDF } from "jspdf";
 import type { Business, Customer, LineItem } from "./types";
 import { invoiceTotals, lineTotal, money } from "./money";
 import { docSettings, hexToRgb, readableOn } from "./docSettings";
+import { renderTemplate } from "./customHtml";
 
 export interface DocInput {
   kind: "Invoice" | "Estimate";
@@ -144,4 +145,65 @@ export async function savePdf(pdf: jsPDF, name: string, share = false) {
   a.download = name;
   a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+
+// ---- Designed layouts as a real PDF -----------------------------------------------------------
+
+const NAMED: Record<string, string> = { white: "#ffffff", black: "#000000" };
+const rgbOf = (c: string): [number, number, number] => {
+  let h = (NAMED[c.toLowerCase()] ?? c).replace("#", "");
+  if (h.length === 3) h = h.split("").map((x) => x + x).join("");
+  return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)];
+};
+/** html2canvas can't read color-mix(), so turn each one into a plain color first. */
+function flattenColorMix(html: string): string {
+  return html.replace(/color-mix\(\s*in\s+srgb\s*,\s*(#[0-9a-f]{3,6}|[a-z]+)\s+(\d+(?:\.\d+)?)%\s*,\s*(#[0-9a-f]{3,6}|[a-z]+)\s*\)/gi, (_m, a: string, pct: string, b: string) => {
+    const k = parseFloat(pct) / 100, x = rgbOf(a), y = rgbOf(b);
+    return "#" + x.map((v, i) => Math.round(v * k + y[i] * (1 - k)).toString(16).padStart(2, "0")).join("");
+  });
+}
+
+/** Renders the business's chosen layout with this document's data and turns it into a PDF (letter pages). */
+async function htmlToPdf(html: string): Promise<jsPDF> {
+  const { default: html2canvas } = await import("html2canvas");
+  const frame = document.createElement("iframe");
+  frame.setAttribute("sandbox", "allow-same-origin");
+  frame.style.cssText = "position:fixed;left:-10000px;top:0;width:816px;height:1056px;border:0;visibility:hidden";
+  document.body.appendChild(frame);
+  try {
+    await new Promise<void>((res) => { frame.onload = () => res(); frame.srcdoc = flattenColorMix(html).replace(/<\/head>/i, "<style>html,body{background:#fff!important}</style></head>"); });
+    const doc = frame.contentDocument!;
+    await Promise.race([doc.fonts?.ready ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1500))]);
+    const h = Math.max(1056, doc.documentElement.scrollHeight);
+    frame.style.height = h + "px";
+    const canvas = await html2canvas(doc.documentElement, { scale: 2, width: 816, height: h, windowWidth: 816, windowHeight: h, backgroundColor: "#ffffff", useCORS: true, logging: false });
+    const pdf = new jsPDF({ unit: "pt", format: "letter" });
+    const fullH = (canvas.height * 612) / canvas.width; // height in pt when scaled to page width
+    if (fullH <= 792 * 1.25) { // only a little too tall: shrink to fit one page rather than spilling a few lines onto page 2
+      const f = Math.min(1, 792 / fullH), w = 612 * f;
+      pdf.addImage(canvas.toDataURL("image/jpeg", 0.92), "JPEG", (612 - w) / 2, 0, w, fullH * f);
+      return pdf;
+    }
+    const pageH = Math.floor((canvas.width * 792) / 612);
+    for (let y = 0, n = 0; y < canvas.height; y += pageH, n++) {
+      const part = document.createElement("canvas");
+      part.width = canvas.width; part.height = Math.min(pageH, canvas.height - y);
+      const ctx = part.getContext("2d")!;
+      ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, part.width, part.height);
+      ctx.drawImage(canvas, 0, y, canvas.width, part.height, 0, 0, canvas.width, part.height);
+      if (n > 0) pdf.addPage();
+      pdf.addImage(part.toDataURL("image/jpeg", 0.92), "JPEG", 0, 0, 612, (part.height * 612) / canvas.width);
+    }
+    return pdf;
+  } finally { frame.remove(); }
+}
+
+/** The PDF customers receive: the chosen designed layout, or the standard one if none is chosen (or it can't be drawn). */
+export async function buildDocPdf(o: DocInput): Promise<jsPDF> {
+  const tpl = o.business.doc_settings?.custom_html?.trim();
+  if (!tpl) return buildPdf(o);
+  try {
+    const html = renderTemplate(tpl, { kind: o.kind, number: o.number, business: o.business, customer: o.customer, items: o.items, tax_rate: o.tax_rate, issued: o.issued, dateLabel: o.dateLabel, dateValue: o.dateValue, paid: o.paid, notes: o.notes });
+    return await htmlToPdf(html);
+  } catch { return buildPdf(o); }
 }

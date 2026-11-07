@@ -115,7 +115,7 @@ export default function InvoiceLayoutCard() {
           {isStandard && <div className="notice">You are using the <b>standard PDF layout</b>. Pick a layout above to use a designed one when printing.</div>}
           {isCustom && <div className="notice">You are using your own HTML design (see Advanced below). Pick a layout above to replace it.</div>}
           {!isStandard && <div><button type="button" className="btn sm" disabled={busy} onClick={() => { const next = { ...d, custom_html: "" }; setD(next); void saveNow(next, "Back to the standard layout"); }}>Use the standard PDF layout instead</button></div>}
-          <p className="small muted" style={{ margin: 0 }}>The PDF that is emailed to customers always uses the standard layout, and uses these same options.</p>
+          <p className="small muted" style={{ margin: 0 }}>This same layout is used for the PDF you email, text, download or print, so what you see here is what your customer gets.</p>
         </Step>
 
         <Step n={2} title="Color and wording">

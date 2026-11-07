@@ -212,7 +212,7 @@ body{margin:0;background:#e9e4e0;font-family:'IBM Plex Sans',system-ui,-apple-sy
 .inv{text-align:right}
 .inv .t{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:40px;line-height:1;color:var(--dark);text-transform:capitalize}
 .inv .no{font-size:15px;font-weight:500;color:var(--acc);margin-top:8px}
-svg.wave{display:block;margin-top:22px}
+.wave{height:3px;margin:26px 0 4px;border-radius:3px;background:linear-gradient(90deg,{{accent}},color-mix(in srgb,{{accent}} 15%,#fff))}
 .three{display:grid;grid-template-columns:1fr .9fr 1.3fr;gap:28px;padding:14px 56px 0;align-items:stretch}
 .lbl{font-size:13px;font-weight:600;color:var(--mute);margin-bottom:8px}
 .cust{font-size:17px;font-weight:600;color:var(--dark)}
@@ -246,7 +246,7 @@ td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;colo
   <div class="brand">{{logo}}<div class="n">{{business_name}}</div></div>
   <div class="inv"><div class="t">{{title}}</div><div class="no">No. {{number}}</div></div>
 </div>
-<svg class="wave" width="100%" height="30" viewBox="0 0 816 30" preserveAspectRatio="none" aria-hidden="true"><path d="M0 15 C 68 -2, 136 -2, 204 15 S 340 32, 408 15 S 544 -2, 612 15 S 748 32, 816 15" fill="none" stroke="{{accent}}" stroke-opacity=".45" stroke-width="2"/></svg>
+<div class="wave"></div>
 <div class="three">
   <div><div class="lbl">Billed to</div>
     <div class="cust">{{customer_name}}</div>
@@ -280,7 +280,7 @@ const withFooter = (h: string) => h.replace(/<\/body>/i, '<div style="text-align
 
 export const INVOICE_TEMPLATES: DocTemplateChoice[] = ([
   { id: "classic", name: "Classic", desc: "Traditional black and white with a clean rule", html: CLASSIC },
-  { id: "dispatch", name: "Warm Wave", desc: "Soft wave header and a dark amount-due panel", html: DISPATCH },
+  { id: "dispatch", name: "Accent Panel", desc: "Clean header and a bold amount-due panel", html: DISPATCH },
   { id: "modern", name: "Modern band", desc: "Color header band, shaded totals box", html: MODERN },
   { id: "bold", name: "Bold", desc: "Big title and a balance-due highlight", html: BOLD },
   { id: "trade", name: "Job ticket", desc: "Boxed layout with a signature line", html: TRADE },

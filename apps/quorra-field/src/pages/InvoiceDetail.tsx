@@ -5,7 +5,8 @@ import { useData } from "../lib/app";
 import { amountPaid, balanceDue, invoiceTotals, isOverdue, lineTotal, money } from "../lib/money";
 import { fmtDate } from "../lib/dates";
 import type { InvoiceStatus } from "../lib/types";
-import { buildPdf, savePdf } from "../lib/pdf";
+import { portalPreviewUrl, portalUrl } from "../lib/publicLinks";
+import { buildDocPdf, savePdf } from "../lib/pdf";
 import { openPrintable, renderTemplate } from "../lib/customHtml";
 import { Icon, InvoiceBadge, Spinner, useToast, useConfirm } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
@@ -76,7 +77,7 @@ export default function InvoiceDetail() {
   const first = customer?.name.split(" ")[0] ?? "there";
   const subject = `Invoice #${inv.number} from ${business.name}`;
   const body = `Hi ${first},\n\nYour invoice #${inv.number} is attached. Balance due: ${money(balance)}, due ${fmtDate(inv.due_at)}.\n\nThank you,\n${business.name}${business.phone ? `\n${business.phone}` : ""}`;
-  const makePdf = () => buildPdf({ kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid, notes: inv.notes });
+  const makePdf = () => buildDocPdf({ kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid, notes: inv.notes });
 
   return (
     <div className="stack">
@@ -123,8 +124,8 @@ export default function InvoiceDetail() {
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Send to customer</div>
           <div className="pay-btns">
-            <button className="btn" onClick={() => setSendOpen(true)}>{Icon.send} Email or text with PDF</button>
-            <button className="btn" onClick={() => void savePdf(makePdf(), `Invoice-${inv.number}.pdf`)}>Download PDF</button>
+            <button className="btn" onClick={() => setSendOpen(true)}>{Icon.send} Send (PDF, portal link or text)</button>
+            <button className="btn" onClick={async () => void savePdf(await makePdf(), `Invoice-${inv.number}.pdf`)}>Download PDF</button>
             {business.doc_settings?.custom_html && <button className="btn" onClick={() => openPrintable(renderTemplate(business.doc_settings!.custom_html!, { kind: "Invoice", number: inv.number, business, customer, items: inv.items, tax_rate: inv.tax_rate, issued: inv.issued_at, dateLabel: "Due", dateValue: inv.due_at, paid, notes: inv.notes }))}>Print custom layout</button>}
           </div>
         </div>
@@ -185,6 +186,7 @@ export default function InvoiceDetail() {
           title="Send invoice"
           filename={`Invoice-${inv.number}.pdf`}
           makePdf={makePdf}
+          portalLink={portalUrl(customer?.portal_token) || portalPreviewUrl()}
           to={customer?.email}
           phone={customer?.phone}
           subject={subject}

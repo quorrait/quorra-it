@@ -7,7 +7,8 @@ import { Icon, Spinner, useToast, useConfirm } from "../components/ui";
 import { EstimateBadge } from "./Estimates";
 import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
-import { buildPdf, savePdf } from "../lib/pdf";
+import { portalPreviewUrl, portalUrl } from "../lib/publicLinks";
+import { buildDocPdf, savePdf } from "../lib/pdf";
 import { openPrintable, renderTemplate } from "../lib/customHtml";
 import { quoteUrl } from "../lib/publicLinks";
 import SendSheet from "../components/SendSheet";
@@ -74,7 +75,7 @@ export default function EstimateDetail() {
   const first = customer?.name.split(" ")[0] ?? "there";
   const subject = `Estimate #${est.number} from ${business.name}`;
   const body = `Hi ${first},\n\nYour estimate for ${est.title} is attached: ${money(totals.total)}, valid until ${fmtDate(est.valid_until)}.${link ? `\n\nView and accept it online: ${link}` : "\n\nReply to approve and we will schedule your service."}\n\nThank you,\n${business.name}${business.phone ? `\n${business.phone}` : ""}`;
-  const makePdf = () => buildPdf({ kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes });
+  const makePdf = () => buildDocPdf({ kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes });
 
   return (
     <div className="stack">
@@ -137,8 +138,8 @@ export default function EstimateDetail() {
       </div>
 
       <div className="row wrap no-print">
-        <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
-        <button className="btn grow" onClick={() => void savePdf(makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
+        <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
+        <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
         {business.doc_settings?.custom_html && <button className="btn grow" onClick={() => openPrintable(renderTemplate(business.doc_settings!.custom_html!, { kind: "Estimate", number: est.number, business, customer, items: est.items, tax_rate: est.tax_rate, issued: est.issued_at, dateLabel: "Valid until", dateValue: est.valid_until, notes: est.notes }))}>Print custom layout</button>}
         {est.status !== "draft" && <button className="btn grow" onClick={() => setSendOpen(true)}>Email / Text</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
@@ -147,7 +148,7 @@ export default function EstimateDetail() {
       </div>
 
       {sendOpen && (
-        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} to={customer?.email} phone={customer?.phone} subject={subject} body={body}
+        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={portalUrl(customer?.portal_token) || portalPreviewUrl()} to={customer?.email} phone={customer?.phone} subject={subject} body={body}
           onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} confirmLabel="I sent it, mark as sent" onClose={() => setSendOpen(false)} />
       )}
       {editing && <EstimateForm estimate={est} onClose={() => setEditing(false)} />}
