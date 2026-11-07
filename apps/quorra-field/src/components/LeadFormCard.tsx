@@ -71,22 +71,30 @@ export default function LeadFormCard() {
           {isCustom && <div className="notice">You are using your own HTML design (see Advanced below). Choose a style above to replace it.</div>}
         </Step>
 
-            <Step n={2} title="Make it yours" hint={`Applies to the ${styleName.toLowerCase()}.`}>
-              <Field label="Heading"><input className="input" value={cfg.heading ?? ""} placeholder="Leave blank to use the style's own heading" onChange={(e) => set({ heading: e.target.value })} /></Field>
-              <Field label="Intro text"><textarea className="textarea" rows={2} value={cfg.intro ?? ""} placeholder="Leave blank to use the style's own intro" onChange={(e) => set({ intro: e.target.value })} /></Field>
-              <div className="grid2 stack-sm">
-                <Field label="Button text"><input className="input" value={cfg.button ?? ""} placeholder="Style default" onChange={(e) => set({ button: e.target.value })} /></Field>
-                <Field label="Accent color"><ColorPick value={cfg.accent ?? "#ea580c"} onChange={(c) => set({ accent: c })} swatches={["#ea580c", "#0F2742", "#1D4ED8", "#047857"]} label="Accent color" /></Field>
-              </div>
-              <Field label="Thank-you message"><input className="input" value={cfg.thanks ?? ""} placeholder="Thank you. Your request was sent and we will contact you shortly." onChange={(e) => set({ thanks: e.target.value })} /></Field>
-              <Field label="Service choices (one per line)"><textarea className="textarea" rows={4} value={servicesText} placeholder={"AC repair\nFurnace repair\nNew install"} onChange={(e) => { setServicesText(e.target.value); setDirty(true); }} /></Field>
-              <div className="stack" style={{ gap: 8 }}>
-                <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>
-                <label className="row small"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
-                <label className="row small"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
-                <label className="row small"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
-              </div>
-            </Step>
+        <Step n={2} title="Make it yours" hint={`Applies to the ${styleName.toLowerCase()}. Changes show in the live preview right away.`}>
+          <div className="opt-group">
+            <h4>Look</h4>
+            <div className="opt-row"><span className="lbl">Accent color</span><ColorPick value={cfg.accent ?? "#ea580c"} onChange={(c) => set({ accent: c })} swatches={["#ea580c", "#0F2742", "#1D4ED8", "#047857"]} label="Accent color" /><span className="help">Buttons, highlights and headers.</span></div>
+          </div>
+          <div className="opt-group">
+            <h4>Words on the form</h4>
+            <Field label="Heading"><input className="input" value={cfg.heading ?? ""} placeholder="Leave blank to use the style's own heading" onChange={(e) => set({ heading: e.target.value })} /></Field>
+            <Field label="Intro text"><textarea className="textarea" rows={2} value={cfg.intro ?? ""} placeholder="Leave blank to use the style's own intro" onChange={(e) => set({ intro: e.target.value })} /></Field>
+            <Field label="Button text"><input className="input" value={cfg.button ?? ""} placeholder="Style default" onChange={(e) => set({ button: e.target.value })} /></Field>
+            <Field label="Thank-you message (shown after sending)"><input className="input" value={cfg.thanks ?? ""} placeholder="Thank you. Your request was sent and we will contact you shortly." onChange={(e) => set({ thanks: e.target.value })} /></Field>
+          </div>
+          <div className="opt-group">
+            <h4>Service choices</h4>
+            <Field label="One per line"><textarea className="textarea" rows={4} value={servicesText} placeholder={"AC repair\nFurnace repair\nNew install"} onChange={(e) => { setServicesText(e.target.value); setDirty(true); }} /></Field>
+          </div>
+          <div className="opt-group">
+            <h4>What to ask customers</h4>
+            <label className="row"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
+            <label className="row"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
+            <label className="row"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
+            <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>
+          </div>
+        </Step>
 
         <Step n={3} title="Put it to work">
           <div className="stack" style={{ gap: 6 }}>

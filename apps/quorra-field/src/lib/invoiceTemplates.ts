@@ -28,7 +28,7 @@ ${PRINT}
 </style></head>
 <body>
 <div class="top">
-  <div class="biz">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
+  <div class="biz" style="{{biz_style}}">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
   <div class="doc"><h1>{{title}}</h1><div>No. {{number}}</div></div>
 </div>
 <div class="meta">
@@ -74,7 +74,7 @@ ${PRINT}
 </style></head>
 <body>
 <div class="band">
-  <div>{{logo}}<h2>{{business_name}}</h2><div class="sub">{{business_phone}} &nbsp; {{business_email}}</div></div>
+  <div style="{{biz_style}}">{{logo}}<h2>{{business_name}}</h2><div class="sub">{{business_phone}} &nbsp; {{business_email}}</div></div>
   <div><h1>{{title}}</h1><div class="no">No. {{number}}</div></div>
 </div>
 <div class="wrap">
@@ -122,6 +122,7 @@ ${PRINT}
 </style></head>
 <body>
 <div class="pad">
+  <div style="margin-bottom:14px;{{biz_style}}">{{logo}}<b style="font-family:Arial,sans-serif">{{business_name}}</b></div>
   <div class="top">
     <div><h1>{{title}}</h1><div class="no">No. {{number}} &middot; {{status}}</div></div>
     <div class="due"><div class="l">Balance due</div><div class="v">{{balance}}</div></div>
@@ -171,7 +172,7 @@ ${PRINT}
 </style></head>
 <body>
 <div class="head">
-  <div class="biz">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
+  <div class="biz" style="{{biz_style}}">{{logo}}<h2>{{business_name}}</h2>{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div>
   <div class="doc"><h1>{{title}}</h1><div class="no">No. {{number}}</div></div>
 </div>
 <div class="two">
@@ -243,7 +244,7 @@ td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;colo
 <div class="page">
 <div class="top"></div>
 <div class="head">
-  <div class="brand">{{logo}}<div class="n">{{business_name}}</div></div>
+  <div class="brand" style="{{biz_style}}">{{logo}}<div class="n">{{business_name}}</div></div>
   <div class="inv"><div class="t">{{title}}</div><div class="no">No. {{number}}</div></div>
 </div>
 <div class="wave"></div>

@@ -15,6 +15,10 @@ const SWATCHES = ["#0F2742", "#E8590C", "#1D4ED8", "#047857", "#7C3AED", "#11182
 const SAMPLE_CUSTOMER: Customer = { id: "sample", name: "Dana Whitfield", phone: "(555) 987-6543", email: "dana@example.com", address: "214 Oak Street, Rocklin CA", notes: "" };
 
 
+const Seg = <T extends string>({ value, opts, onChange }: { value: T; opts: [T, string][]; onChange(v: T): void }) => (
+  <div className="seg" role="group">{opts.map(([v, l]) => <button key={v} type="button" className={value === v ? "on" : ""} onClick={() => onChange(v)}>{l}</button>)}</div>
+);
+
 /** Page-width iframe scaled to fit its container, in a box that scrolls so the whole page (footer included) can be seen. */
 function Scaled({ html }: { html: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -112,39 +116,52 @@ export default function InvoiceLayoutCard() {
             render={(h) => renderTemplate(h, galleryData())}
             previewNote="Sample customer and items shown. Your real invoice details fill in when you print."
             onPick={(t) => { const next = { ...d, custom_html: t.html }; setD(next); void saveNow(next, `${t.name} layout saved`); }} />
-          {isStandard && <div className="notice">You are using the <b>standard PDF layout</b>. Pick a layout above to use a designed one when printing.</div>}
+          {isStandard && <div className="notice">You are using the <b>standard PDF layout</b>. Pick a layout above to use a designed one instead.</div>}
           {isCustom && <div className="notice">You are using your own HTML design (see Advanced below). Pick a layout above to replace it.</div>}
           {!isStandard && <div><button type="button" className="btn sm" disabled={busy} onClick={() => { const next = { ...d, custom_html: "" }; setD(next); void saveNow(next, "Back to the standard layout"); }}>Use the standard PDF layout instead</button></div>}
           <p className="small muted" style={{ margin: 0 }}>This same layout is used for the PDF you email, text, download or print, so what you see here is what your customer gets.</p>
         </Step>
 
-        <Step n={2} title="Color and wording">
-          <div className="grid2 stack-sm">
-            <Field label="Color"><ColorPick value={d.accent} onChange={(c) => set("accent", c)} swatches={SWATCHES} label="Color" /></Field>
-            <div />
+        <Step n={2} title="Make it yours" hint="Changes show in the live preview right away.">
+          <div className="opt-group">
+            <h4>Brand</h4>
+            <div className="opt-row"><span className="lbl">Color</span><ColorPick value={d.accent} onChange={(c) => set("accent", c)} swatches={SWATCHES} label="Color" /><span className="help">Used for headers, bars, lines and the amount due.</span></div>
           </div>
-          <Field label="Default notes and payment terms on invoices"><textarea className="textarea" value={d.default_notes} onChange={(e) => set("default_notes", e.target.value)} placeholder="Payment due within 14 days. We accept card, check or cash." /></Field>
-          <Field label="Default notes on estimates"><textarea className="textarea" value={d.default_estimate_notes} onChange={(e) => set("default_estimate_notes", e.target.value)} placeholder="Estimate valid for 30 days. 50% deposit to schedule." /></Field>
-          <div className="stack">
-              {isStandard && <Field label="Header style">
-                <select className="select" value={d.header} onChange={(e) => set("header", e.target.value as "band" | "plain")}>
-                  <option value="band">Color band across the top</option>
-                  <option value="plain">White with a color line</option>
-                </select>
-              </Field>}
-              <div className="grid2 stack-sm">
-                <Field label="Invoice title"><input className="input" value={d.title_invoice} onChange={(e) => set("title_invoice", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_invoice} /></Field>
-                <Field label="Estimate title"><input className="input" value={d.title_estimate} onChange={(e) => set("title_estimate", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_estimate} /></Field>
-              </div>
-              <div className="stack" style={{ gap: 8 }}>
-                {check("show_logo", "Show my logo")}
-                {check("show_address", "Show my address in the header")}
-                {check("show_phone", "Show my phone number in the header")}
-                {check("show_email", "Show my email in the header")}
-                {check("show_status", "Show Paid / Unpaid status on invoices")}
-              </div>
-              <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
+
+          <div className="opt-group">
+            <h4>Logo and company name</h4>
+            <div className="opt-row"><span className="lbl">Logo position</span><Seg value={d.logo_pos ?? "left"} opts={[["left", "Left"], ["center", "Center"], ["right", "Right"]]} onChange={(v) => set("logo_pos", v)} /></div>
+            <div className="opt-row"><span className="lbl">Logo size</span><Seg value={d.logo_size ?? "medium"} opts={[["small", "Small"], ["medium", "Medium"], ["large", "Large"]]} onChange={(v) => set("logo_size", v)} /></div>
+            <div className="opt-row"><span className="lbl">Company name and contact details</span><Seg value={d.company_align ?? "left"} opts={[["left", "Left"], ["center", "Center"], ["right", "Right"]]} onChange={(v) => set("company_align", v)} /></div>
+            <span className="help small muted">Upload your logo under Business details above. Pick where it and your company text sit in the header.</span>
           </div>
+
+          <div className="opt-group">
+            <h4>What to show</h4>
+            {check("show_logo", "My logo")}
+            {check("show_address", "My address")}
+            {check("show_phone", "My phone number")}
+            {check("show_email", "My email")}
+            {check("show_status", "Paid / Unpaid status on invoices")}
+          </div>
+
+          <div className="opt-group">
+            <h4>Wording</h4>
+            <div className="grid2 stack-sm">
+              <Field label="Invoice title"><input className="input" value={d.title_invoice} onChange={(e) => set("title_invoice", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_invoice} /></Field>
+              <Field label="Estimate title"><input className="input" value={d.title_estimate} onChange={(e) => set("title_estimate", e.target.value.toUpperCase())} placeholder={DOC_DEFAULTS.title_estimate} /></Field>
+            </div>
+            <Field label="Notes and payment terms on invoices"><textarea className="textarea" rows={2} value={d.default_notes} onChange={(e) => set("default_notes", e.target.value)} placeholder="Payment due within 14 days. We accept card, check or cash." /></Field>
+            <Field label="Notes on estimates"><textarea className="textarea" rows={2} value={d.default_estimate_notes} onChange={(e) => set("default_estimate_notes", e.target.value)} placeholder="Estimate valid for 30 days. 50% deposit to schedule." /></Field>
+            <Field label="Footer line (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
+          </div>
+
+          {isStandard && (
+            <div className="opt-group">
+              <h4>Standard layout only</h4>
+              <div className="opt-row"><span className="lbl">Header style</span><Seg value={d.header} opts={[["band", "Color band"], ["plain", "White with line"]]} onChange={(v) => set("header", v)} /></div>
+            </div>
+          )}
         </Step>
         <div className="row wrap">
           <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>

@@ -216,6 +216,9 @@ export interface DocSettings {
   title_estimate?: string;
   default_notes?: string; // printed on every invoice unless the invoice has its own
   default_estimate_notes?: string;
+  logo_pos?: "left" | "center" | "right"; // where the logo sits in the header
+  company_align?: "left" | "center" | "right"; // where the company name and details sit
+  logo_size?: "small" | "medium" | "large";
   footer?: string; // extra line above the contact footer
   custom_html?: string; // an uploaded HTML template used for printing invoices and estimates
 }

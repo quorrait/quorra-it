@@ -38,30 +38,46 @@ export function buildPdf(o: DocInput): jsPDF {
   const title = (o.kind === "Invoice" ? ds.title_invoice : ds.title_estimate) || o.kind.toUpperCase();
   const notes = o.notes || (o.kind === "Invoice" ? ds.default_notes : ds.default_estimate_notes);
 
-  // Header
-  if (band) pdf.setFillColor(accent[0], accent[1], accent[2]).rect(0, 0, W, 108, "F");
-  else pdf.setDrawColor(accent[0], accent[1], accent[2]).setLineWidth(3).line(M, 98, W - M, 98).setLineWidth(1);
-  let textX = M;
+  // Header. Logo and company text can sit left, center or right; the title goes to the opposite side.
+  const align = ds.company_align, lpos = ds.logo_pos;
+  const mirror = align === "right";
+  const centered = align === "center";
+  const bandH = centered ? 132 : 108;
+  if (band) pdf.setFillColor(accent[0], accent[1], accent[2]).rect(0, 0, W, bandH, "F");
+  else pdf.setDrawColor(accent[0], accent[1], accent[2]).setLineWidth(3).line(M, bandH - 10, W - M, bandH - 10).setLineWidth(1);
+  const lh = { small: 34, medium: 52, large: 72 }[ds.logo_size];
+  let textX = mirror ? W - M : centered ? W / 2 : M;
+  const tAlign = mirror ? "right" : centered ? "center" : "left";
+  let nameY = 46, linesY = 62;
   if (biz.logo && ds.show_logo) {
     try {
       const p = pdf.getImageProperties(biz.logo);
-      const h = 52, w = Math.min(110, (p.width / p.height) * h), hh = (w * p.height) / p.width;
-      pdf.addImage(biz.logo, p.fileType, M, 28, w, hh);
-      textX = M + w + 14;
+      const h = lh, w = Math.min(lh * 2.2, (p.width / p.height) * h), hh = (w * p.height) / p.width;
+      if (centered || lpos !== align) {
+        // logo on its own row above the text
+        const lx = lpos === "center" ? (W - w) / 2 : lpos === "right" ? W - M - w : M;
+        pdf.addImage(biz.logo, p.fileType, lx, 16, w, hh);
+        nameY = 16 + hh + 18; linesY = nameY + 15;
+      } else {
+        const lx = mirror ? W - M - w : M;
+        pdf.addImage(biz.logo, p.fileType, lx, 28, w, hh);
+        textX = mirror ? lx - 14 : M + w + 14;
+      }
     } catch { /* ignore bad logo */ }
   }
-  pdf.setFont("helvetica", "bold").setFontSize(17).setTextColor(ink[0], ink[1], ink[2]).text(biz.name, textX, 46);
+  pdf.setFont("helvetica", "bold").setFontSize(17).setTextColor(ink[0], ink[1], ink[2]).text(biz.name, textX, nameY, { align: tAlign });
   pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(soft[0], soft[1], soft[2]);
   const hdrLines = [
     ...(ds.show_address && biz.address ? biz.address.split(/\n|, (?=[A-Z]{2}\b)/) : []),
     ...(ds.show_phone && biz.phone ? [biz.phone] : []),
     ...(ds.show_email && biz.email ? [biz.email] : []),
   ].filter(Boolean);
-  pdf.text(hdrLines.slice(0, 4), textX, 62);
-  pdf.setFont("helvetica", "bold").setFontSize(24).setTextColor(ink[0], ink[1], ink[2]).text(title, W - M, 50, { align: "right" });
-  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(band ? 255 : accent[0], band ? 178 : accent[1], band ? 122 : accent[2]).text(`#${o.number}`, W - M, 68, { align: "right" });
+  pdf.text(hdrLines.slice(0, 4), textX, linesY, { align: tAlign });
+  const tx = mirror ? M : W - M, ta = mirror ? "left" : "right";
+  pdf.setFont("helvetica", "bold").setFontSize(24).setTextColor(ink[0], ink[1], ink[2]).text(title, tx, 50, { align: ta });
+  pdf.setFont("helvetica", "normal").setFontSize(10).setTextColor(band ? 255 : accent[0], band ? 178 : accent[1], band ? 122 : accent[2]).text(`#${o.number}`, tx, 68, { align: ta });
 
-  let y = 142;
+  let y = Math.max(142, bandH + 34);
   // Bill to + dates
   pdf.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(130).text("BILL TO", M, y - 14);
   pdf.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(20).text(o.customer?.name ?? "", M, y);

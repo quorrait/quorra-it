@@ -1,6 +1,6 @@
 import type { DocSettings } from "./types";
 
-export const DOC_DEFAULTS: Required<Pick<DocSettings, "accent" | "header" | "show_logo" | "show_address" | "show_phone" | "show_email" | "show_status" | "title_invoice" | "title_estimate" | "default_notes" | "default_estimate_notes" | "footer">> = {
+export const DOC_DEFAULTS: Required<Pick<DocSettings, "accent" | "header" | "show_logo" | "show_address" | "show_phone" | "show_email" | "show_status" | "title_invoice" | "title_estimate" | "default_notes" | "default_estimate_notes" | "footer" | "logo_pos" | "company_align" | "logo_size">> = {
   accent: "#0F2742",
   header: "band",
   show_logo: true,
@@ -13,6 +13,9 @@ export const DOC_DEFAULTS: Required<Pick<DocSettings, "accent" | "header" | "sho
   default_notes: "",
   default_estimate_notes: "",
   footer: "",
+  logo_pos: "left",
+  company_align: "left",
+  logo_size: "medium",
 };
 
 export const docSettings = (s?: DocSettings | null) => ({ ...DOC_DEFAULTS, ...(s ?? {}) });
