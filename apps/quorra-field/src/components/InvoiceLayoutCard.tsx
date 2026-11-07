@@ -1,5 +1,5 @@
 import { errMsg } from "../lib/errors";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useData } from "../lib/app";
 import { Field, Sheet, Step, useToast } from "./ui";
 import { buildPdf } from "../lib/pdf";
@@ -13,6 +13,24 @@ import { MAX_DOC_HTML, PLACEHOLDERS, STARTER_DOC, downloadText, openPrintable, r
 const SWATCHES = ["#0F2742", "#E8590C", "#1D4ED8", "#047857", "#7C3AED", "#111827"];
 const SAMPLE_CUSTOMER: Customer = { id: "sample", name: "Dana Whitfield", phone: "(555) 987-6543", email: "dana@example.com", address: "214 Oak Street, Rocklin CA", notes: "" };
 
+
+/** Page-sized iframe scaled to fit its container width. */
+function Scaled({ html }: { html: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [w, setW] = useState(340);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const ro = new ResizeObserver(() => setW(el.clientWidth || 340)); ro.observe(el); setW(el.clientWidth || 340);
+    return () => ro.disconnect();
+  }, []);
+  const k = w / 816;
+  return (
+    <div ref={ref} style={{ width: "100%", height: 1056 * k, overflow: "hidden", border: "1px solid var(--line)", borderRadius: 10, background: "#fff" }}>
+      <iframe title="Live preview" sandbox="" srcDoc={html} style={{ width: 816, height: 1056, border: 0, transform: `scale(${k})`, transformOrigin: "0 0", pointerEvents: "none" }} />
+    </div>
+  );
+}
+
 /** Invoice and estimate look: pick a layout, set the color and wording, preview, and (for designers) use custom HTML. */
 export default function InvoiceLayoutCard() {
   const { store, business, invoices, customers, refresh } = useData();
@@ -25,9 +43,18 @@ export default function InvoiceLayoutCard() {
   const norm = (o: DocSettings) => JSON.stringify(Object.entries(o).filter(([k, v]) => v !== undefined && !(k === "custom_html" && !v)).sort(([a], [b]) => (a < b ? -1 : 1)));
   const dirty = norm(d) !== norm(docSettings(business.doc_settings));
 
+  const [liveUrl, setLiveUrl] = useState("");
   const activeTpl = INVOICE_TEMPLATES.find((t) => t.html === d.custom_html);
   const isStandard = !d.custom_html?.trim();
   const isCustom = !isStandard && !activeTpl;
+
+  const stdKey = isStandard ? JSON.stringify([d, business.name, business.phone, business.email, business.address, business.logo]) : "";
+  useEffect(() => {
+    if (!isStandard) return;
+    const t = setTimeout(() => { try { const s = sampleData(); setLiveUrl(buildPdf({ kind: "Invoice", number: s.number, business: s.business, customer: s.customer, items: s.items, tax_rate: s.tax_rate, issued: s.issued, dateLabel: "Due", dateValue: s.dateValue, notes: s.notes }).output("bloburl").toString() + "#toolbar=0&navpanes=0"); } catch { /* keep last */ } }, 400);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stdKey]);
 
   /** Saves right away, so choosing, uploading or removing a layout never depends on finding the Save button. */
   async function saveNow(next: DocSettings, msg = "Layout saved") {
@@ -115,10 +142,12 @@ export default function InvoiceLayoutCard() {
           </details>
         </Step>
 
-        <Step n={3} title="Preview and save">
+        <Step n={3} title="Live preview and save" hint="Updates as you change the layout, color and wording.">
+          {isStandard
+            ? (liveUrl ? <iframe title="Live preview" src={liveUrl} style={{ width: "100%", height: 520, border: "1px solid var(--line)", borderRadius: 10, background: "#fff" }} /> : <p className="small muted">Preparing preview...</p>)
+            : <Scaled html={renderTemplate(d.custom_html as string, sampleData())} />}
           <div className="row wrap">
-            {!isStandard && <button className="btn" onClick={() => setCustom(renderTemplate(d.custom_html as string, sampleData()))}>Preview my layout</button>}
-            <button className="btn" onClick={makeStandardPreview}>Preview standard PDF</button>
+            {!isStandard && <button className="btn" onClick={() => openPrintable(renderTemplate(d.custom_html as string, sampleData()))}>Open to print</button>}
             <button className="btn primary" disabled={busy || !dirty} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save changes"}</button>
             <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
           </div>
