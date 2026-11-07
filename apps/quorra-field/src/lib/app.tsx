@@ -184,19 +184,24 @@ export function DataProvider({ children }: { children: ReactNode }) {
       } else {
         setSubscription({ status: "active", plan: "Quorra Dispatch", amount_cents: 19000, billing_interval: "month", current_period_end: new Date(Date.now() + 19 * 86400_000).toISOString(), cancel_at_period_end: false, comped: false });
       }
+      // Load every list on its own so one missing table or column cannot blank the whole app,
+      // and say exactly which one failed.
+      const failed: string[] = [];
+      const part = <T,>(label: string, p: Promise<T>, fallback: T): Promise<T> =>
+        p.catch((e) => { failed.push(`${label}: ${errMsg(e, "failed")}`); return fallback; });
       const [b, c, j, i, p, pi, es, ld, sp, tm, te, po, dt] = await Promise.all([
         store.getBusiness(),
-        store.listCustomers(),
-        store.listJobs(),
-        store.listInvoices(),
-        store.listPayments(),
-        store.listRows("price_items"),
-        store.listRows("estimates"),
-        store.listRows("leads"),
-        store.listRows("service_plans"),
-        store.listRows("team_members"),
-        store.listRows("time_entries"),
-        store.listRows("purchase_orders"),
+        part("customers", store.listCustomers(), [] as Customer[]),
+        part("jobs", store.listJobs(), [] as Job[]),
+        part("invoices", store.listInvoices(), [] as Invoice[]),
+        part("payments", store.listPayments(), [] as Payment[]),
+        part("price book", store.listRows("price_items"), [] as PriceItem[]),
+        part("estimates", store.listRows("estimates"), [] as Estimate[]),
+        part("leads", store.listRows("leads"), [] as Lead[]),
+        part("service plans", store.listRows("service_plans"), [] as ServicePlan[]),
+        part("team", store.listRows("team_members"), [] as TeamMember[]),
+        part("time entries", store.listRows("time_entries"), [] as TimeEntry[]),
+        part("purchase orders", store.listRows("purchase_orders"), [] as PurchaseOrder[]),
         store.listRows("doc_templates").catch(() => [] as DocTemplate[]), // table may not exist until migration 0004 is run
       ]);
       setBusiness(b);
@@ -212,7 +217,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setTimeEntries(te);
       setPurchaseOrders(po);
       setDocTemplates(dt);
-      setError(null);
+      setError(failed.length ? `Could not load some data. ${failed.join("; ")}` : null);
     } catch (e) {
       setError(errMsg(e, "Could not load data"));
     } finally {
