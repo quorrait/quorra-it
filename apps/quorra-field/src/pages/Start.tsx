@@ -3,7 +3,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
-import { PLANS } from "../lib/plans";
+import { PLANS, ANNUAL_DISCOUNT, annualCents } from "../lib/plans";
 import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
 import { Field, PasswordInput } from "../components/ui";
@@ -13,6 +13,7 @@ export default function Start() {
   const auth = useAuth();
   const nav = useNavigate();
   const [params] = useSearchParams();
+  const interval = params.get("interval") === "year" ? "year" : "month";
   const plan = PLANS.find((p) => p.id === params.get("plan")) ?? PLANS[1];
   const [biz, setBiz] = useState("");
   const [email, setEmail] = useState("");
@@ -32,7 +33,7 @@ export default function Start() {
       const r = await auth.signUp(email, password, biz.trim());
       if (r.needsConfirm) { setInfo("Check your email to confirm your account, then sign in. You will be asked to start your plan."); return; }
       if (hasSupabase && supabase) {
-        const { data, error } = await supabase.functions.invoke("billing-checkout", { body: { plan: plan.id } });
+        const { data, error } = await supabase.functions.invoke("billing-checkout", { body: { plan: plan.id, interval } });
         if (error || !data?.url) {
           let m = data?.error ?? "Your account is created, but we could not open payment. Sign in and choose your plan under Billing.";
           try { const ctx = (error as { context?: Response } | null)?.context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
@@ -53,7 +54,7 @@ export default function Start() {
         <div className="auth-head">
           <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
           <h1>Create your account</h1>
-          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {money(plan.price_cents).replace(".00", "")} per month after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and nothing is charged until the trial ends. Cancel any time before then.</p>
+          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {interval === "year" ? `${money(annualCents(plan)).replace(".00", "")} per year (${ANNUAL_DISCOUNT}% off)` : `${money(plan.price_cents).replace(".00", "")} per month`} after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and nothing is charged until the trial ends. Cancel any time before then.</p>
         </div>
         {!hasSupabase && <div className="notice">Demo mode: no payment is taken.</div>}
         <Field label="Business name"><input className="input" autoComplete="organization" value={biz} onChange={(e) => setBiz(e.target.value)} placeholder="Summit Home Services" required={hasSupabase} /></Field>

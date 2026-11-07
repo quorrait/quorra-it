@@ -13,7 +13,7 @@ export default function Plans() {
         </div>
         <h1>Pick your plan</h1>
         <p className="sub">Try any plan free for 14 days. Create your account, add a card, and start dispatching. Nothing is charged until the trial ends. Cancel any time.</p>
-        <PlanCards onChoose={(p) => nav(`/start?plan=${p.id}`)} cta="Start" />
+        <PlanCards onChoose={(p, iv) => nav(`/start?plan=${p.id}&interval=${iv}`)} cta="Start" />
       </div>
     </div>
   );

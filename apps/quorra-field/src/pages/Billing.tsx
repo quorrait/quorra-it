@@ -43,11 +43,11 @@ export default function Billing() {
   const planLabel = named ? named.name : sub?.plan ?? "No plan yet";
   const active = status === "active" || status === "past_due" || sub?.comped;
 
-  async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string) {
+  async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string, interval?: string) {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? fn + (flow ?? ""));
     try {
-      const { data, error } = await supabase.functions.invoke(fn, { body: { flow, plan } });
+      const { data, error } = await supabase.functions.invoke(fn, { body: { flow, plan, interval } });
       if (error) throw error;
       if (!data?.url) throw new Error(data?.error ?? "Could not open billing");
       location.href = data.url as string;
@@ -110,7 +110,7 @@ export default function Billing() {
       {!active && !sub?.comped ? (
         <div className="stack">
           <div className="card-title" style={{ margin: 0 }}>Choose your plan</div>
-          <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p) => void go("billing-checkout", undefined, p.id)} />
+          <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p, iv) => void go("billing-checkout", undefined, p.id, iv)} />
         </div>
       ) : !sub?.comped && (
         <div className="card stack">

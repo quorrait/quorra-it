@@ -10,6 +10,11 @@ export interface Plan {
 
 export const TRIAL_DAYS = 14;
 
+export type Interval = "month" | "year";
+export const ANNUAL_DISCOUNT = 10; // percent off when paying for the year up front
+/** Yearly price: 12 months with the discount taken off. */
+export const annualCents = (p: { price_cents: number }) => Math.round(p.price_cents * 12 * (1 - ANNUAL_DISCOUNT / 100));
+
 /** Monthly prices. What is actually charged comes from the Stripe price ids set as STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE. */
 export const PLANS: Plan[] = [
   { id: "basic", name: "Basic", price_cents: 8000, seats: 1, tagline: "For a one-person shop", extras: ["1 login (the owner)", "Email support"] },

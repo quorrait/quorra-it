@@ -10,7 +10,8 @@ handler(async (req) => {
   // Secrets: STRIPE_PRICE_BASIC, STRIPE_PRICE_ESSENTIALS, STRIPE_PRICE_ENTERPRISE (the price ids from Stripe).
   const plan = String(body.plan ?? "essentials").toLowerCase();
   if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
-  const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}`);
+  const yearly = body.interval === "year";
+  const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${yearly ? "_ANNUAL" : ""}`);
 
   const db = admin();
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });

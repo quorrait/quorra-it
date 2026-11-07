@@ -10,7 +10,7 @@ const cryptoProvider = Stripe.createSubtleCryptoProvider();
 // Plan name from the price id (STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE), so it is right even when the Stripe price has no nickname.
 function planName(price?: Stripe.Price | null): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
-    if (price?.id && price.id === Deno.env.get(`STRIPE_PRICE_${key}`)) return name;
+    if (price?.id && (price.id === Deno.env.get(`STRIPE_PRICE_${key}`) || price.id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
   }
   return price?.nickname || "Quorra Dispatch";
 }
