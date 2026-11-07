@@ -34,7 +34,7 @@
 </style>
 </head>
 <body>
-<iframe id="custom" title="Request service" sandbox="allow-scripts" style="display:none;width:100%;max-width:640px;margin:0 auto;border:0;height:760px"></iframe>
+<iframe id="custom" title="Request service" sandbox="allow-scripts allow-forms" style="display:none;width:100%;max-width:640px;margin:0 auto;border:0;height:760px"></iframe>
 <div class="card" id="builtin">
   <div class="head">
     <div class="biz" id="biz"></div>
@@ -62,8 +62,9 @@
   var q = new URLSearchParams(location.search);
   var key = q.get("k"), api = q.get("api"), demo = q.get("demo") === "1", name = q.get("n"), anon = q.get("a");
   var f = document.getElementById("f"), out = document.getElementById("out"), go = document.getElementById("go");
-  var cfg = {};
+  var cfg = {}, bizName = name || "";
   if (name) document.getElementById("biz").textContent = name;
+  function escHtml(s) { return String(s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function show(cls, text) { out.className = "msg " + cls; out.textContent = text; }
   function shade(hex, amt) { var n = parseInt(hex.slice(1), 16), r = Math.max(0, (n >> 16) - amt), g = Math.max(0, ((n >> 8) & 255) - amt), b = Math.max(0, (n & 255) - amt); return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1); }
   // Business-supplied HTML runs in a sealed frame (scripts allowed, but no access to this page or the account).
@@ -71,6 +72,9 @@
   var BRIDGE = '<scr' + 'ipt>(function(){var known={name:1,phone:1,email:1,address:1,service:1,message:1,hp:1};function status(t,ok){var s=document.getElementById("quorra-status");if(!s){s=document.createElement("div");s.id="quorra-status";s.style.cssText="margin:12px 0;padding:10px 12px;border-radius:8px;font:600 14px system-ui,sans-serif";document.body.appendChild(s)}s.textContent=t;s.style.background=ok?"#ecfdf3":"#fef3f2";s.style.color=ok?"#137a3c":"#b42318"}document.addEventListener("submit",function(e){e.preventDefault();var f=e.target,fd=new FormData(f),d={},extra=[];fd.forEach(function(v,k){if(typeof v!=="string")return;if(known[k])d[k]=v;else if(v.trim())extra.push(k+": "+v)});if(extra.length)d.message=((d.message||"")+"\\n"+extra.join("\\n")).trim();parent.postMessage({quorraLead:d},"*");status("Sending...",true)},true);window.addEventListener("message",function(e){var m=e.data&&e.data.quorraResult;if(!m)return;status(m.text,m.ok);if(m.ok){document.querySelectorAll("form").forEach(function(f){f.reset()})}});function size(){parent.postMessage({quorraHeight:document.documentElement.scrollHeight},"*")}window.addEventListener("load",size);if(window.ResizeObserver)new ResizeObserver(size).observe(document.documentElement)})();</scr' + 'ipt>';
   var frame = document.getElementById("custom");
   function useCustom(html) {
+    // {{accent}} and {{business_name}} work in any custom form.
+    var acc = cfg.accent && /^#[0-9a-f]{6}$/i.test(cfg.accent) ? cfg.accent : "#ea580c";
+    html = html.replace(/\{\{\s*accent\s*\}\}/gi, acc).replace(/\{\{\s*business_name\s*\}\}/gi, escHtml(bizName || "Our team"));
     document.getElementById("builtin").style.display = "none";
     frame.style.display = "block";
     frame.srcdoc = html + BRIDGE;
@@ -115,7 +119,7 @@
   else if (!demo && key && api && anon) {
     fetch(api.replace(/\/functions\/v1\/?$/, "") + "/rest/v1/rpc/lead_form_config", { method: "POST", headers: { "Content-Type": "application/json", apikey: anon, Authorization: "Bearer " + anon }, body: JSON.stringify({ p_key: key }) })
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (j) { if (j) { if (j.name && !name) document.getElementById("biz").textContent = j.name; apply(j.form); } })
+      .then(function (j) { if (j) { if (j.name && !name) { document.getElementById("biz").textContent = j.name; bizName = j.name; } apply(j.form); } })
       .catch(function () {});
   }
   if (!demo && (!key || !api)) show("err", "This form is not set up correctly.");
