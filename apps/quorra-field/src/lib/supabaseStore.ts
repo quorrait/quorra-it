@@ -76,6 +76,10 @@ export function createSupabaseStore(): Store {
       if (error) throw error;
     },
 
+    async deleteInvoice(id) {
+      const { error } = await sb().from("invoices").delete().eq("id", id);
+      if (error) throw error;
+    },
     listInvoices: () => list<Invoice>("invoices", "number", false),
     saveInvoice: (i: New<Invoice>) => upsert<Invoice>("invoices", i),
 

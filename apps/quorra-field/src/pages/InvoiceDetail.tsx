@@ -11,11 +11,12 @@ import { openPrintable, renderTemplate } from "../lib/customHtml";
 import { Icon, InvoiceBadge, Spinner, useToast, useConfirm } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
 import SendSheet from "../components/SendSheet";
+import { isManager } from "../lib/access";
 import { CardPaySheet, ManualPaySheet, TakePaymentSheet } from "../components/PaySheet";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
-  const { loading, store, business, invoices, payments, customerById, refresh } = useData();
+  const { loading, store, business, invoices, payments, customerById, refresh, me } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const ask = useConfirm();
@@ -174,6 +175,15 @@ export default function InvoiceDetail() {
         {inv.job_id && <Link className="btn grow" to={`/jobs/${inv.job_id}`}>View job</Link>}
         {inv.status !== "void" && inv.status !== "paid" && (
           <button className="btn danger grow" disabled={busy} onClick={async () => { if (await ask({ title: "Void this invoice?", message: "A voided invoice can no longer be paid.", confirmLabel: "Void invoice", danger: true })) { void setStatus("void", "Invoice voided").then(() => nav("/invoices")); } }}>Void</button>
+        )}
+        {isManager(me.role) && (
+          <button className="btn danger grow" disabled={busy} onClick={async () => {
+            if (!(await ask({ title: `Delete invoice #${inv.number}?`, message: myPayments.length ? "This permanently removes the invoice and its recorded payments. It cannot be undone." : "This permanently removes the invoice. It cannot be undone.", confirmLabel: "Delete invoice", danger: true }))) return;
+            setBusy(true);
+            try { await store.deleteInvoice(inv.id); await refresh(); toast("Invoice deleted"); nav("/invoices"); }
+            catch (e) { toast(errMsg(e, "Could not delete the invoice")); }
+            finally { setBusy(false); }
+          }}>Delete</button>
         )}
       </div>
 

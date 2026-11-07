@@ -2,6 +2,7 @@ import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Icon, useConfirm } from "./ui";
 import NotificationBell from "./NotificationBell";
+import PublicFooter from "./PublicFooter";
 import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
 import { useData, useAuth } from "../lib/app";
@@ -105,6 +106,7 @@ export default function Layout() {
       <main className="main">
         {error && <div className="error-banner">{error}</div>}
         <Outlet />
+        <div className="appfoot"><PublicFooter /></div>
       </main>
 
       <nav className="tabbar" aria-label="Main">

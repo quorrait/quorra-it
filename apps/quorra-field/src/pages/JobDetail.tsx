@@ -186,7 +186,7 @@ export default function JobDetail() {
       <div className="row wrap">
         {(job.status === "scheduled") && <button className="btn grow primary" onClick={() => { const loc = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }; setResched({ start: loc(job.start_at), end: loc(job.end_at), tell: true }); }}>Reschedule</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit job</button>
-        <button className="btn grow" onClick={() => downloadIcs(`${job.title}.ics`, buildIcs(job.title, jobEvents([job], customerById)))}>Add to phone calendar</button>
+        <button className="btn grow" onClick={() => downloadIcs(`${job.title}.ics`, buildIcs(job.title, jobEvents([job], customerById)))}>Add to calendar</button>
         {can("templates") && <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "job", name: job.title, trade: "", title: job.title, notes: job.description, items: [], hours: Math.max(0.5, (new Date(job.end_at).getTime() - new Date(job.start_at).getTime()) / 3600_000) }); await refresh(); toast("Saved as a job template"); }}>Save as template</button>}
         {job.status !== "canceled" && job.status !== "completed" && (
           <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Cancel this job?", message: "The job will be marked as canceled.", confirmLabel: "Cancel job", cancelLabel: "Keep job", danger: true })) void setStatus("canceled"); }}>Cancel job</button>

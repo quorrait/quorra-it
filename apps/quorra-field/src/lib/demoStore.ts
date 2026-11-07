@@ -344,6 +344,13 @@ export function createDemoStore(): Store {
       save();
       return wait(out);
     },
+    async deleteInvoice(id) {
+      db.invoices = db.invoices.filter((i) => i.id !== id);
+      db.payments = db.payments.filter((p) => p.invoice_id !== id);
+      for (const e of (db.rows.estimates ?? []) as { invoice_id: string | null }[]) if (e.invoice_id === id) e.invoice_id = null;
+      save();
+      await wait(null);
+    },
     async deleteJob(id) {
       db.jobs = db.jobs.filter((j) => j.id !== id);
       save();

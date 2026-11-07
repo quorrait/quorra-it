@@ -13,6 +13,7 @@ export interface Store {
   listJobs(): Promise<Job[]>;
   saveJob(j: New<Job>): Promise<Job>;
   deleteJob(id: string): Promise<void>;
+  deleteInvoice(id: string): Promise<void>;
 
   listInvoices(): Promise<Invoice[]>;
   saveInvoice(i: New<Invoice>): Promise<Invoice>;

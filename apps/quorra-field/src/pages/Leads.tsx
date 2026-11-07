@@ -188,7 +188,7 @@ export default function Leads() {
                     <div className="title">{l.name}</div>
                     <div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)} ${fmtTime(job.start_at)}` : " · not scheduled yet"}</div>
                   </div>
-                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}<button className="btn sm danger" onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}<button className="btn sm danger" style={{ marginLeft: 14 }} onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
                 </div>
               );
             })}
@@ -205,7 +205,7 @@ export default function Leads() {
               return (
                 <div key={l.id} className="list-item" onClick={() => (job ? nav(`/jobs/${job.id}`) : setEdit(l))}>
                   <div className="grow"><div className="title">{l.name}</div><div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)}` : ""}</div></div>
-                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}<span className="badge good">Paid</span><button className="btn sm danger" onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}<span className="badge good">Paid</span><button className="btn sm danger" style={{ marginLeft: 14 }} onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
                 </div>
               );
             })}
