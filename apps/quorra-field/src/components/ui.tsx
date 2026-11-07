@@ -41,6 +41,51 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   );
 }
 
+/* ---------- Confirm (replaces the browser's confirm box) ---------- */
+export type ConfirmOptions = { title: string; message?: string; confirmLabel?: string; cancelLabel?: string; danger?: boolean };
+type ConfirmFn = (o: ConfirmOptions) => Promise<boolean>;
+const ConfirmCtx = createContext<ConfirmFn>(() => Promise.resolve(false));
+export const useConfirm = () => useContext(ConfirmCtx);
+
+export function ConfirmProvider({ children }: { children: ReactNode }) {
+  const [ask, setAsk] = useState<{ o: ConfirmOptions; done(v: boolean): void } | null>(null);
+  const confirm = useCallback<ConfirmFn>((o) => new Promise<boolean>((resolve) => setAsk({ o, done: resolve })), []);
+  const finish = (v: boolean) => {
+    ask?.done(v);
+    setAsk(null);
+  };
+  useEffect(() => {
+    if (!ask) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { ask.done(false); setAsk(null); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [ask]);
+  return (
+    <ConfirmCtx.Provider value={confirm}>
+      {children}
+      {ask && (
+        <div className="overlay confirm-overlay" onMouseDown={(e) => e.target === e.currentTarget && finish(false)}>
+          <div className="confirm" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby={ask.o.message ? "confirm-msg" : undefined}>
+            <h2 id="confirm-title">{ask.o.title}</h2>
+            {ask.o.message && <p id="confirm-msg">{ask.o.message}</p>}
+            <div className="confirm-actions">
+              <button className="btn grow" onClick={() => finish(false)}>{ask.o.cancelLabel ?? "Cancel"}</button>
+              <button className={`btn grow ${ask.o.danger ? "danger-solid" : "primary"}`} autoFocus onClick={() => finish(true)}>{ask.o.confirmLabel ?? "Confirm"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </ConfirmCtx.Provider>
+  );
+}
+
 /* ---------- Sheet (modal) ---------- */
 export function Sheet({ title, onClose, children }: { title: string; onClose(): void; children: ReactNode }) {
   useEffect(() => {

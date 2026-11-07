@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "../lib/app";
 import { money } from "../lib/money";
 import { LIBRARY, type LibPack } from "../lib/library";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "../components/LineItems";
 import type { DocTemplate, TemplateKind } from "../lib/types";
 
@@ -11,6 +11,7 @@ const total = (t: DocTemplate) => t.items.reduce((s, i) => s + Math.round(i.qty 
 function TemplateForm({ tpl, kind, onClose }: { tpl?: DocTemplate; kind: TemplateKind; onClose(): void }) {
   const { store, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [name, setName] = useState(tpl?.name ?? "");
   const [title, setTitle] = useState(tpl?.title ?? "");
   const [notes, setNotes] = useState(tpl?.notes ?? "");
@@ -33,7 +34,7 @@ function TemplateForm({ tpl, kind, onClose }: { tpl?: DocTemplate; kind: Templat
           await store.saveRow("doc_templates", { id: tpl?.id, kind, name: name.trim(), trade, title, notes, items: kind === "estimate" ? rowsToItems(rows) : [], hours: Number(hours) || 2 });
           await refresh(); toast("Template saved"); onClose();
         }}>Save template</button>
-        {tpl && <button className="btn danger block" onClick={async () => { if (confirm("Delete this template?")) { await store.deleteRow("doc_templates", tpl.id); await refresh(); onClose(); } }}>Delete</button>}
+        {tpl && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this template?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("doc_templates", tpl.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );

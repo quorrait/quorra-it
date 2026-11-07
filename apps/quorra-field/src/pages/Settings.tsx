@@ -4,7 +4,7 @@ import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useAuth, useData } from "../lib/app";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
@@ -49,6 +49,7 @@ export default function Settings() {
   const { loading, store, business, refresh, resetDemo } = useData();
   const { signOut, email } = useAuth();
   const toast = useToast();
+  const ask = useConfirm();
   const [params, setParams] = useSearchParams();
   const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "", review_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
@@ -175,7 +176,7 @@ export default function Settings() {
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
         <div className="row wrap">
           <button className="btn grow" onClick={signOut}>Sign out</button>
-          {store.mode === "demo" && <button className="btn danger grow" onClick={() => { if (confirm("Reset all demo data?")) resetDemo(); }}>Reset demo data</button>}
+          {store.mode === "demo" && <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Reset all demo data?", message: "Everything you added in the demo will be removed.", confirmLabel: "Reset", danger: true })) resetDemo(); }}>Reset demo data</button>}
         </div>
       </div>
     </div>

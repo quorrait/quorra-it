@@ -1,6 +1,6 @@
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AuthProvider, DataProvider, useAuth } from "./lib/app";
-import { Spinner, ToastProvider } from "./components/ui";
+import { ConfirmProvider, Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
@@ -100,7 +100,9 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
-        <Gate />
+        <ConfirmProvider>
+          <Gate />
+        </ConfirmProvider>
       </ToastProvider>
     </AuthProvider>
   );

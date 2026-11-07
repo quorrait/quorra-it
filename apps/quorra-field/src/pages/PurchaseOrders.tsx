@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "../lib/app";
 import { lineTotal, money } from "../lib/money";
 import { fmtDate, fromDateInput, toDateInput } from "../lib/dates";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "../components/LineItems";
 import type { POStatus, PurchaseOrder } from "../lib/types";
 
@@ -12,6 +12,7 @@ const total = (po: PurchaseOrder) => po.items.reduce((s, i) => s + lineTotal(i),
 function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
   const { store, jobs, purchaseOrders, customerById, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [vendor, setVendor] = useState(po?.vendor ?? "");
   const [jobId, setJobId] = useState(po?.job_id ?? "");
   const [rows, setRows] = useState<Row[]>(po ? po.items.map(toRow) : [{ description: "", qty: "1", price: "" }]);
@@ -40,7 +41,7 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
           });
           await refresh(); toast("Saved"); onClose();
         }}>Save purchase order</button>
-        {po && <button className="btn danger block" onClick={async () => { if (confirm("Delete this PO?")) { await store.deleteRow("purchase_orders", po.id); await refresh(); onClose(); } }}>Delete</button>}
+        {po && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this purchase order?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("purchase_orders", po.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );

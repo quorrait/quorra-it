@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useData } from "../lib/app";
 import { money, moneyShort } from "../lib/money";
 import { fmtDate, fromDateInput, addDays } from "../lib/dates";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { ServicePlan } from "../lib/types";
 
@@ -15,6 +15,7 @@ const addMonthsStr = (ymd: string, n: number) => {
 function PlanForm({ plan, onClose }: { plan?: ServicePlan; onClose(): void }) {
   const { store, customers, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [f, setF] = useState({
     customer_id: plan?.customer_id ?? customers[0]?.id ?? "", name: plan?.name ?? "", visit_title: plan?.visit_title ?? "",
     price: centsToStr(plan?.price_cents ?? 0), interval: String(plan?.interval_months ?? 6),
@@ -38,7 +39,7 @@ function PlanForm({ plan, onClose }: { plan?: ServicePlan; onClose(): void }) {
           await store.saveRow("service_plans", { id: plan?.id, customer_id: f.customer_id, name: f.name.trim(), visit_title: f.visit_title || f.name, price_cents: strToCents(f.price), interval_months: Number(f.interval), next_visit: f.next_visit, status: plan?.status ?? "active", notes: f.notes });
           await refresh(); toast("Plan saved"); onClose();
         }}>Save plan</button>
-        {plan && <button className="btn danger block" onClick={async () => { if (confirm("Delete this plan?")) { await store.deleteRow("service_plans", plan.id); await refresh(); onClose(); } }}>Delete</button>}
+        {plan && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this plan?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("service_plans", plan.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );

@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
 import { moneyShort } from "../lib/money";
 import { fmtDate, fmtTime } from "../lib/dates";
-import { Field, Icon, JobBadge, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, JobBadge, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { centsToStr, strToCents } from "../components/LineItems";
 import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
@@ -22,6 +22,7 @@ const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): void; onBuildQuote?(l: Lead): void }) {
   const { store, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [f, setF] = useState({
     name: lead?.name ?? "", phone: lead?.phone ?? "", email: lead?.email ?? "", address: lead?.address ?? "",
     source: lead?.source ?? "Google", service: lead?.service ?? "", value: centsToStr(lead?.value_cents ?? 0), notes: lead?.notes ?? "",
@@ -58,7 +59,7 @@ function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): voi
         {lead && !lead.estimate_id && lead.stage !== "work_order" && onBuildQuote && (
           <button className="btn block" onClick={async () => { const s = await save(); if (s) { onClose(); onBuildQuote(s); } }}>Build quote</button>
         )}
-        {lead && <button className="btn danger block" onClick={async () => { if (confirm("Delete this lead?")) { await store.deleteRow("leads", lead.id); await refresh(); onClose(); } }}>Delete</button>}
+        {lead && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this lead?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("leads", lead.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );

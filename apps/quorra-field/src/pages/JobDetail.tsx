@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { fmtDate, fmtDuration, fmtTime, fmtVariance, quotedMinutes } from "../lib/dates";
-import { Field, Icon, InvoiceBadge, JobBadge, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, InvoiceBadge, JobBadge, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import JobForm from "../components/JobForm";
 import InvoiceForm from "../components/InvoiceForm";
 import { invoiceTotals, isOverdue, money } from "../lib/money";
@@ -17,6 +17,7 @@ export default function JobDetail() {
   const { loading, me, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
   const nav = useNavigate();
   const toast = useToast();
+  const ask = useConfirm();
   const [editing, setEditing] = useState(false);
   const [invoicing, setInvoicing] = useState(false);
   const [timing, setTiming] = useState(false);
@@ -65,7 +66,7 @@ export default function JobDetail() {
     if (kind === "en_route" && customer?.phone) {
       const who = me.name.split(" ")[0];
       const msg = `Hi ${customer.name.split(" ")[0]}, this is ${who} with ${business.name || "us"}. I'm on my way to ${job!.address || "your location"} now.`;
-      if (confirm("Text the customer that you're on your way?")) location.href = `sms:${customer.phone}?&body=${encodeURIComponent(msg)}`;
+      if (await ask({ title: "Text the customer?", message: "Let them know you're on your way.", confirmLabel: "Send text", cancelLabel: "Not now" })) location.href = `sms:${customer.phone}?&body=${encodeURIComponent(msg)}`;
     }
   }
 
@@ -183,9 +184,9 @@ export default function JobDetail() {
         <button className="btn grow" onClick={() => downloadIcs(`${job.title}.ics`, buildIcs(job.title, jobEvents([job], customerById)))}>Add to phone calendar</button>
         {can("templates") && <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "job", name: job.title, trade: "", title: job.title, notes: job.description, items: [], hours: Math.max(0.5, (new Date(job.end_at).getTime() - new Date(job.start_at).getTime()) / 3600_000) }); await refresh(); toast("Saved as a job template"); }}>Save as template</button>}
         {job.status !== "canceled" && job.status !== "completed" && (
-          <button className="btn danger grow" onClick={() => { if (confirm("Cancel this job?")) void setStatus("canceled"); }}>Cancel job</button>
+          <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Cancel this job?", message: "The job will be marked as canceled.", confirmLabel: "Cancel job", cancelLabel: "Keep job", danger: true })) void setStatus("canceled"); }}>Cancel job</button>
         )}
-        {can("settings") && <button className="btn danger grow" onClick={async () => { if (confirm("Delete this job permanently?")) { await store.deleteJob(job.id); await refresh(); nav("/jobs"); } }}>Delete</button>}
+        {can("settings") && <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Delete this job?", message: "This permanently removes the job and cannot be undone.", confirmLabel: "Delete job", danger: true })) { await store.deleteJob(job.id); await refresh(); nav("/jobs"); } }}>Delete</button>}
       </div>
 
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}

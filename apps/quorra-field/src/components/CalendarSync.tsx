@@ -1,3 +1,4 @@
+import { useConfirm } from "./ui";
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -10,6 +11,7 @@ import { useToast } from "./ui";
 export default function CalendarSync({ memberId }: { memberId?: string }) {
   const { business, team, me, jobs, customerById, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [busy, setBusy] = useState(false);
 
   // Managers get the all-jobs feed; everyone else gets only their own jobs.
@@ -20,7 +22,8 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
   const link = feedUrl(token);
 
   async function reset() {
-    if (!supabase || !confirm("Create a new link? The current link will stop working on every phone that uses it.")) return;
+    if (!supabase) return;
+    if (!(await ask({ title: "Create a new link?", message: "The current link will stop working on every phone that uses it.", confirmLabel: "Create new link", danger: true }))) return;
     setBusy(true);
     const { error } = await supabase.rpc("reset_calendar_token", { p_member: member?.id ?? null });
     setBusy(false);

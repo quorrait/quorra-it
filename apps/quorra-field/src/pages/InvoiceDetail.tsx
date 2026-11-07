@@ -6,7 +6,7 @@ import { fmtDate } from "../lib/dates";
 import type { InvoiceStatus } from "../lib/types";
 import { buildPdf, savePdf } from "../lib/pdf";
 import { openPrintable, renderTemplate } from "../lib/customHtml";
-import { Icon, InvoiceBadge, Spinner, useToast } from "../components/ui";
+import { Icon, InvoiceBadge, Spinner, useToast, useConfirm } from "../components/ui";
 import InvoiceForm from "../components/InvoiceForm";
 import SendSheet from "../components/SendSheet";
 import { CardPaySheet, ManualPaySheet } from "../components/PaySheet";
@@ -16,6 +16,7 @@ export default function InvoiceDetail() {
   const { loading, store, business, invoices, payments, customerById, refresh } = useData();
   const nav = useNavigate();
   const toast = useToast();
+  const ask = useConfirm();
   const [editing, setEditing] = useState(false);
   const [cardOpen, setCardOpen] = useState(false);
   const [manualOpen, setManualOpen] = useState(false);
@@ -174,7 +175,7 @@ export default function InvoiceDetail() {
         {inv.status !== "draft" && inv.status !== "void" && inv.status !== "paid" && <button className="btn grow" onClick={() => setEditing(true)}>Edit invoice</button>}
         {inv.job_id && <Link className="btn grow" to={`/jobs/${inv.job_id}`}>View job</Link>}
         {inv.status !== "void" && inv.status !== "paid" && (
-          <button className="btn danger grow" disabled={busy} onClick={() => { if (confirm("Void this invoice?")) { void setStatus("void", "Invoice voided").then(() => nav("/invoices")); } }}>Void</button>
+          <button className="btn danger grow" disabled={busy} onClick={async () => { if (await ask({ title: "Void this invoice?", message: "A voided invoice can no longer be paid.", confirmLabel: "Void invoice", danger: true })) { void setStatus("void", "Invoice voided").then(() => nav("/invoices")); } }}>Void</button>
         )}
       </div>
 

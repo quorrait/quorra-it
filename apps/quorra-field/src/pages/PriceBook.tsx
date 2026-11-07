@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { money } from "../lib/money";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { PriceCategory, PriceItem } from "../lib/types";
 
@@ -10,6 +10,7 @@ const CATS: PriceCategory[] = ["Labor", "Material", "Service", "Equipment"];
 function ItemForm({ item, onClose }: { item?: PriceItem; onClose(): void }) {
   const { store, refresh } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [f, setF] = useState({
     name: item?.name ?? "", description: item?.description ?? "", category: item?.category ?? ("Service" as PriceCategory),
     price: centsToStr(item?.unit_cents ?? 0), cost: centsToStr(item?.cost_cents ?? 0),
@@ -30,7 +31,7 @@ function ItemForm({ item, onClose }: { item?: PriceItem; onClose(): void }) {
           await store.saveRow("price_items", { id: item?.id, name: f.name.trim(), description: f.description, category: f.category, unit_cents: strToCents(f.price), cost_cents: strToCents(f.cost) });
           await refresh(); toast("Saved"); onClose();
         }}>Save</button>
-        {item && <button className="btn danger block" onClick={async () => { if (confirm("Delete this item?")) { await store.deleteRow("price_items", item.id); await refresh(); onClose(); } }}>Delete</button>}
+        {item && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this item?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("price_items", item.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );

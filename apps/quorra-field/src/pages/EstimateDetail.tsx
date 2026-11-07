@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { invoiceTotals, lineTotal, money } from "../lib/money";
 import { fmtDate } from "../lib/dates";
-import { Icon, Spinner, useToast } from "../components/ui";
+import { Icon, Spinner, useToast, useConfirm } from "../components/ui";
 import { EstimateBadge } from "./Estimates";
 import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
@@ -19,6 +19,7 @@ export default function EstimateDetail() {
   const { loading, store, business, estimates, invoices, leads, customerById, refresh } = useData();
   const nav = useNavigate();
   const toast = useToast();
+  const ask = useConfirm();
   const [editing, setEditing] = useState(false);
   const [scheduling, setScheduling] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -142,7 +143,7 @@ export default function EstimateDetail() {
         {est.status !== "draft" && <button className="btn grow" onClick={() => setSendOpen(true)}>Email / Text</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit</button>
         <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "estimate", name: est.title, trade: "", title: est.title, notes: est.notes, items: est.items, hours: 2 }); await refresh(); toast("Saved as a template"); }}>Save as template</button>
-        <button className="btn danger grow" onClick={async () => { if (confirm("Delete this estimate?")) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
+        <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Delete this estimate?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
       </div>
 
       {sendOpen && (

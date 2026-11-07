@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
-import { Field, Icon, Sheet, Spinner, useToast } from "../components/ui";
+import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import ColorPick from "../components/ColorPick";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { Invite, Role, TeamMember } from "../lib/types";
@@ -18,6 +18,7 @@ export const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2)
 function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[]; reload(): Promise<void> }) {
   const { business, subscription } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [busy, setBusy] = useState(false);
   const mine = invites.find((i) => i.team_member_id === m.id && (i.status === "pending" || i.status === "accepted"));
   const link = mine?.status === "pending" ? inviteUrl(mine.code) : "";
@@ -34,7 +35,7 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
     finally { setBusy(false); }
   }
   async function remove() {
-    if (!confirm(`Remove ${m.name}'s access? They will no longer be able to sign in to this business.`)) return;
+    if (!(await ask({ title: `Remove ${m.name}'s access?`, message: "They will no longer be able to sign in to this business.", confirmLabel: "Remove access", danger: true }))) return;
     setBusy(true);
     try { await revokeAccess(m.id); await reload(); toast("Access removed"); }
     catch (e) { toast(e instanceof Error ? e.message : "Could not remove access"); }
@@ -76,6 +77,7 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
 function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: Invite[]; reload(): Promise<void>; onClose(): void }) {
   const { store, refresh, team } = useData();
   const toast = useToast();
+  const ask = useConfirm();
   const [f, setF] = useState({ name: m?.name ?? "", role: m?.role ?? ("Technician" as Role), phone: m?.phone ?? "", email: m?.email ?? "", rate: centsToStr(m?.hourly_cents ?? 0), comm: String(m?.commission_pct ?? 0), color: m?.color ?? COLORS[team.length % COLORS.length], active: m?.active ?? true });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -109,7 +111,7 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
             await refresh(); await reload(); onClose();
           }}>Save and create invite</button>
         )}
-        {m && <button className="btn danger block" onClick={async () => { if (confirm("Delete this member? Their past time entries stay.")) { await store.deleteRow("team_members", m.id); await refresh(); onClose(); } }}>Delete</button>}
+        {m && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this member?", message: "Their past time entries stay.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("team_members", m.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );
