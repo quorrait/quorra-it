@@ -2,7 +2,7 @@ import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
-import type { Invoice, LineItem } from "../lib/types";
+import type { Estimate, Invoice, LineItem } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
@@ -23,19 +23,26 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   const [newPhone, setNewPhone] = useState("");
   const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
   // New invoices start from the customer's latest accepted estimate (or the one tied to this job).
-  const estFor = (cid: string) => invoice ? undefined : estimates
+  const estsFor = (cid: string) => invoice ? [] : estimates
     .filter((e) => (e.status === "approved" || e.status === "sent") && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
-    .sort((a, b) => Number(b.status === "approved") - Number(a.status === "approved") || Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number)[0];
+    .sort((a, b) => Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number);
+  const estFor = (cid: string) => estsFor(cid)[0];
   const est0 = estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
-  const [fromEst, setFromEst] = useState(est0);
+  const fill = (e: typeof est0) => e ? e.items.map((li) => {
+    const r = toRow(li);
+    // A bare description like "Replacement" gets the estimate title so the invoice says what it was for.
+    if (e.title && r.description.trim().split(/\s+/).length <= 2 && !r.description.toLowerCase().includes(e.title.toLowerCase())) r.description = `${r.description.trim()} - ${e.title}`.replace(/^ - /, "");
+    return r;
+  }) : [];
+  const [fromEst, setFromEst] = useState<Estimate | undefined>(est0);
   const [touched, setTouched] = useState(false);
   const [rows, setRows] = useState<Row[]>(
-    invoice ? invoice.items.map(toRow) : est0 ? est0.items.map(toRow) : [{ description: job?.title ?? "", qty: "1", price: "" }],
+    invoice ? invoice.items.map(toRow) : est0 ? fill(est0) : [{ description: job?.title ?? "", qty: "1", price: "" }],
   );
   const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? est0?.tax_rate ?? business.tax_rate ?? 0));
   const [due, setDue] = useState(toDateInput(invoice?.due_at ?? addDays(new Date(), 14).toISOString()));
   const [issued, setIssued] = useState(toDateInput(invoice?.issued_at ?? new Date().toISOString()));
-  const [notes, setNotes] = useState(invoice?.notes ?? "");
+  const [notes, setNotes] = useState(invoice?.notes ?? (est0 ? `For estimate #${est0.number}: ${est0.title}` : ""));
   const [busy, setBusy] = useState(false);
 
   const items: LineItem[] = rowsToItems(rows);
@@ -90,7 +97,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
         <Field label="Customer">
           <select className="select" value={cust} onChange={(e) => {
             setCust(e.target.value);
-            if (!touched && !invoice) { const e2 = estFor(e.target.value); setFromEst(e2); if (e2) { setRows(e2.items.map(toRow)); setTaxRate(String(e2.tax_rate)); } }
+            if (!touched && !invoice) { const e2 = estFor(e.target.value); setFromEst(e2); if (e2) { setRows(fill(e2)); setTaxRate(String(e2.tax_rate)); } }
           }}>
             <option value="__new__">+ New customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -103,7 +110,17 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
           </div>
         )}
 
-        {fromEst && <div className="notice">Filled in from estimate #{fromEst.number}. Change anything you need.</div>}
+        {estsFor(cust).length > 0 && (
+          <Field label="Start from estimate">
+            <select className="select" value={fromEst?.id ?? ""} onChange={(e) => {
+              const x = estimates.find((q) => q.id === e.target.value); setFromEst(x); setTouched(true);
+              if (x) { setRows(fill(x)); setTaxRate(String(x.tax_rate)); setNotes(`For estimate #${x.number}: ${x.title}`); }
+            }}>
+              <option value="">None (blank invoice)</option>
+              {estsFor(cust).map((x) => <option key={x.id} value={x.id}>#{x.number} · {x.title} · {money(invoiceTotals({ items: x.items, tax_rate: x.tax_rate }).total)}</option>)}
+            </select>
+          </Field>
+        )}
         {!invoice && <TemplatePicker kind="estimate" onPick={(t) => { setTouched(true); setFromEst(undefined); setRows(t.items.map(toRow)); }} />}
         <LineItemsEditor rows={rows} setRows={(r) => { setTouched(true); setRows(r); }} />
 

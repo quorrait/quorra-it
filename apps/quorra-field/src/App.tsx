@@ -4,6 +4,7 @@ import { ConfirmProvider, Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
 import Contact from "./pages/Contact";
+import PublicFooter from "./components/PublicFooter";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import Jobs from "./pages/Jobs";
@@ -55,6 +56,7 @@ function Gate() {
   const { ready, email } = useAuth();
   if (!ready) return <Spinner />;
   if (!email) return (
+    <>
     <Routes>
       <Route path="plans" element={<Plans />} />
       <Route path="contact" element={<Contact />} />
@@ -62,6 +64,8 @@ function Gate() {
       <Route path="join" element={<Login />} />
       <Route path="*" element={<Login />} />
     </Routes>
+    <PublicFooter />
+    </>
   );
   return (
     <DataProvider>

@@ -77,7 +77,7 @@ export default function Reports() {
     }
     const won = estimates.filter((e) => e.status === "approved").length;
     const lost = estimates.filter((e) => e.status === "declined").length;
-    const lw = leads.filter((l) => l.stage === "work_order").length;
+    const lw = leads.filter((l) => l.stage === "work_order" || l.stage === "completed").length;
     const ll = leads.filter((l) => l.stage === "declined").length;
     return { pays, collected, billed, done, byMethod, byTech, byCust, aging, months, estRate: won + lost ? Math.round((won / (won + lost)) * 100) : null, leadRate: lw + ll ? Math.round((lw / (lw + ll)) * 100) : null, invs, from, to, label, chartTitle };
   }, [range, offset, cFrom, cTo, payments, invoices, jobs, customerById, estimates, leads]);

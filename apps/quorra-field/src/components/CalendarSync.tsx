@@ -65,7 +65,7 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
     );
   }
 
-  const google = `https://calendar.google.com/calendar/u/0/r?cid=${encodeURIComponent(feedUrl(token))}`;
+  const google = `https://calendar.google.com/calendar/r?cid=${feedUrl(token).replace(/^https?:/, "webcal:")}`;
   return (
     <div className="stack">
       <p className="small muted" style={{ margin: 0 }}>Calendar: <b>{label}</b></p>

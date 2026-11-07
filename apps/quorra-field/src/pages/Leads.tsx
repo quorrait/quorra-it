@@ -16,7 +16,7 @@ const PIPELINE: LeadStage[] = ["new", "contacted", "send_quote", "quote_sent"];
 const SOURCES = ["Website form", "Google", "Referral", "Yelp", "Facebook", "Nextdoor", "Repeat customer", "Other"];
 const REASONS = ["Price too high", "Went with someone else", "Not ready yet", "No response", "Out of service area", "Other"];
 
-type Tab = "pipeline" | "work" | "declined";
+type Tab = "pipeline" | "work" | "declined" | "completed";
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
 
 function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): void; onBuildQuote?(l: Lead): void }) {
@@ -108,9 +108,11 @@ export default function Leads() {
 
   const pipeline = leads.filter((l) => PIPELINE.includes(l.stage));
   const work = leads.filter((l) => l.stage === "work_order");
+  const completed = leads.filter((l) => l.stage === "completed");
   const declined = leads.filter((l) => l.stage === "declined");
   const sum = (a: Lead[]) => a.reduce((s, l) => s + l.value_cents, 0);
-  const rate = work.length + declined.length ? Math.round((work.length / (work.length + declined.length)) * 100) : null;
+  const won = work.length + completed.length;
+  const rate = won + declined.length ? Math.round((won / (won + declined.length)) * 100) : null;
 
   const actions = (l: Lead) => {
     const est = estimates.find((e) => e.id === l.estimate_id);
@@ -143,6 +145,7 @@ export default function Leads() {
       <div className="chips">
         <button className={`chip${tab === "pipeline" ? " on" : ""}`} onClick={() => setTab("pipeline")}>Open leads ({pipeline.length})</button>
         <button className={`chip${tab === "work" ? " on" : ""}`} onClick={() => setTab("work")}>Work orders ({work.length})</button>
+        <button className={`chip${tab === "completed" ? " on" : ""}`} onClick={() => setTab("completed")}>Completed ({completed.length})</button>
         <button className={`chip${tab === "declined" ? " on" : ""}`} onClick={() => setTab("declined")}>Declined ({declined.length})</button>
       </div>
 
@@ -183,6 +186,23 @@ export default function Leads() {
                     <div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)} ${fmtTime(job.start_at)}` : " · not scheduled yet"}</div>
                   </div>
                   <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {tab === "completed" && (
+        <div className="card flush">
+          {completed.length === 0 && <div className="empty">Paid jobs move here from Work orders.</div>}
+          <div className="list">
+            {completed.map((l) => {
+              const job = jobs.find((j) => j.id === l.job_id);
+              return (
+                <div key={l.id} className="list-item" onClick={() => (job ? nav(`/jobs/${job.id}`) : setEdit(l))}>
+                  <div className="grow"><div className="title">{l.name}</div><div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)}` : ""}</div></div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}<span className="badge good">Paid</span></div>
                 </div>
               );
             })}
