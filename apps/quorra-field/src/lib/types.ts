@@ -23,10 +23,12 @@ export interface Business {
   lead_form?: LeadFormSettings; // website request form wording and fields
   vendors?: Vendor[]; // preset vendors for purchase orders
   pay_period?: PayPeriod; // how timesheets are grouped
+  notify_email?: string; // who is emailed when something is booked or moved
+  notify_phone?: string;
   hours?: BusinessHours; // open hours for customer scheduling
 }
 export interface Vendor { name: string; phone?: string; email?: string }
-export interface PayPeriod { type?: "weekly" | "biweekly" | "semimonthly" | "monthly"; anchor?: string } // anchor: a date a period starts on (weekly/biweekly)
+export interface PayPeriod { type?: "weekly" | "biweekly" | "semimonthly" | "monthly" | "custom"; anchor?: string; from?: string; to?: string } // anchor: a date a period starts on (weekly/biweekly)
 export interface DayHours { open: boolean; start: string; end: string } // "08:00" 24h
 export interface BusinessHours { days?: DayHours[]; job_minutes?: number; buffer_minutes?: number; notice_hours?: number; max_days?: number; tz?: string } // days[0] = Sunday
 

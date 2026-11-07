@@ -1,6 +1,6 @@
 import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
-import { HoursCard, VendorsCard } from "../components/BusinessSetupCards";
+import { HoursCard, NotifyCard, VendorsCard } from "../components/BusinessSetupCards";
 import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
 import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
@@ -144,6 +144,7 @@ function SettingsInner() {
 
 
       <HoursCard />
+      <NotifyCard />
 
       <VendorsCard />
 

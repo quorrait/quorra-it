@@ -4,7 +4,8 @@ import { useData } from "../lib/app";
 import { balanceDue, invoiceTotals, isOverdue, money, moneyShort } from "../lib/money";
 import { dailySeries, earningsSummary, monthlySeries, weeklySeries } from "../lib/stats";
 import { addDays, addMonths, fmtDayShort, fmtDuration, quotedMinutes, fmtMonth, fmtTime, sameDay, startOfDay } from "../lib/dates";
-import { BarChart, JobBadge, Spinner } from "../components/ui";
+import { BarChart, JobBadge, Sheet, Spinner } from "../components/ui";
+import CalendarSync from "../components/CalendarSync";
 import MonthGrid from "../components/MonthGrid";
 import JobForm from "../components/JobForm";
 
@@ -37,6 +38,7 @@ export default function Dashboard() {
   );
 
   const today = new Date();
+  const [syncOpen, setSyncOpen] = useState(false);
   const [month, setMonth] = useState(() => startOfDay(new Date()));
   const [picked, setPicked] = useState<Date | null>(null);
   const [adding, setAdding] = useState<Date | null>(null);
@@ -100,6 +102,7 @@ export default function Dashboard() {
               <button className="btn sm" onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month">‹</button>
               <button className="btn sm" onClick={() => { setMonth(startOfDay(new Date())); setPicked(null); }}>Today</button>
               <button className="btn sm" onClick={() => setMonth(addMonths(month, 1))} aria-label="Next month">›</button>
+              <button className="btn sm" onClick={() => setSyncOpen(true)}>Sync phone</button>
             </div>
           </div>
           <MonthGrid
@@ -232,13 +235,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <p className="small muted" style={{ textAlign: "center" }}>
-        {invoices.length} invoices · {money(invoices.reduce((s, i) => s + invoiceTotals(i).total, 0))} billed all time
-      </p>
         </>
       )}
 
       {adding && <JobForm defaultStart={adding} onClose={() => setAdding(null)} onSaved={(j) => setPicked(startOfDay(new Date(j.start_at)))} />}
+      {syncOpen && <Sheet title="Sync to your phone calendar" onClose={() => setSyncOpen(false)}><CalendarSync /></Sheet>}
     </div>
   );
 }

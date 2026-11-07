@@ -8,10 +8,11 @@ import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
-export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSaved }: {
+export default function InvoiceForm({ invoice, jobId, customerId, estimateId, onClose, onSaved }: {
   invoice?: Invoice;
   jobId?: string;
   customerId?: string;
+  estimateId?: string; // start from this estimate
   onClose(): void;
   onSaved?(i: Invoice): void;
 }) {
@@ -21,13 +22,14 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
 
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
-  const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
+  const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? estimates.find((e) => e.id === estimateId)?.customer_id ?? job?.customer_id ?? customers[0]?.id ?? "");
   // New invoices start from the customer's latest accepted estimate (or the one tied to this job).
   const estsFor = (cid: string) => invoice ? [] : estimates
-    .filter((e) => (e.status === "approved" || e.status === "sent") && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
+    .filter((e) => e.id === estimateId || (e.status === "approved" || e.status === "sent") && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
     .sort((a, b) => Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number);
   const estFor = (cid: string) => estsFor(cid)[0];
-  const est0 = estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
+  const picked = estimateId ? estimates.find((e) => e.id === estimateId) : undefined;
+  const est0 = picked ?? estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
   const fill = (e: typeof est0) => e ? e.items.map((li) => {
     const r = toRow(li);
     // A bare description like "Replacement" gets the estimate title so the invoice says what it was for.

@@ -425,3 +425,12 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .opt-row { display: grid; gap: 6px; }
 .opt-row > .lbl { font-weight: 700; font-size: 13px; }
 .opt-row > .help { font-size: 12px; color: var(--muted); margin-top: -2px; }
+
+.pub { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; background: var(--nav); }
+.pub .auth { min-height: 0; flex: 1; }
+.pubfoot { color: rgba(255,255,255,.7) !important; } .pubfoot b, .pubfoot .pf-name { color: #fff !important; }
+.bell-wrap { position: fixed; top: 10px; right: 12px; z-index: 60; }
+.bell { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line, #e2e8f0); background: #fff; color: #0f172a; display: grid; place-items: center; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.12); }
+.bell-n { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 9px; background: #dc2626; color: #fff; font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 4px; }
+.bell-panel { position: absolute; right: 0; top: 48px; width: min(340px, calc(100vw - 24px)); max-height: 70vh; overflow-y: auto; background: #fff; color: #0f172a; border: 1px solid var(--line, #e2e8f0); border-radius: 14px; box-shadow: 0 12px 32px rgba(0,0,0,.2); }
+.bell-item { padding: 10px 12px; border-top: 1px solid var(--line, #e2e8f0); cursor: pointer; display: grid; gap: 2px; }

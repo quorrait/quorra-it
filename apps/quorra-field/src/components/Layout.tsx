@@ -1,6 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Icon, useConfirm } from "./ui";
+import NotificationBell from "./NotificationBell";
 import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
 import { useData, useAuth } from "../lib/app";
@@ -100,6 +101,7 @@ export default function Layout() {
         </div>
       </aside>
 
+      <NotificationBell />
       <main className="main">
         {error && <div className="error-banner">{error}</div>}
         <Outlet />

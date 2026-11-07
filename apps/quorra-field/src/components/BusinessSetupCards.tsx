@@ -84,3 +84,26 @@ export function HoursCard() {
     </details>
   );
 }
+
+/** Who is told when a customer books a time or a job is moved. */
+export function NotifyCard() {
+  const { store, business, refresh } = useData();
+  const toast = useToast();
+  const [email, setEmail] = useState(business.notify_email ?? "");
+  const [phone, setPhone] = useState(business.notify_phone ?? "");
+  const dirty = email.trim() !== (business.notify_email ?? "") || phone.trim() !== (business.notify_phone ?? "");
+  useRegisterSave("notify", dirty, async () => {
+    try { await store.saveBusiness({ notify_email: email.trim(), notify_phone: phone.trim() }); await refresh(); toast("Notification settings saved"); }
+    catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); }
+  });
+  return (
+    <details className="card fold">
+      <summary><span className="card-title">Notifications</span><span className="small muted">Who hears about bookings and changes</span></summary>
+      <div className="stack">
+        <p className="small muted" style={{ margin: 0 }}>When a customer books a time, or anyone moves a job, everyone on your account sees it under the bell in the app. It is also emailed here.</p>
+        <Field label="Notification email"><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={business.email || "you@company.com"} /></Field>
+        <Field label="Text alerts to (optional)"><input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(916) 555-0100" /></Field>
+      </div>
+    </details>
+  );
+}

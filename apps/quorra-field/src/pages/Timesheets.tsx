@@ -12,11 +12,16 @@ import { initials } from "./Team";
 const hrs = (ms: number) => ms / 3600_000;
 const OT_RATE = 1.5;
 const iso = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-const PERIOD_NAMES: Record<NonNullable<PayPeriod["type"]>, string> = { weekly: "Weekly", biweekly: "Every 2 weeks", semimonthly: "Twice a month (1st-15th, 16th-end)", monthly: "Monthly" };
+const PERIOD_NAMES: Record<NonNullable<PayPeriod["type"]>, string> = { weekly: "Weekly", biweekly: "Every 2 weeks", semimonthly: "Twice a month (1st-15th, 16th-end)", monthly: "Monthly", custom: "Custom dates" };
 /** The pay period that is `offset` periods before the current one. End is exclusive. */
 function periodFor(offset: number, pp: PayPeriod | undefined, now = new Date()): { start: Date; end: Date } {
   const type = pp?.type ?? "weekly";
   const day = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (type === "custom" && pp?.from && pp?.to) {
+    const f = new Date(pp.from + "T00:00:00"), t = addDays(new Date(pp.to + "T00:00:00"), 1);
+    const span = Math.max(1, Math.round((t.getTime() - f.getTime()) / 86400000));
+    return { start: addDays(f, offset * span), end: addDays(t, offset * span) };
+  }
   if (type === "monthly") { const s = new Date(day.getFullYear(), day.getMonth() + offset, 1); return { start: s, end: new Date(s.getFullYear(), s.getMonth() + 1, 1) }; }
   if (type === "semimonthly") {
     const idx = day.getFullYear() * 24 + day.getMonth() * 2 + (day.getDate() >= 16 ? 1 : 0) + offset; // counts half-months
@@ -203,11 +208,17 @@ export default function Timesheets() {
                 {(Object.keys(PERIOD_NAMES) as (keyof typeof PERIOD_NAMES)[]).map((k) => <option key={k} value={k}>{PERIOD_NAMES[k]}</option>)}
               </select>
             </Field>
-            {(ppDraft.type ?? "weekly") !== "semimonthly" && (ppDraft.type ?? "weekly") !== "monthly" && (
+            {ppDraft.type === "custom" && (
+              <div className="grid2 stack-sm">
+                <Field label="First day"><input className="input" type="date" value={ppDraft.from ?? ""} onChange={(e) => setPpDraft({ ...ppDraft, from: e.target.value })} /></Field>
+                <Field label="Last day"><input className="input" type="date" value={ppDraft.to ?? ""} onChange={(e) => setPpDraft({ ...ppDraft, to: e.target.value })} /></Field>
+              </div>
+            )}
+            {(ppDraft.type ?? "weekly") !== "semimonthly" && (ppDraft.type ?? "weekly") !== "monthly" && ppDraft.type !== "custom" && (
               <Field label="A date a pay period starts on"><input className="input" type="date" value={ppDraft.anchor ?? iso(startOfWeek(new Date()))} onChange={(e) => setPpDraft({ ...ppDraft, anchor: e.target.value })} /></Field>
             )}
             <div className="small muted">Pick any start date from a past or current pay period. Every period is counted from it. Timesheets, hours and labor cost are grouped by this period.</div>
-            <button className="btn primary block" onClick={async () => { try { await store.saveBusiness({ pay_period: ppDraft }); await refresh(); setWeek(0); setPpOpen(false); toast("Pay period updated"); } catch (e) { toast(errMsg(e, "Could not save. Run database update 0016 first.")); } }}>Save pay period</button>
+            <button className="btn primary block" onClick={async () => { if (ppDraft.type === "custom" && (!ppDraft.from || !ppDraft.to || ppDraft.to < ppDraft.from)) return toast("Pick a first and last day"); try { await store.saveBusiness({ pay_period: ppDraft }); await refresh(); setWeek(0); setPpOpen(false); toast("Pay period updated"); } catch (e) { toast(errMsg(e, "Could not save. Run database update 0016 first.")); } }}>Save pay period</button>
           </div>
         </Sheet>
       )}

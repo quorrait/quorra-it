@@ -68,6 +68,7 @@ function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): voi
 export default function Leads() {
   const { loading, leads, jobs, estimates, customers, store, refresh } = useData();
   const toast = useToast();
+  const askDel = useConfirm();
   const nav = useNavigate();
   const [tab, setTab] = useState<Tab>("pipeline");
   const [edit, setEdit] = useState<Lead | "new" | null>(null);
@@ -107,8 +108,10 @@ export default function Leads() {
   }
 
   const pipeline = leads.filter((l) => PIPELINE.includes(l.stage));
-  const work = leads.filter((l) => l.stage === "work_order");
-  const completed = leads.filter((l) => l.stage === "completed");
+  const jobDone = (l: Lead) => Boolean(l.job_id && jobs.find((j) => j.id === l.job_id)?.status === "completed");
+  const work = leads.filter((l) => l.stage === "work_order" && !jobDone(l));
+  const completed = leads.filter((l) => l.stage === "completed" || (l.stage === "work_order" && jobDone(l)));
+  const del = async (l: Lead) => { if (await askDel({ title: "Delete this work order?", message: "It is removed from this list. The job on your calendar is not deleted.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("leads", l.id); await refresh(); toast("Deleted"); } };
   const declined = leads.filter((l) => l.stage === "declined");
   const sum = (a: Lead[]) => a.reduce((s, l) => s + l.value_cents, 0);
   const won = work.length + completed.length;
@@ -185,7 +188,7 @@ export default function Leads() {
                     <div className="title">{l.name}</div>
                     <div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)} ${fmtTime(job.start_at)}` : " · not scheduled yet"}</div>
                   </div>
-                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}</div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}{job ? <JobBadge status={job.status} /> : <span className="badge gray">Tap to schedule</span>}<button className="btn sm danger" onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
                 </div>
               );
             })}
@@ -202,7 +205,7 @@ export default function Leads() {
               return (
                 <div key={l.id} className="list-item" onClick={() => (job ? nav(`/jobs/${job.id}`) : setEdit(l))}>
                   <div className="grow"><div className="title">{l.name}</div><div className="small muted">{l.service}{job ? ` · ${fmtDate(job.start_at)}` : ""}</div></div>
-                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}<span className="badge good">Paid</span></div>
+                  <div className="right">{l.value_cents > 0 && <div className="bold num">{moneyShort(l.value_cents)}</div>}<span className="badge good">Paid</span><button className="btn sm danger" onClick={(e) => { e.stopPropagation(); void del(l); }}>Delete</button></div>
                 </div>
               );
             })}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import InvoiceForm from "../components/InvoiceForm";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { invoiceTotals, lineTotal, money } from "../lib/money";
@@ -25,6 +26,7 @@ export default function EstimateDetail() {
   const [scheduling, setScheduling] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
+  const [invOpen, setInvOpen] = useState(false);
 
   if (loading) return <Spinner />;
   const est = estimates.find((e) => e.id === id);
@@ -131,7 +133,7 @@ export default function EstimateDetail() {
             <div className="card-title" style={{ margin: 0 }}>Next steps</div>
             <div className="row wrap">
               {est.job_id ? <Link className="btn grow" to={`/jobs/${est.job_id}`}>View job</Link> : <button className="btn primary grow" onClick={() => setScheduling(true)}>Schedule the job</button>}
-              {est.invoice_id && invoices.some((i) => i.id === est.invoice_id) ? <Link className="btn grow" to={`/invoices/${est.invoice_id}`}>View invoice</Link> : <button className="btn grow" disabled={busy} onClick={createInvoice}>Create invoice</button>}
+              {est.invoice_id && invoices.some((i) => i.id === est.invoice_id) ? <Link className="btn grow" to={`/invoices/${est.invoice_id}`}>View invoice</Link> : <button className="btn grow" disabled={busy} onClick={() => setInvOpen(true)}>Create invoice</button>}
             </div>
           </>
         )}
@@ -146,6 +148,7 @@ export default function EstimateDetail() {
         <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Delete this estimate?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("estimates", est.id); await refresh(); nav("/estimates"); } }}>Delete</button>
       </div>
 
+      {invOpen && est && <InvoiceForm estimateId={est.id} customerId={est.customer_id} jobId={est.job_id ?? undefined} onClose={() => setInvOpen(false)} onSaved={(i) => nav(`/invoices/${i.id}`)} />}
       {sendOpen && (
         <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={link || portalPreviewUrl()} linkTitle="Online estimate link" linkDesc="No file. They tap a link that opens just this estimate, where they can accept it and pick a time." to={customer?.email} phone={customer?.phone} subject={subject} body={body}
           onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} confirmLabel="I sent it, mark as sent" onClose={() => setSendOpen(false)} />

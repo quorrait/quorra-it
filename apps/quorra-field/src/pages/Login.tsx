@@ -1,3 +1,4 @@
+import { wasKicked } from "../lib/session";
 import { errMsg } from "../lib/errors";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -18,7 +19,7 @@ export default function Login() {
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [info, setInfo] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(() => (wasKicked() ? "You have been logged out because this account signed in on another device." : null));
 
   useEffect(() => {
     if (!code) return;

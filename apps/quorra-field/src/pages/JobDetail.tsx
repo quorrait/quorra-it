@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { supabase } from "../lib/supabase";
+import { errMsg } from "../lib/errors";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { fmtDate, fmtDuration, fmtTime, fmtVariance, quotedMinutes } from "../lib/dates";
@@ -21,6 +23,8 @@ export default function JobDetail() {
   const [editing, setEditing] = useState(false);
   const [invoicing, setInvoicing] = useState(false);
   const [timing, setTiming] = useState(false);
+  const [resched, setResched] = useState<{ start: string; end: string; tell: boolean } | null>(null);
+  const [reBusy, setReBusy] = useState(false);
   const [hrs, setHrs] = useState("");
   const [mins, setMins] = useState("");
 
@@ -180,6 +184,7 @@ export default function JobDetail() {
       </div>}
 
       <div className="row wrap">
+        {(job.status === "scheduled") && <button className="btn grow primary" onClick={() => { const loc = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; }; setResched({ start: loc(job.start_at), end: loc(job.end_at), tell: true }); }}>Reschedule</button>}
         <button className="btn grow" onClick={() => setEditing(true)}>Edit job</button>
         <button className="btn grow" onClick={() => downloadIcs(`${job.title}.ics`, buildIcs(job.title, jobEvents([job], customerById)))}>Add to phone calendar</button>
         {can("templates") && <button className="btn grow" onClick={async () => { await store.saveRow("doc_templates", { kind: "job", name: job.title, trade: "", title: job.title, notes: job.description, items: [], hours: Math.max(0.5, (new Date(job.end_at).getTime() - new Date(job.start_at).getTime()) / 3600_000) }); await refresh(); toast("Saved as a job template"); }}>Save as template</button>}
@@ -191,6 +196,29 @@ export default function JobDetail() {
 
       {editing && <JobForm job={job} onClose={() => setEditing(false)} />}
       {invoicing && <InvoiceForm jobId={job.id} customerId={job.customer_id} onClose={() => setInvoicing(false)} onSaved={(i) => nav(`/invoices/${i.id}`)} />}
+      {resched && (
+        <Sheet title="Reschedule job" onClose={() => setResched(null)}>
+          <div className="stack">
+            <Field label="Starts"><input className="input" type="datetime-local" value={resched.start} onChange={(e) => setResched({ ...resched, start: e.target.value })} /></Field>
+            <Field label="Ends"><input className="input" type="datetime-local" value={resched.end} onChange={(e) => setResched({ ...resched, end: e.target.value })} /></Field>
+            <label className="row"><input type="checkbox" checked={resched.tell} onChange={(e) => setResched({ ...resched, tell: e.target.checked })} /> Text and email the customer the new time</label>
+            <div className="small muted">Your team gets an app notification and an email about the change.</div>
+            <button className="btn primary block" disabled={reBusy} onClick={async () => {
+              const s0 = new Date(resched.start), e0 = new Date(resched.end);
+              if (isNaN(s0.getTime()) || isNaN(e0.getTime()) || e0 <= s0) return toast("End must be after the start");
+              setReBusy(true);
+              try {
+                if (supabase) {
+                  const { data, error } = await supabase.functions.invoke("job-reschedule", { body: { job_id: job.id, start: s0.toISOString(), end: e0.toISOString(), notify_customer: resched.tell } });
+                  if (error) throw error;
+                  toast((data as { texted?: boolean })?.texted ? "Rescheduled. Customer texted." : "Rescheduled");
+                } else { await store.saveJob({ ...job, start_at: s0.toISOString(), end_at: e0.toISOString() }); toast("Rescheduled"); }
+                await refresh(); setResched(null);
+              } catch (err) { toast(errMsg(err, "Could not reschedule")); } finally { setReBusy(false); }
+            }}>{reBusy ? "Saving..." : "Save new time"}</button>
+          </div>
+        </Sheet>
+      )}
       {timing && (
         <Sheet title={job.status === "completed" ? "Edit time on the job" : "How long did the job take?"} onClose={() => setTiming(false)}>
           <div className="stack">

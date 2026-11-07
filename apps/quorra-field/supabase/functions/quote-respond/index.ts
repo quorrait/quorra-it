@@ -3,6 +3,7 @@
 import { admin, handler, HttpError, json } from "../_shared/util.ts";
 import { availableSlots, normHours } from "../_shared/schedule.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
+import { notifyAccount } from "../_shared/alert.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -72,6 +73,6 @@ handler(async (req) => {
   const msg = `Hi ${first}, your ${est.title} with ${biz?.name ?? "us"} is scheduled for ${when}.${link ? ` Need to change it? Reschedule here: ${link}` : ""}`;
   const texted = cust?.phone ? await sendSms({ to: cust.phone, body: msg }) : { sent: false, reason: "No phone number" };
   if (cust?.email) await sendEmail({ to: cust.email, subject: `Your visit is scheduled: ${when}`, text: msg });
-  if (biz?.email) await sendEmail({ to: biz.email, subject: `${oldJob ? "Rescheduled" : "Booked"}: ${est.title} for ${cust?.name ?? "customer"}`, text: `${cust?.name ?? "A customer"} ${oldJob ? "moved their visit to" : "booked"} ${when}.` });
+  await notifyAccount(db, est.owner_id, { title: `${oldJob ? "Rescheduled" : "Booked"}: ${est.title} for ${cust?.name ?? "customer"}`, body: `${cust?.name ?? "A customer"} ${oldJob ? "moved their visit to" : "booked"} ${when}.`, link: `/jobs/${jobId}` });
   return json({ ok: true, status: "approved", scheduled_for: start.toISOString(), texted: texted.sent });
 });

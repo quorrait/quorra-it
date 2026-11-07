@@ -56,7 +56,7 @@ function Gate() {
   const { ready, email } = useAuth();
   if (!ready) return <Spinner />;
   if (!email) return (
-    <>
+    <div className="pub">
     <Routes>
       <Route path="plans" element={<Plans />} />
       <Route path="contact" element={<Contact />} />
@@ -65,7 +65,7 @@ function Gate() {
       <Route path="*" element={<Login />} />
     </Routes>
     <PublicFooter />
-    </>
+    </div>
   );
   return (
     <DataProvider>

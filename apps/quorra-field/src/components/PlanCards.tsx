@@ -3,7 +3,7 @@ import { PLANS, CUSTOM_PLAN, EVERY_PLAN, TRIAL_DAYS, type Plan } from "../lib/pl
 import { money } from "../lib/money";
 
 /** Plan comparison. Used on the public plans page and on the Billing screen. */
-export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: { onChoose(p: Plan): void; current?: string; busy?: string | null; cta?: string }) {
+export default function PlanCards({ onChoose, current, busy, cta = "Choose", backTo = "/plans" }: { onChoose(p: Plan): void; current?: string; busy?: string | null; cta?: string; backTo?: string }) {
   return (
     <div className="stack">
       <div className="plan-grid">
@@ -29,7 +29,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose" }: {
           <div className="plan-price"><span className="num">+ {money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> / month per technician after 15</span></div>
           <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
-        <Link className="btn dark" to="/contact">Contact us</Link>
+        <Link className="btn dark" to="/contact" state={{ back: backTo }}>Contact us</Link>
       </div>
       <div className="card">
         <div className="card-title">Every plan includes</div>

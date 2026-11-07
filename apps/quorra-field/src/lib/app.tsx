@@ -1,3 +1,4 @@
+import { claimSession, watchSession } from "./session";
 import { errMsg } from "./errors";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, Subscription, TeamMember, TimeEntry } from "./types";
@@ -41,7 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setEmail(session?.user.email ?? null));
-    return () => sub.subscription.unsubscribe();
+    const stop = watchSession(() => { void supabase!.auth.signOut({ scope: "local" }); });
+    return () => { sub.subscription.unsubscribe(); stop(); };
   }, []);
 
   const value = useMemo<AuthCtx>(
@@ -61,6 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
         if (error) throw error;
+        await claimSession().catch(() => undefined);
       },
       async signUp(e, p, businessName) {
         if (!supabase) {

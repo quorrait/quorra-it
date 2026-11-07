@@ -110,7 +110,7 @@ export default function Billing() {
       {!active && !sub?.comped ? (
         <div className="stack">
           <div className="card-title" style={{ margin: 0 }}>Choose your plan</div>
-          <PlanCards busy={busy} cta="Start" onChoose={(p) => void go("billing-checkout", undefined, p.id)} />
+          <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p) => void go("billing-checkout", undefined, p.id)} />
         </div>
       ) : !sub?.comped && (
         <div className="card stack">

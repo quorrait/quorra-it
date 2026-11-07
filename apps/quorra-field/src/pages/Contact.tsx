@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "../lib/config";
 import { hasSupabase } from "../lib/supabase";
 import { apiBase } from "../lib/publicLinks";
@@ -13,6 +13,8 @@ export default function Contact() {
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
   const nav = useNavigate();
+  const back = (useLocation().state as { back?: string } | null)?.back ?? "/plans";
+  const backName = back === "/billing" ? "Billing" : "plans";
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
 
   async function submit(e: FormEvent) {
@@ -28,7 +30,7 @@ export default function Contact() {
         if (!r.ok) throw new Error(j.error || "Could not send your request. Please try again.");
       }
       setDone(true);
-      setTimeout(() => nav("/plans"), 5000);
+      setTimeout(() => nav(back), 5000);
     } catch (e) { setErr(errMsg(e, "Could not send your request. Please try again.")); }
     finally { setBusy(false); }
   }
@@ -36,14 +38,14 @@ export default function Contact() {
   if (done) return (
     <div className="auth"><div className="auth-card stack">
       <h1>Thank you</h1>
-      <p className="muted">Our response time is 1-2 business days. We will reach out by {f.best_way.toLowerCase()}. Taking you back to plans...</p>
-      <Link className="btn primary block" to="/plans">Back to plans</Link>
+      <p className="muted">Our response time is 1-2 business days. We will reach out by {f.best_way.toLowerCase()}. Taking you back to {backName}...</p>
+      <Link className="btn primary block" to={back}>Back to {backName}</Link>
     </div></div>
   );
   return (
     <div className="auth">
       <form className="auth-card stack" onSubmit={submit}>
-        <div><Link to="/plans" className="small muted bold">← Plans</Link><h1 style={{ marginTop: 8 }}>Contact us</h1><p className="muted">Tell us about your business and how {APP_NAME} can help.</p></div>
+        <div><Link to={back} className="small muted bold">← {backName === "Billing" ? "Billing" : "Plans"}</Link><h1 style={{ marginTop: 8 }}>Contact us</h1><p className="muted">Tell us about your business and how {APP_NAME} can help.</p></div>
         <Field label="Name"><input className="input" autoComplete="name" value={f.name} onChange={(e) => set("name", e.target.value)} required /></Field>
         <Field label="Company"><input className="input" autoComplete="organization" value={f.company} onChange={(e) => set("company", e.target.value)} /></Field>
         <Field label="Email"><input className="input" type="email" autoComplete="email" value={f.email} onChange={(e) => set("email", e.target.value)} /></Field>
