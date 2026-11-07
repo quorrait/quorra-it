@@ -161,7 +161,10 @@ export interface TimeEntry {
   start_at: string;
   end_at: string | null; // null = still clocked in
   note: string;
+  overtime_minutes?: number; // part of this entry paid as overtime (1.5x)
+  edits?: TimeEdit[]; // who changed this entry and what changed
 }
+export interface TimeEdit { by: string; at: string; added?: boolean; changes: string[] }
 
 export type POStatus = "draft" | "ordered" | "received" | "canceled";
 export interface PurchaseOrder {

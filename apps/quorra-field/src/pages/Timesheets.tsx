@@ -2,14 +2,25 @@ import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
 import { money } from "../lib/money";
 import { addDays, fmtDayShort, fmtTime, startOfWeek } from "../lib/dates";
-import { Spinner, useToast } from "../components/ui";
+import { Field, Sheet, Spinner, useToast } from "../components/ui";
+import { isManager } from "../lib/access";
+import type { TimeEntry } from "../lib/types";
 import { initials } from "./Team";
 
 const hrs = (ms: number) => ms / 3600_000;
+const OT_RATE = 1.5;
+const toLocal = (iso: string) => { const d = new Date(iso); const p = (n: number) => String(n).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`; };
+const stamp = (iso: string | null) => (iso ? new Date(iso).toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "still clocked in");
+const otH = (t: { overtime_minutes?: number }) => (t.overtime_minutes ?? 0) / 60;
+interface Form { id?: string; member_id: string; job_id: string; start: string; end: string; ot: string; note: string }
 const dur = (ms: number) => `${Math.floor(ms / 3600_000)}h ${String(Math.floor((ms % 3600_000) / 60_000)).padStart(2, "0")}m`;
 
 export default function Timesheets() {
-  const { loading, team, timeEntries, jobs, store, refresh } = useData();
+  const { loading, team, timeEntries, jobs, store, refresh, me: user } = useData();
+  const canEdit = isManager(user.role);
+  const [form, setForm] = useState<Form | null>(null);
+  const [open, setOpen] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const toast = useToast();
   const [who, setWho] = useState("");
   const [jobId, setJobId] = useState("");
@@ -36,9 +47,47 @@ export default function Timesheets() {
     await refresh(); toast("Clocked out");
   }
 
+  const blank = (): Form => { const n = new Date(); const e = new Date(n.getTime()); n.setHours(8, 0, 0, 0); e.setHours(16, 0, 0, 0); return { member_id: me_(), job_id: "", start: toLocal(n.toISOString()), end: toLocal(e.toISOString()), ot: "0", note: "" }; };
+  function me_() { return active.find((m) => m.id === who)?.id ?? active[0]?.id ?? ""; }
+  const edit = (t: TimeEntry): Form => ({ id: t.id, member_id: t.member_id, job_id: t.job_id ?? "", start: toLocal(t.start_at), end: t.end_at ? toLocal(t.end_at) : "", ot: String(+(otH(t)).toFixed(2)), note: t.note ?? "" });
+
+  async function saveForm() {
+    if (!form) return;
+    const start = new Date(form.start), endD = form.end ? new Date(form.end) : null;
+    if (isNaN(start.getTime())) return toast("Enter a start time");
+    if (endD && (isNaN(endD.getTime()) || endD <= start)) return toast("End time must be after the start time");
+    const otMin = Math.max(0, Math.round((parseFloat(form.ot) || 0) * 60));
+    if (endD && otMin > (endD.getTime() - start.getTime()) / 60000) return toast("Overtime can't be longer than the entry");
+    const at = new Date().toISOString();
+    setSaving(true);
+    try {
+      const next = { member_id: form.member_id, job_id: form.job_id || null, start_at: start.toISOString(), end_at: endD ? endD.toISOString() : null, overtime_minutes: otMin, note: form.note.trim() };
+      if (form.id) {
+        const old = timeEntries.find((t) => t.id === form.id)!;
+        const nm = (id: string) => team.find((m) => m.id === id)?.name ?? "Unknown";
+        const jn = (id: string | null) => jobs.find((j) => j.id === id)?.title ?? "No job";
+        const changes: string[] = [];
+        if (old.member_id !== next.member_id) changes.push(`Employee: ${nm(old.member_id)} → ${nm(next.member_id)}`);
+        if (new Date(old.start_at).getTime() !== start.getTime()) changes.push(`Clock in: ${stamp(old.start_at)} → ${stamp(next.start_at)}`);
+        if ((old.end_at ? new Date(old.end_at).getTime() : null) !== (endD ? endD.getTime() : null)) changes.push(`Clock out: ${stamp(old.end_at)} → ${stamp(next.end_at)}`);
+        if ((old.overtime_minutes ?? 0) !== otMin) changes.push(`Overtime: ${((old.overtime_minutes ?? 0) / 60).toFixed(2)}h → ${(otMin / 60).toFixed(2)}h`);
+        if ((old.job_id ?? null) !== next.job_id) changes.push(`Job: ${jn(old.job_id)} → ${jn(next.job_id)}`);
+        if ((old.note ?? "") !== next.note) changes.push(`Note: "${old.note ?? ""}" → "${next.note}"`);
+        if (!changes.length) { setForm(null); return; }
+        await store.saveRow("time_entries", { ...old, ...next, edits: [...(old.edits ?? []), { by: user.name, at, changes }] });
+        toast("Timesheet updated");
+      } else {
+        await store.saveRow("time_entries", { ...next, edits: [{ by: user.name, at, added: true, changes: [] }] });
+        toast("Time added");
+      }
+      await refresh(); setForm(null);
+    } catch (e) { toast(e instanceof Error ? e.message : "Could not save. Run the latest database update first."); }
+    finally { setSaving(false); }
+  }
+
   return (
     <div className="stack">
-      <div className="page-head"><div><h1 className="page-title">Timesheets</h1><p className="page-sub">Clock in and out, see hours and labor cost.</p></div></div>
+      <div className="page-head"><div><h1 className="page-title">Timesheets</h1><p className="page-sub">Clock in and out, see hours and labor cost.</p></div>{canEdit && <button className="btn primary" onClick={() => setForm(blank())}>Add time</button>}</div>
 
       <div className="card stack">
         <div className="grid2 stack-sm">
@@ -64,15 +113,16 @@ export default function Timesheets() {
 
       <div className="card flush scroll-x">
         <table className="tbl">
-          <thead><tr><th>Member</th><th className="r">Hours</th><th className="r">Labor cost</th></tr></thead>
+          <thead><tr><th>Member</th><th className="r">Hours</th><th className="r">Overtime</th><th className="r">Labor cost</th></tr></thead>
           <tbody>
             {team.map((m) => {
               const mine = inWeek.filter((t) => t.member_id === m.id);
               if (!mine.length) return null;
               const h = hrs(mine.reduce((s, t) => s + ms(t), 0));
-              return <tr key={m.id}><td><span className="row"><span className="avatar" style={{ background: m.color, width: 26, height: 26, fontSize: 11 }}>{initials(m.name)}</span>{m.name}</span></td><td className="r num">{h.toFixed(1)}</td><td className="r num">{money(Math.round(h * m.hourly_cents))}</td></tr>;
+              const ot = Math.min(h, mine.reduce((s, t) => s + otH(t), 0));
+              return <tr key={m.id}><td><span className="row"><span className="avatar" style={{ background: m.color, width: 26, height: 26, fontSize: 11 }}>{initials(m.name)}</span>{m.name}</span></td><td className="r num">{h.toFixed(1)}</td><td className="r num">{ot ? ot.toFixed(1) : "–"}</td><td className="r num">{money(Math.round((h - ot) * m.hourly_cents + ot * m.hourly_cents * OT_RATE))}</td></tr>;
             })}
-            {inWeek.length === 0 && <tr><td colSpan={3} className="muted">No time logged this week</td></tr>}
+            {inWeek.length === 0 && <tr><td colSpan={4} className="muted">No time logged this week</td></tr>}
           </tbody>
         </table>
       </div>
@@ -80,18 +130,50 @@ export default function Timesheets() {
       <div className="card flush">
         <div className="card-title" style={{ padding: "14px 16px 0" }}>Entries</div>
         <div className="list">
-          {[...inWeek].sort((a, b) => b.start_at.localeCompare(a.start_at)).map((t) => (
-            <div key={t.id} className="list-item">
-              <div className="grow">
-                <div className="title">{team.find((m) => m.id === t.member_id)?.name ?? "Unknown"}</div>
-                <div className="small muted">{fmtDayShort(new Date(t.start_at))} · {fmtTime(t.start_at)} – {t.end_at ? fmtTime(t.end_at) : "now"} · {jobs.find((j) => j.id === t.job_id)?.title ?? "No job"}</div>
+          {[...inWeek].sort((a, b) => b.start_at.localeCompare(a.start_at)).map((t) => {
+            const ed = t.edits ?? [];
+            const last = ed[ed.length - 1];
+            return (
+              <div key={t.id} className="list-item" style={{ flexWrap: "wrap" }}>
+                <div className="grow">
+                  <div className="title">{team.find((m) => m.id === t.member_id)?.name ?? "Unknown"}{otH(t) > 0 && <span className="pill" style={{ marginLeft: 8 }}>OT {otH(t).toFixed(1)}h</span>}</div>
+                  <div className="small muted">{fmtDayShort(new Date(t.start_at))} · {fmtTime(t.start_at)} – {t.end_at ? fmtTime(t.end_at) : "now"} · {jobs.find((j) => j.id === t.job_id)?.title ?? "No job"}</div>
+                  {last && <button type="button" className="small" style={{ background: "none", border: 0, padding: 0, color: "var(--brand, #ea580c)", cursor: "pointer", textAlign: "left" }} onClick={() => setOpen(open === t.id ? null : t.id)}>{last.added && ed.length === 1 ? `Added by ${last.by}` : `Edited by ${last.by}`} · {stamp(last.at)} {open === t.id ? "▴" : "▾"}</button>}
+                </div>
+                <div className="bold num">{dur(ms(t))}</div>
+                {canEdit && <button className="btn sm" onClick={() => setForm(edit(t))}>Edit</button>}
+                <button className="btn sm danger" onClick={async () => { await store.deleteRow("time_entries", t.id); await refresh(); }}>✕</button>
+                {open === t.id && (
+                  <div className="notice" style={{ flexBasis: "100%" }}>
+                    {[...ed].reverse().map((e, i) => (
+                      <div key={i} style={{ marginBottom: 6 }}>
+                        <b>{e.added ? "Added" : "Edited"} by {e.by}</b> <span className="muted">{stamp(e.at)}</span>
+                        {e.changes.map((c, j) => <div key={j} className="small">{c}</div>)}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-              <div className="bold num">{dur(ms(t))}</div>
-              <button className="btn sm danger" onClick={async () => { await store.deleteRow("time_entries", t.id); await refresh(); }}>✕</button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
+      {form && (
+        <Sheet title={form.id ? "Edit time entry" : "Add time"} onClose={() => setForm(null)}>
+          <div className="stack">
+            <Field label="Employee"><select className="select" value={form.member_id} onChange={(e) => setForm({ ...form, member_id: e.target.value })}>{team.filter((m) => m.active || m.id === form.member_id).map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></Field>
+            <Field label="Job"><select className="select" value={form.job_id} onChange={(e) => setForm({ ...form, job_id: e.target.value })}><option value="">No job</option>{jobs.map((j) => <option key={j.id} value={j.id}>{j.title}</option>)}</select></Field>
+            <div className="grid2 stack-sm">
+              <Field label="Clock in"><input className="input" type="datetime-local" value={form.start} onChange={(e) => setForm({ ...form, start: e.target.value })} /></Field>
+              <Field label="Clock out (blank = still in)"><input className="input" type="datetime-local" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} /></Field>
+            </div>
+            <Field label="Overtime hours in this entry (paid at 1.5x)"><input className="input" inputMode="decimal" value={form.ot} onChange={(e) => setForm({ ...form, ot: e.target.value })} /></Field>
+            <Field label="Note"><input className="input" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} placeholder="Reason for the change (optional)" /></Field>
+            {form.id && <div className="small muted">Every change is logged with your name and what changed.</div>}
+            <button className="btn primary block" disabled={saving} onClick={() => void saveForm()}>{saving ? "Saving..." : form.id ? "Save changes" : "Add time"}</button>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }

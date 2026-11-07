@@ -616,3 +616,6 @@ alter table public.subscriptions add column if not exists trialing boolean not n
 alter table public.business add column if not exists yelp_url text not null default '';
 grant update (yelp_url) on public.business to authenticated;
 notify pgrst, 'reload schema';
+alter table public.time_entries add column if not exists overtime_minutes integer not null default 0;
+alter table public.time_entries add column if not exists edits jsonb not null default '[]'::jsonb;
+notify pgrst, 'reload schema';
