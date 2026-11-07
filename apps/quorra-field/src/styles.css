@@ -45,9 +45,9 @@ h1, h2, h3, p { margin: 0; }
 /* ---------- Shell ---------- */
 .shell { min-height: 100%; display: flex; flex-direction: column; }
 .side { display: none; }
-.main { flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: 18px 16px calc(var(--tab-h) + 28px); }
+.main { flex: 1; width: 100%; max-width: 980px; margin: 0 auto; padding: 18px 16px calc(var(--tab-h) + env(safe-area-inset-bottom) + 28px); }
 .tabbar {
-  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: var(--tab-h);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--tab-h) + env(safe-area-inset-bottom));
   display: grid; grid-template-columns: repeat(5, 1fr);
   background: var(--card); border-top: 1px solid var(--line);
   padding-bottom: env(safe-area-inset-bottom);
@@ -234,7 +234,7 @@ h1, h2, h3, p { margin: 0; }
 .auth-card { width: 100%; max-width: 400px; background: #fff; border-radius: 22px; padding: 28px 22px; }
 .auth-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 14px 0 4px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + 18px); transform: translateX(-50%); z-index: 90; background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: up .2s; max-width: 90vw; }
+.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px); transform: translateX(-50%); z-index: 90; background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: up .2s; max-width: 90vw; }
 @media (min-width: 900px) { .toast { bottom: 28px; } }
 .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; margin: 40px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
@@ -357,3 +357,15 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .feature-title { font-weight: 800; font-size: 16px; }
 .plan-custom { display: flex; flex-direction: column; gap: 14px; align-items: stretch; border: 2px dashed var(--line); }
 @media (min-width: 820px) { .plan-custom { flex-direction: row; align-items: center; } }
+
+/* ---------- Phone-only fit (desktop untouched) ---------- */
+@media (max-width: 899px) {
+  .shell { min-height: 100dvh; }
+  .main { padding-left: max(14px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); overflow-x: clip; }
+  .tab { min-width: 0; font-size: 10.5px; padding-top: 6px; align-self: start; height: var(--tab-h); }
+  .tab span, .tab { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sheet { max-height: 88dvh; }
+  .main img, .main canvas, .main video, .main table { max-width: 100%; }
+  .main h1, .main h2, .main h3, .main p, .main .list-item, .main .card { overflow-wrap: anywhere; min-width: 0; }
+  .btn { white-space: normal; text-align: center; }
+}
