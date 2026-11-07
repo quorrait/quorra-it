@@ -65,6 +65,7 @@ export default function LeadFormCard() {
   return (
     <details className="card fold">
       <summary><span className="card-title">Website lead form</span></summary>
+      <div className="split">
       <div className="stack">
         <p className="small muted" style={{ margin: 0 }}>A request form for your website. When a customer fills it out, it lands in <b>Leads</b> as a new lead and you get a badge on the Leads tab.</p>
 
@@ -76,8 +77,6 @@ export default function LeadFormCard() {
           {isCustom && <div className="notice">You are using your own HTML design (see Advanced below). Choose a style above to replace it.</div>}
         </Step>
 
-        <div className="split">
-          <div className="stack">
             <Step n={2} title="Make it yours" hint={`Applies to the ${styleName.toLowerCase()}.`}>
               <Field label="Heading"><input className="input" value={cfg.heading ?? ""} placeholder="Leave blank to use the style's own heading" onChange={(e) => set({ heading: e.target.value })} /></Field>
               <Field label="Intro text"><textarea className="textarea" rows={2} value={cfg.intro ?? ""} placeholder="Leave blank to use the style's own intro" onChange={(e) => set({ intro: e.target.value })} /></Field>
@@ -99,13 +98,6 @@ export default function LeadFormCard() {
               )}
               <div><button className="btn primary" disabled={!dirty || saving} onClick={() => void save()}>{saving ? "Saving..." : "Save changes"}</button></div>
             </Step>
-          </div>
-          <div className="stack sticky" style={{ gap: 6 }}>
-            <div className="bold small">Live preview</div>
-            <iframe key={previewSrc} title="Lead form preview" src={previewSrc} style={{ width: "100%", height: 700, border: "1px solid var(--line)", borderRadius: 12, background: "#f1f5f9" }} />
-            <div className="small muted">{live ? "Shows your unsaved edits. Nothing is sent from the preview." : "Shows your edits. Your live link and embed code appear once your account is connected to the database."}</div>
-          </div>
-        </div>
 
         <Step n={3} title="Put it to work">
           <div className="stack" style={{ gap: 6 }}>
@@ -169,6 +161,12 @@ export default function LeadFormCard() {
             </form>
           </Sheet>
         )}
+      </div>
+          <div className="stack sticky" style={{ gap: 6 }}>
+            <div className="bold small">Live preview</div>
+            <iframe key={previewSrc} title="Lead form preview" src={previewSrc} style={{ width: "100%", height: "calc(100vh - 90px)", minHeight: 420, maxHeight: 760, border: "1px solid var(--line)", borderRadius: 12, background: "#f1f5f9" }} />
+            <div className="small muted">{live ? "Shows your unsaved edits. Nothing is sent from the preview." : "Shows your edits. Your live link and embed code appear once your account is connected to the database."}</div>
+          </div>
       </div>
     </details>
   );

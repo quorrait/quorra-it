@@ -96,6 +96,7 @@ export default function InvoiceLayoutCard() {
   return (
     <details className="card fold">
       <summary><span className="card-title">Invoice and estimate layout</span></summary>
+      <div className="split">
       <div className="stack">
         <p className="small muted" style={{ margin: 0 }}>Choose how your invoices and estimates look. Open any invoice or estimate and tap <b>Print custom layout</b> to print it or save it as a PDF.</p>
 
@@ -110,8 +111,6 @@ export default function InvoiceLayoutCard() {
           <p className="small muted" style={{ margin: 0 }}>The PDF that is emailed to customers always uses the standard layout, set up in step 2 and the standard options below.</p>
         </Step>
 
-        <div className="split">
-          <div>
         <Step n={2} title="Color and wording">
           <div className="grid2 stack-sm">
             <Field label="Color"><ColorPick value={d.accent} onChange={(c) => set("accent", c)} swatches={SWATCHES} label="Color" /></Field>
@@ -143,16 +142,6 @@ export default function InvoiceLayoutCard() {
             </div>
           </details>
         </Step>
-          </div>
-          <div className="stack sticky" style={{ gap: 6 }}>
-            <div className="bold small">Live preview</div>
-            {isStandard
-              ? (liveUrl ? <iframe title="Live preview" src={liveUrl} style={{ width: "100%", height: 560, border: "1px solid var(--line)", borderRadius: 12, background: "#fff" }} /> : <p className="small muted">Preparing preview...</p>)
-              : <Scaled html={renderTemplate(d.custom_html as string, sampleData())} />}
-            <div className="small muted">Updates as you edit. Sample items shown unless you have an invoice.</div>
-          </div>
-        </div>
-
         <div className="row wrap">
           <button className="btn primary" disabled={busy || !dirty} onClick={() => void saveNow(d)}>{busy ? "Saving..." : "Save changes"}</button>
           <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
@@ -197,6 +186,14 @@ export default function InvoiceLayoutCard() {
             </div>
           </Sheet>
         )}
+      </div>
+          <div className="stack sticky" style={{ gap: 6 }}>
+            <div className="bold small">Live preview</div>
+            {isStandard
+              ? (liveUrl ? <iframe title="Live preview" src={liveUrl} style={{ width: "100%", height: "calc(100vh - 90px)", minHeight: 420, maxHeight: 820, border: "1px solid var(--line)", borderRadius: 12, background: "#fff" }} /> : <p className="small muted">Preparing preview...</p>)
+              : <Scaled html={renderTemplate(d.custom_html as string, sampleData())} />}
+            <div className="small muted">Updates as you edit. Sample items shown unless you have an invoice.</div>
+          </div>
       </div>
     </details>
   );
