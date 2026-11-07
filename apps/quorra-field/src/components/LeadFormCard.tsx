@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useMemo, useState } from "react";
 import type { LeadFormSettings } from "../lib/types";
 import { useData } from "../lib/app";
@@ -21,7 +22,7 @@ export default function LeadFormCard() {
     const services = servicesText.split("\n").map((x) => x.trim()).filter(Boolean);
     const next = { ...cfg, services: services.length ? services : undefined, custom_html: cfg.custom_html?.trim() ? cfg.custom_html : undefined };
     try { await store.saveBusiness({ lead_form: next }); await refresh(); setDirty(false); toast("Form saved. Your website form updates right away."); }
-    catch (e) { toast(e instanceof Error ? e.message : "Could not save"); }
+    catch (e) { toast(errMsg(e, "Could not save")); }
   }
   async function upload(f?: File) {
     if (!f) return;

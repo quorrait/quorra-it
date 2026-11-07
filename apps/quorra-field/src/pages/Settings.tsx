@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
 import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
 import { STATE_NAMES } from "../lib/priceGuide";
@@ -92,7 +93,7 @@ export default function Settings() {
       await refresh();
       if (done) toast(done);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      toast(errMsg(e, "Something went wrong. Please try again."));
     } finally {
       setBusy(null);
     }

@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -51,7 +52,7 @@ export default function Billing() {
       if (!data?.url) throw new Error(data?.error ?? "Could not open billing");
       location.href = data.url as string;
     } catch (e) {
-      let m = e instanceof Error ? e.message : "Could not open billing";
+      let m = errMsg(e, "Could not open billing");
       try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
       toast(m);
       setBusy(null);

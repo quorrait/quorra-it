@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
@@ -58,7 +59,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
       onSaved?.(saved);
       onClose();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not save");
+      toast(errMsg(e, "Could not save"));
     } finally {
       setBusy(false);
     }

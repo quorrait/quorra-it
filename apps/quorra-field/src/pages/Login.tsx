@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
@@ -38,7 +39,7 @@ export default function Login() {
         if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in with the same email.");
       }
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Something went wrong. Please try again.");
+      setErr(errMsg(e, "Something went wrong. Please try again."));
     } finally {
       setBusy(false);
     }

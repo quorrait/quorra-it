@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { Field, Sheet, useToast } from "./ui";
@@ -89,7 +90,7 @@ export default function InvoiceLayoutCard() {
       <Field label="Line above the footer (optional)"><input className="input" value={d.footer} onChange={(e) => set("footer", e.target.value)} placeholder="License #123456 · Fully insured" /></Field>
       <div className="row wrap">
         <button className="btn" onClick={makePreview}>Preview invoice</button>
-        <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); try { await store.saveBusiness({ doc_settings: d }); await refresh(); toast("Layout saved"); } catch (e) { toast(e instanceof Error ? e.message : "Could not save. Run the latest database update first."); } finally { setBusy(false); } }}>Save layout</button>
+        <button className="btn primary" disabled={busy} onClick={async () => { setBusy(true); try { await store.saveBusiness({ doc_settings: d }); await refresh(); toast("Layout saved"); } catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); } }}>Save layout</button>
         <button className="btn" onClick={() => setD(docSettings({}))}>Reset to default</button>
       </div>
       {custom && (

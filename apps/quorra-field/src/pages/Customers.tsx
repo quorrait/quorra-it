@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -23,7 +24,7 @@ function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): v
       toast(customer ? "Customer updated" : "Customer added");
       onClose();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not save");
+      toast(errMsg(e, "Could not save"));
     } finally {
       setBusy(false);
     }

@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
@@ -70,7 +71,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
       onSaved?.(saved);
       onClose();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not save");
+      toast(errMsg(e, "Could not save"));
     } finally {
       setBusy(false);
     }

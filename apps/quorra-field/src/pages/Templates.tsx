@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { money } from "../lib/money";
@@ -61,7 +62,7 @@ export default function Templates() {
       }
       await refresh();
       toast(`Added ${a} price book items and ${b} templates`);
-    } catch (e) { toast(e instanceof Error ? e.message : "Could not add (is migration 0004 run?)"); }
+    } catch (e) { toast(errMsg(e, "Could not add (is migration 0004 run?)")); }
     finally { setBusy(false); }
   }
 

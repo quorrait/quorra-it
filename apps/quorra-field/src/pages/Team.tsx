@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
@@ -31,14 +32,14 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
     if (used >= seats) return toast(`Your ${subscription?.plan} plan includes ${seats} ${seats === 1 ? "login" : "logins"}. Upgrade under Billing to add more.`);
     setBusy(true);
     try { await createInvite({ id: m.id, email: m.email, role: m.role }); await reload(); }
-    catch (e) { toast(e instanceof Error ? e.message : "Could not create the invite"); }
+    catch (e) { toast(errMsg(e, "Could not create the invite")); }
     finally { setBusy(false); }
   }
   async function remove() {
     if (!(await ask({ title: `Remove ${m.name}'s access?`, message: "They will no longer be able to sign in to this business.", confirmLabel: "Remove access", danger: true }))) return;
     setBusy(true);
     try { await revokeAccess(m.id); await reload(); toast("Access removed"); }
-    catch (e) { toast(e instanceof Error ? e.message : "Could not remove access"); }
+    catch (e) { toast(errMsg(e, "Could not remove access")); }
     finally { setBusy(false); }
   }
 
@@ -107,7 +108,7 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
             if (!f.email.trim()) return toast("Add an email address to invite them");
             const saved = await store.saveRow("team_members", { name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active });
             try { await createInvite({ id: saved.id, email: f.email, role: f.role }); toast("Saved. Open them to send the invite."); }
-            catch (e) { toast(e instanceof Error ? e.message : "Saved, but the invite failed"); }
+            catch (e) { toast(errMsg(e, "Saved, but the invite failed")); }
             await refresh(); await reload(); onClose();
           }}>Save and create invite</button>
         )}

@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { Icon, Sheet, useToast } from "./ui";
@@ -19,7 +20,7 @@ export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice:
     store
       .createPayLink(invoice.id)
       .then((l) => live && setLink(l))
-      .catch((e) => live && setErr(e instanceof Error ? e.message : "Could not create a payment link"));
+      .catch((e) => live && setErr(errMsg(e, "Could not create a payment link")));
     return () => {
       live = false;
     };
@@ -105,7 +106,7 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
       toast(cents === balance ? "Invoice marked paid" : `${money(cents)} recorded`);
       onClose();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not record payment");
+      toast(errMsg(e, "Could not record payment"));
     } finally {
       setBusy(false);
     }

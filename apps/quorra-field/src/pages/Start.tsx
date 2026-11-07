@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/app";
@@ -40,7 +41,7 @@ export default function Start() {
         location.href = data.url as string; // Stripe Checkout
       }
     } catch (e2) {
-      setErr(e2 instanceof Error ? e2.message : "Something went wrong. Please try again.");
+      setErr(errMsg(e2, "Something went wrong. Please try again."));
     } finally {
       setBusy(false);
     }

@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
@@ -42,9 +43,9 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
       let cid = cust;
       if (cid === "__new__") cid = (await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address: job?.address ?? "", notes: "" })).id;
       const nextNumber = Math.max(1000, ...invoices.map((i) => i.number)) + 1;
-      const saved = await store.saveInvoice({
+      const build = (n: number) => ({
         id: invoice?.id,
-        number: invoice?.number ?? nextNumber,
+        number: invoice?.number ?? n,
         customer_id: cid,
         job_id: invoice?.job_id ?? job?.id ?? null,
         status: invoice?.status ?? "draft",
@@ -55,12 +56,21 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
         due_at: fromDateInput(due),
         qbo_id: invoice?.qbo_id ?? null,
       });
+      let saved;
+      try {
+        saved = await store.saveInvoice(build(nextNumber));
+      } catch (err) {
+        // Another device may have taken this number meanwhile: look again and use the next free one.
+        if (invoice || (err as { code?: string })?.code !== "23505") throw err;
+        const fresh = await store.listInvoices();
+        saved = await store.saveInvoice(build(Math.max(1000, ...fresh.map((i) => i.number)) + 1));
+      }
       await refresh();
       toast(invoice ? "Invoice updated" : "Invoice created");
       onSaved?.(saved);
       onClose();
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not save");
+      toast(errMsg(e, "Could not save"));
     } finally {
       setBusy(false);
     }

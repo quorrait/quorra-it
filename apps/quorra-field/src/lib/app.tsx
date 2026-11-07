@@ -1,3 +1,4 @@
+import { errMsg } from "./errors";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, Subscription, TeamMember, TimeEntry } from "./types";
 import { acceptInvite, pendingInviteCode, rememberInvite } from "./team";
@@ -213,7 +214,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setDocTemplates(dt);
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not load data");
+      setError(errMsg(e, "Could not load data"));
     } finally {
       setLoading(false);
     }

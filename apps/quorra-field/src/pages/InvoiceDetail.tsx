@@ -1,3 +1,4 @@
+import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -53,7 +54,7 @@ export default function InvoiceDetail() {
       await refresh();
       toast(msg);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "Could not update");
+      toast(errMsg(e, "Could not update"));
     } finally {
       setBusy(false);
     }
@@ -66,7 +67,7 @@ export default function InvoiceDetail() {
       await refresh();
       toast(`Synced to QuickBooks (#${r.qbo_id})`);
     } catch (e) {
-      toast(e instanceof Error ? e.message : "QuickBooks sync failed");
+      toast(errMsg(e, "QuickBooks sync failed"));
     } finally {
       setBusy(false);
     }
