@@ -23,6 +23,7 @@ export interface Business {
   lead_form?: LeadFormSettings; // website request form wording and fields
   vendors?: Vendor[]; // preset vendors for purchase orders
   pay_period?: PayPeriod; // how timesheets are grouped
+  reminders?: { customer_hours?: number; team_hours?: number }; // hours before a visit; 0 = off
   notify_email?: string; // who is emailed when something is booked or moved
   notify_phone?: string;
   hours?: BusinessHours; // open hours for customer scheduling

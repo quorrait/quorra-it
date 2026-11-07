@@ -52,7 +52,7 @@ handler(async (req) => {
 
   let jobId = oldJob?.id as string | undefined;
   if (jobId) {
-    const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString() }).eq("id", jobId);
+    const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString(), customer_reminded_at: null, team_reminded_at: null }).eq("id", jobId);
     if (error) throw error;
   } else {
     const { data: job, error } = await db.from("jobs").insert({

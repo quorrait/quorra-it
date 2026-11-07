@@ -12,23 +12,40 @@ handler(async (req) => {
   const now = Date.now();
   let visits = 0, plans = 0;
 
-  const { data: jobs } = await db.from("jobs").select("id,owner_id,customer_id,title,start_at,address,assigned_to")
-    .eq("status", "scheduled").is("reminder_sent_at", null)
-    .gt("start_at", new Date(now).toISOString()).lte("start_at", new Date(now + 24 * 3600_000).toISOString());
+  // Visits: each business chooses how long before a visit the customer and the team hear about it.
+  const { data: jobs } = await db.from("jobs").select("id,owner_id,customer_id,title,start_at,address,assigned_to,customer_reminded_at,team_reminded_at")
+    .eq("status", "scheduled").gt("start_at", new Date(now).toISOString()).lte("start_at", new Date(now + 8 * 86400_000).toISOString())
+    .or("customer_reminded_at.is.null,team_reminded_at.is.null");
+  const bizCache = new Map<string, Record<string, unknown> | null>();
   for (const j of jobs ?? []) {
-    const [{ data: biz }, { data: cust }] = await Promise.all([
-      db.from("business").select("name,phone,email,hours").eq("owner_id", j.owner_id).maybeSingle(),
-      db.from("customers").select("name,phone,email").eq("id", j.customer_id).maybeSingle(),
-    ]);
+    if (!bizCache.has(j.owner_id)) {
+      const { data } = await db.from("business").select("name,phone,email,hours,reminders,notify_email,notify_phone").eq("owner_id", j.owner_id).maybeSingle();
+      bizCache.set(j.owner_id, data);
+    }
+    const biz = bizCache.get(j.owner_id) as { name?: string; phone?: string; email?: string; hours?: never; reminders?: { customer_hours?: number; team_hours?: number }; notify_email?: string; notify_phone?: string } | null;
+    const custH = biz?.reminders?.customer_hours ?? 24, teamH = biz?.reminders?.team_hours ?? 24;
+    const startMs = new Date(j.start_at).getTime();
+    const dueCust = custH > 0 && !j.customer_reminded_at && now >= startMs - custH * 3600_000;
+    const dueTeam = teamH > 0 && !j.team_reminded_at && now >= startMs - teamH * 3600_000;
+    if (!dueCust && !dueTeam) continue;
+    const { data: cust } = await db.from("customers").select("name,phone,email").eq("id", j.customer_id).maybeSingle();
     const tz = normHours(biz?.hours).tz;
     const when = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(new Date(j.start_at));
-    const first = (cust?.name ?? "").split(" ")[0] || "there";
-    const msg = `Reminder: ${biz?.name ?? "We"} will be at ${j.address || "your address"} for ${j.title} on ${when}.${biz?.phone ? ` Questions? Call ${biz.phone}.` : ""}`;
-    if (cust?.phone) await sendSms({ to: cust.phone, body: `Hi ${first}. ${msg}` });
-    if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Reminder: ${j.title} ${when}`, text: `Hi ${first},\n\n${msg}` });
-    if (biz?.email) await sendEmail({ to: biz.email, subject: `Coming up: ${j.title} for ${cust?.name ?? "customer"}`, text: `${when}\n${cust?.name ?? ""} ${cust?.phone ?? ""}\n${j.address}${j.assigned_to ? `\nAssigned: ${j.assigned_to}` : ""}` });
-    if (biz?.phone) await sendSms({ to: biz.phone, body: `Upcoming: ${j.title} for ${cust?.name ?? "customer"} ${when}` });
-    await db.from("jobs").update({ reminder_sent_at: new Date().toISOString() }).eq("id", j.id);
+    if (dueCust) {
+      const first = (cust?.name ?? "").split(" ")[0] || "there";
+      const msg = `Reminder: ${biz?.name ?? "We"} will be at ${j.address || "your address"} for ${j.title} on ${when}.${biz?.phone ? ` Questions? Call ${biz.phone}.` : ""}`;
+      if (cust?.phone) await sendSms({ to: cust.phone, body: `Hi ${first}. ${msg}` });
+      if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Reminder: ${j.title} ${when}`, text: `Hi ${first},\n\n${msg}` });
+      await db.from("jobs").update({ customer_reminded_at: new Date().toISOString() }).eq("id", j.id);
+    }
+    if (dueTeam) {
+      const body = `${when}\n${cust?.name ?? ""} ${cust?.phone ?? ""}\n${j.address}${j.assigned_to ? `\nAssigned: ${j.assigned_to}` : ""}`;
+      const { data: tech } = j.assigned_to ? await db.from("team_members").select("email,phone").eq("owner_id", j.owner_id).eq("name", j.assigned_to).maybeSingle() : { data: null };
+      const mail = new Set([biz?.notify_email || biz?.email, tech?.email].filter(Boolean) as string[]);
+      for (const to of mail) await sendEmail({ to, subject: `Coming up: ${j.title} for ${cust?.name ?? "customer"}`, text: body });
+      for (const to of new Set([biz?.notify_phone, tech?.phone].filter(Boolean) as string[])) await sendSms({ to, body: `Upcoming: ${j.title} for ${cust?.name ?? "customer"} ${when}` });
+      await db.from("jobs").update({ team_reminded_at: new Date().toISOString() }).eq("id", j.id);
+    }
     visits++;
   }
 

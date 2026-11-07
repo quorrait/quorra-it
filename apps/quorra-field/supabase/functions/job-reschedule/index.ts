@@ -14,7 +14,7 @@ handler(async (req) => {
   const owner = await accountOwner(user.id);
   const { data: job } = await db.from("jobs").select("id,title,customer_id,start_at,assigned_to").eq("id", b.job_id).eq("owner_id", owner).maybeSingle();
   if (!job) throw new HttpError(404, "Job not found");
-  const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString(), reminder_sent_at: null }).eq("id", job.id);
+  const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString(), reminder_sent_at: null, customer_reminded_at: null, team_reminded_at: null }).eq("id", job.id);
   if (error) throw error;
   const [{ data: biz }, { data: cust }, { data: me }] = await Promise.all([
     db.from("business").select("name,phone,hours").eq("owner_id", owner).maybeSingle(),
