@@ -25,7 +25,9 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
               ? <div className="plan-price"><span className="num">{money(p.price_cents).replace(".00", "")}</span><span className="muted"> / month</span></div>
               : <div className="plan-price"><span className="num">{money(annualCents(p)).replace(".00", "")}</span><span className="muted"> / year</span><div className="small muted" style={{ fontWeight: 400 }}>{money(Math.round(annualCents(p) / 12)).replace(".00", "")} / month, {ANNUAL_DISCOUNT}% off</div></div>}
             <div className="small bold" style={{ color: "var(--brand-dark, #c2410c)" }}>{TRIAL_DAYS}-day free trial</div>
-            <ul className="plan-list">{p.extras.map((x) => <li key={x}>{x}</li>)}</ul>
+            <ul className="plan-list" style={{ flex: "none" }}>{p.extras.map((x) => <li key={x} style={{ fontWeight: 700 }}>{x}</li>)}</ul>
+            <div className="small muted bold" style={{ marginTop: 4 }}>Every feature included:</div>
+            <ul className="plan-list">{EVERY_PLAN.map((x) => <li key={x} className="small">{x}</li>)}</ul>
             <button className={`btn block ${p.popular ? "primary" : ""}`} disabled={busy !== null && busy !== undefined} onClick={() => onChoose(p, iv)}>
               {current?.toLowerCase() === p.name.toLowerCase() ? "Your plan" : busy === p.id ? "One moment..." : cta === "Start" ? `Start ${TRIAL_DAYS}-day free trial` : `${cta} ${p.name}`}
             </button>
@@ -41,10 +43,6 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
           <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
         <Link className="btn dark" to="/contact" state={{ back: backTo }}>Contact us</Link>
-      </div>
-      <div className="card">
-        <div className="card-title">Every plan includes</div>
-        <ul className="plan-list cols">{EVERY_PLAN.map((x) => <li key={x}>{x}</li>)}</ul>
       </div>
     </div>
   );

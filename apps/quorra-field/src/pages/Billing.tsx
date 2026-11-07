@@ -5,7 +5,7 @@ import { useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { money } from "../lib/money";
-import { Spinner, useToast } from "../components/ui";
+import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
 import { PLANS, planByName } from "../lib/plans";
 
@@ -21,6 +21,8 @@ export default function Billing() {
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
 
   useEffect(() => {
@@ -118,10 +120,36 @@ export default function Billing() {
           <div className="pay-btns">
             <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal")}>Update card and see receipts</button>
             <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal", "update")}>Upgrade or downgrade</button>
-            <button className="btn danger" disabled={busy !== null} onClick={() => go("billing-portal", "cancel")}>Cancel plan</button>
+            <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
           </div>
           <div className="small muted">These open Stripe's secure billing page. Cancelling keeps your access until the end of the period you already paid for.</div>
         </div>
+      )}
+      {cancelOpen && (
+        <Sheet title="Cancel your plan" onClose={() => setCancelOpen(false)}>
+          <div className="stack">
+            <p className="small muted" style={{ margin: 0 }}>We are sorry to see you go. Please tell us why. It takes ten seconds and helps us fix problems. You keep access until the end of the period you already paid for.</p>
+            <Field label="Why are you cancelling? (required)">
+              <select className="select" value={why.reason} onChange={(e) => setWhy({ ...why, reason: e.target.value })}>
+                <option value="">Choose a reason</option>
+                {["Too expensive", "Missing a feature I need", "Too hard to use", "Something is not working right", "Switching to another product", "Closing or pausing my business", "Not using it enough", "Other"].map((r) => <option key={r}>{r}</option>)}
+              </select>
+            </Field>
+            <Field label="Tell us more (optional)"><textarea className="textarea" rows={3} value={why.details} onChange={(e) => setWhy({ ...why, details: e.target.value })} placeholder="What went wrong or what would have kept you?" /></Field>
+            <label className="row"><input type="checkbox" checked={why.contact} onChange={(e) => setWhy({ ...why, contact: e.target.checked })} /> Yes, please contact me about this problem</label>
+            {why.contact && <Field label="Best phone number (we will also email you)"><input className="input" type="tel" value={why.phone} onChange={(e) => setWhy({ ...why, phone: e.target.value })} /></Field>}
+            <button className="btn danger block" disabled={busy !== null} onClick={async () => {
+              if (!why.reason) return toast("Please choose a reason");
+              if (hasSupabase && supabase) {
+                const { error } = await supabase.functions.invoke("cancel-feedback", { body: { reason: why.reason, details: why.details, contact_me: why.contact, phone: why.phone } });
+                if (error) { let m = errMsg(error, "Could not send your feedback"); try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } return toast(m); }
+              }
+              setCancelOpen(false);
+              void go("billing-portal", "cancel");
+            }}>Continue to cancel</button>
+            <button className="btn block" onClick={() => setCancelOpen(false)}>Keep my plan</button>
+          </div>
+        </Sheet>
       )}
     </div>
   );

@@ -32,18 +32,26 @@ export const CUSTOM_PLAN = {
 };
 
 export const EVERY_PLAN = [
-  "Job scheduling and calendar",
-  "Estimates and invoices with PDF, email and text",
-  "Card payments on your own Stripe account",
-  "QuickBooks Online sync",
-  "Website lead form and lead pipeline",
-  "Your own HTML invoice layout and lead form",
+  "Job scheduling and calendar, with phone calendar sync",
+  "Customers book a time online after they accept a quote",
+  "Estimates and invoices by PDF, email, text or portal link",
+  "Take payment on the spot: cash, check or card",
+  "Card payments into your own Stripe account (QR, link, Apple Pay, Google Pay)",
   "Customer portal for quotes, invoices and payments",
+  "Text and email reminders for visits and service plans",
+  "Reschedule a job and the customer is texted automatically",
+  "In-app and email notifications for bookings and changes",
+  "Website lead form and lead pipeline",
+  "Your own invoice layout and lead form design",
+  "QuickBooks Online sync",
   "On my way and arrived check-ins",
-  "Timesheets and commission tracking",
-  "Reports, earnings and recurring service plans",
+  "Timesheets with overtime, edit history and custom pay periods",
+  "Commission tracking and labor cost reports",
+  "Purchase orders with preset vendors",
   "Price book, local price guide and CSV imports",
-  "Phone calendar sync",
+  "Recurring service plans",
+  "Reports and earnings",
+  "Open hours and booking rules you control",
 ];
 
 export const planByName = (name?: string | null) => PLANS.find((p) => p.name.toLowerCase() === (name ?? "").toLowerCase());
