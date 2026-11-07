@@ -87,7 +87,7 @@ export default function Billing() {
           </>
         )}
         {sub?.current_period_end && active && !sub.comped && (
-          <div className="row between"><span className="muted">{sub.cancel_at_period_end ? "Access until" : sub.trialing ? "Free trial ends, first charge" : "Next payment"}</span><b>{fmtDate(sub.current_period_end)}</b></div>
+          <div className="row between"><span className="muted">{sub.cancel_at_period_end ? "Access until" : sub.trialing ? "Free trial ends, first charge" : "Next payment"}</span><b>{new Date(sub.current_period_end).getFullYear() > 1971 ? fmtDate(sub.current_period_end) : "-"}</b></div>
         )}
         {status === "past_due" && <div className="notice">The last payment did not go through. Update your card to keep your access.</div>}
         {sub?.comped && <div className="small muted">This account is on a complimentary plan. No payment is needed.</div>}
@@ -120,8 +120,19 @@ export default function Billing() {
           <div className="card-title" style={{ margin: 0 }}>Manage your plan</div>
           <div className="pay-btns">
             <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal")}>Update card and see receipts</button>
-            <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal", "update")}>Upgrade or downgrade</button>
-            <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
+            {sub?.cancel_at_period_end ? (
+              <button className="btn primary" disabled={busy !== null} onClick={async () => {
+                setBusy("resume");
+                try { const { error } = await supabase!.functions.invoke("billing-portal", { body: { flow: "resume" } }); if (error) throw error; toast("Plan resumed. It will keep renewing."); await refresh(); }
+                catch (e) { toast(errMsg(e, "Could not resume your plan")); }
+                finally { setBusy(null); }
+              }}>Resume plan</button>
+            ) : (
+              <>
+                <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal", "update")}>Upgrade or downgrade</button>
+                <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
+              </>
+            )}
           </div>
           <div className="small muted">These open Stripe's secure billing page. Cancelling keeps your access until the end of the period you already paid for.</div>
         </div>

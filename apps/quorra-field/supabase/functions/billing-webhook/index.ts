@@ -31,8 +31,12 @@ async function save(sub: Stripe.Subscription) {
     plan: planName(item?.price),
     amount_cents: item?.price?.unit_amount ?? 30000,
     billing_interval: item?.price?.recurring?.interval ?? "month",
-    current_period_end: new Date((sub.current_period_end ?? 0) * 1000).toISOString(),
-    cancel_at_period_end: sub.cancel_at_period_end,
+    // Newer Stripe API versions keep the period end on the item; a scheduled cancel date wins when there is one.
+    current_period_end: (() => {
+      const t = sub.cancel_at ?? (item as unknown as { current_period_end?: number })?.current_period_end ?? (sub as unknown as { current_period_end?: number }).current_period_end ?? sub.trial_end;
+      return t ? new Date(t * 1000).toISOString() : null;
+    })(),
+    cancel_at_period_end: Boolean(sub.cancel_at_period_end || sub.cancel_at),
     trialing: sub.status === "trialing",
     stripe_customer_id: String(sub.customer),
     stripe_subscription_id: sub.id,
