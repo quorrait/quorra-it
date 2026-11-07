@@ -24,8 +24,8 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
   const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
   // New invoices start from the customer's latest accepted estimate (or the one tied to this job).
   const estFor = (cid: string) => invoice ? undefined : estimates
-    .filter((e) => e.status === "approved" && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
-    .sort((a, b) => Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number)[0];
+    .filter((e) => (e.status === "approved" || e.status === "sent") && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
+    .sort((a, b) => Number(b.status === "approved") - Number(a.status === "approved") || Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number)[0];
   const est0 = estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");
   const [fromEst, setFromEst] = useState(est0);
   const [touched, setTouched] = useState(false);
@@ -103,7 +103,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, onClose, onSav
           </div>
         )}
 
-        {fromEst && <div className="notice">Filled in from accepted estimate #{fromEst.number}. Change anything you need.</div>}
+        {fromEst && <div className="notice">Filled in from estimate #{fromEst.number}. Change anything you need.</div>}
         {!invoice && <TemplatePicker kind="estimate" onPick={(t) => { setTouched(true); setFromEst(undefined); setRows(t.items.map(toRow)); }} />}
         <LineItemsEditor rows={rows} setRows={(r) => { setTouched(true); setRows(r); }} />
 

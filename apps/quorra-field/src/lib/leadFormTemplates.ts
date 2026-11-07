@@ -8,7 +8,7 @@ export interface FormTemplateChoice { id: string; name: string; desc: string; ht
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-export interface FormWording { accent?: string; heading?: string; intro?: string; button?: string; services?: string[]; show_email?: boolean; show_address?: boolean; require_phone?: boolean; extra_label?: string }
+export interface FormWording { accent?: string; heading?: string; intro?: string; button?: string; services?: string[]; show_email?: boolean; show_address?: boolean; show_service?: boolean; require_phone?: boolean; extra_label?: string }
 export const DEFAULT_SERVICE_OPTIONS = `<option value="">Choose one</option><option>Repair</option><option>Installation or replacement</option><option>Maintenance or tune-up</option><option>Inspection or estimate</option><option>Something else</option>`;
 
 /**
@@ -29,12 +29,13 @@ export function fillFormTemplate(html: string, businessName?: string, w: FormWor
 
 /** Applies the field options (ask for email / address, require phone, extra question) to any style. lead.html has the same logic. */
 export function applyFieldOptions(html: string, w: FormWording): string {
-  const hideEmail = w.show_email === false, hideAddr = w.show_address === false, reqPhone = Boolean(w.require_phone), extra = (w.extra_label ?? "").trim();
-  if (!hideEmail && !hideAddr && !reqPhone && !extra) return html;
+  const hideEmail = w.show_email === false, hideAddr = w.show_address === false, hideSvc = w.show_service === false, reqPhone = Boolean(w.require_phone), extra = (w.extra_label ?? "").trim();
+  if (!hideEmail && !hideAddr && !hideSvc && !reqPhone && !extra) return html;
   const doc = new DOMParser().parseFromString(html, "text/html");
   const drop = (n: string) => doc.querySelectorAll(`[name="${n}"]`).forEach((el) => (el.closest("label") ?? el).remove());
   if (hideEmail) drop("email");
   if (hideAddr) drop("address");
+  if (hideSvc) drop("service");
   const ph = doc.querySelector<HTMLInputElement>('input[name="phone"]');
   if (reqPhone && ph) ph.required = true;
   if (extra && ph) {

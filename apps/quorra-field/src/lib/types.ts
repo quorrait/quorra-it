@@ -216,6 +216,7 @@ export interface DocSettings {
   header?: "band" | "plain";
   show_logo?: boolean;
   show_address?: boolean;
+  show_service?: boolean;
   show_phone?: boolean;
   show_email?: boolean;
   show_status?: boolean;
@@ -238,6 +239,7 @@ export interface LeadFormSettings {
   thanks?: string;
   accent?: string;
   show_address?: boolean;
+  show_service?: boolean;
   show_email?: boolean;
   services?: string[]; // when set, the "service" field becomes a dropdown
   require_phone?: boolean;

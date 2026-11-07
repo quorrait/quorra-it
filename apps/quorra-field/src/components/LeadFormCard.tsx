@@ -90,6 +90,7 @@ export default function LeadFormCard() {
           <div className="opt-group">
             <h4>What to ask customers</h4>
             <label className="row"><input type="checkbox" checked={cfg.show_email !== false} onChange={(e) => set({ show_email: e.target.checked })} /> Ask for email</label>
+            <label className="row"><input type="checkbox" checked={cfg.show_service !== false} onChange={(e) => set({ show_service: e.target.checked })} /> Ask for type of service</label>
             <label className="row"><input type="checkbox" checked={cfg.show_address !== false} onChange={(e) => set({ show_address: e.target.checked })} /> Ask for service address</label>
             <label className="row"><input type="checkbox" checked={Boolean(cfg.require_phone)} onChange={(e) => set({ require_phone: e.target.checked })} /> Require a phone number</label>
             <Field label="Extra question (optional)"><input className="input" value={cfg.extra_label ?? ""} placeholder="e.g. How did you hear about us?" onChange={(e) => set({ extra_label: e.target.value })} /></Field>

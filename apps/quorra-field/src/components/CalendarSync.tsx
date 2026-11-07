@@ -72,7 +72,8 @@ export default function CalendarSync({ memberId }: { memberId?: string }) {
       {how}
       <div className="opt-group">
         <h4>iPhone, iPad or Mac (Apple Calendar)</h4>
-        <a className="btn primary" style={{ minHeight: 48 }} href={webcalUrl(token)}>Add to Apple Calendar</a>
+        <a className="btn primary" style={{ minHeight: 48 }} href="calshow://" onClick={() => { void navigator.clipboard?.writeText(link); toast("Link copied. Opening Calendar: add it as a subscribed calendar."); }}>Open Apple Calendar (copies link)</a>
+        <a className="btn" href={webcalUrl(token)}>Subscribe directly (Safari)</a>
         <div className="small muted">Open this in Safari and tap Subscribe. If it says it cannot open the link (this can happen from the home-screen app), tap Copy link below, then go to Settings, Calendar, Accounts, Add Account, Other, Add Subscribed Calendar, and paste it.</div>
         <div><button className="btn" onClick={() => copy(link, "Calendar link copied")}>Copy link</button></div>
       </div>

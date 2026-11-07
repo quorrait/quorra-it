@@ -1,7 +1,7 @@
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Icon, useConfirm } from "./ui";
-import { clearUnsaved, hasUnsaved } from "../lib/unsaved";
+import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
 import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
@@ -56,7 +56,10 @@ export default function Layout() {
       const dest = url.hash.startsWith("#/") ? url.hash.slice(1) : url.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ""), "") + url.search;
       if (dest === (location.hash.startsWith("#/") ? location.hash.slice(1) : location.pathname.replace(import.meta.env.BASE_URL.replace(/\/$/, ""), ""))) return;
       e.preventDefault(); e.stopPropagation();
-      if (await ask({ title: "Leave without saving?", message: "You have changes that are not saved. If you leave now they will be lost.", confirmLabel: "Leave without saving", cancelLabel: "Stay here" })) { clearUnsaved(); nav(dest || "/"); }
+      const canSave = canSaveUnsaved();
+      const leave = await ask({ title: "Leave without saving?", message: "You have changes that are not saved. If you leave now they will be lost.", confirmLabel: "Leave without saving", cancelLabel: canSave ? "Save changes" : "Stay here", danger: true });
+      if (leave) { clearUnsaved(); nav(dest || "/"); }
+      else if (canSave) { try { await saveUnsaved(); clearUnsaved(); nav(dest || "/"); } catch { /* the save toast already explains; stay here */ } }
     };
     const onUnload = (e: BeforeUnloadEvent) => { if (hasUnsaved()) { e.preventDefault(); e.returnValue = ""; } };
     document.addEventListener("click", onClick, true);

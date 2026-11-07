@@ -92,7 +92,7 @@ export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice:
 
 /** Cash / check / other payments entered by hand. */
 export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice; balance: number; onClose(): void }) {
-  const { store, refresh } = useData();
+  const { store, refresh, jobs, leads } = useData();
   const toast = useToast();
   const [method, setMethod] = useState<PayMethod>("cash");
   const [amount, setAmount] = useState((balance / 100).toFixed(2));
@@ -106,6 +106,12 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
     try {
       if (invoice.status === "draft") await store.saveInvoice({ ...invoice, status: "sent" });
       await store.recordPayment({ invoice_id: invoice.id, amount_cents: cents, method });
+      if (cents === balance && invoice.job_id) {
+        // Paid in full: the job is done and the work order leaves the list (the database does this too).
+        const job = jobs.find((j) => j.id === invoice.job_id);
+        if (job && job.status !== "completed" && job.status !== "canceled") await store.saveJob({ ...job, status: "completed" }).catch(() => undefined);
+        for (const l of leads.filter((x) => x.job_id === invoice.job_id && x.stage === "work_order")) await store.saveRow("leads", { ...l, stage: "completed" }).catch(() => undefined);
+      }
       await refresh();
       toast(cents === balance ? "Invoice marked paid" : `${money(cents)} recorded`);
       onClose();

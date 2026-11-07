@@ -15,7 +15,7 @@ export function SaveAllProvider({ children }: { children: ReactNode }) {
     if (Boolean(prev?.dirty) !== Boolean(e?.dirty)) bump((n) => n + 1);
   };
   const dirty = Array.from(map.current.values()).some((e) => e.dirty);
-  useEffect(() => { setUnsaved("settings", dirty); return () => setUnsaved("settings", false); }, [dirty]);
+  useEffect(() => { setUnsaved("settings", dirty, async () => { for (const e of Array.from(map.current.values())) if (e.dirty) await e.save(); }); return () => setUnsaved("settings", false); }, [dirty]);
   async function saveAll() {
     setBusy(true);
     try { for (const e of Array.from(map.current.values())) if (e.dirty) await e.save(); }

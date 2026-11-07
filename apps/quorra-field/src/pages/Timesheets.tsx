@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
+import { errMsg } from "../lib/errors";
 import { money } from "../lib/money";
 import { addDays, fmtDayShort, fmtTime, startOfWeek } from "../lib/dates";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
@@ -206,7 +207,7 @@ export default function Timesheets() {
               <Field label="A date a pay period starts on"><input className="input" type="date" value={ppDraft.anchor ?? iso(startOfWeek(new Date()))} onChange={(e) => setPpDraft({ ...ppDraft, anchor: e.target.value })} /></Field>
             )}
             <div className="small muted">Pick any start date from a past or current pay period. Every period is counted from it. Timesheets, hours and labor cost are grouped by this period.</div>
-            <button className="btn primary block" onClick={async () => { await store.saveBusiness({ pay_period: ppDraft }); await refresh(); setWeek(0); setPpOpen(false); toast("Pay period updated"); }}>Save pay period</button>
+            <button className="btn primary block" onClick={async () => { try { await store.saveBusiness({ pay_period: ppDraft }); await refresh(); setWeek(0); setPpOpen(false); toast("Pay period updated"); } catch (e) { toast(errMsg(e, "Could not save. Run database update 0016 first.")); } }}>Save pay period</button>
           </div>
         </Sheet>
       )}

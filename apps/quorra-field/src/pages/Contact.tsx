@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { APP_NAME } from "../lib/config";
 import { hasSupabase } from "../lib/supabase";
 import { apiBase } from "../lib/publicLinks";
@@ -12,6 +12,7 @@ export default function Contact() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
+  const nav = useNavigate();
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
 
   async function submit(e: FormEvent) {
@@ -22,11 +23,12 @@ export default function Contact() {
       if (!f.message.trim()) throw new Error("Please tell us how we can help.");
       if (!f.email.trim() && f.phone.replace(/\D/g, "").length < 10) throw new Error("Please enter an email or a phone number so we can reach you.");
       if (hasSupabase) {
-        const r = await fetch(`${apiBase()}/contact-request`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) });
+        const r = await fetch(`${apiBase()}/contact-request`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(f) }).catch(() => { throw new Error("We could not send that right now. Please try again in a minute or call us."); });
         const j = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(j.error || "Could not send your request. Please try again.");
       }
       setDone(true);
+      setTimeout(() => nav("/plans"), 5000);
     } catch (e) { setErr(errMsg(e, "Could not send your request. Please try again.")); }
     finally { setBusy(false); }
   }
@@ -34,7 +36,7 @@ export default function Contact() {
   if (done) return (
     <div className="auth"><div className="auth-card stack">
       <h1>Thank you</h1>
-      <p className="muted">We received your message and will reach out by {f.best_way.toLowerCase()} soon.</p>
+      <p className="muted">Our response time is 1-2 business days. We will reach out by {f.best_way.toLowerCase()}. Taking you back to plans...</p>
       <Link className="btn primary block" to="/plans">Back to plans</Link>
     </div></div>
   );
