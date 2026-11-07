@@ -25,6 +25,9 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body, #root { height: 100%; }
+html, body { overflow-x: hidden; max-width: 100%; overscroll-behavior-x: none; touch-action: pan-y; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+button, a, .btn, .tab, .chip { touch-action: manipulation; }
+@media (max-width: 899px) { input, select, textarea, .input, .select, .textarea { font-size: 16px; } }
 body {
   margin: 0;
   font-family: var(--font);
