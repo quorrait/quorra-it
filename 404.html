@@ -1,0 +1,17 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Page not found</title>
+<script>
+  // GitHub Pages has no single-page-app fallback. A link or refresh inside the Dispatch app lands here,
+  // so hand the path back to the app's front page, which restores it.
+  (function (l) {
+    var base = "/field-test/";
+    if (l.pathname.indexOf(base) === 0) {
+      var rest = l.pathname.slice(base.length).replace(/&/g, "~and~");
+      var q = l.search ? "&" + l.search.slice(1).replace(/&/g, "~and~") : "";
+      l.replace(l.protocol + "//" + l.host + base + "?/" + rest + q + l.hash);
+    }
+  })(window.location);
+</script>
+<style>body{font:16px system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;color:#14232B}a{color:#1789b3}</style>
+</head><body><div style="text-align:center"><h1>Page not found</h1><p><a href="/">Back to Quorra IT</a></p></div></body></html>
