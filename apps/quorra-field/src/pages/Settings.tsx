@@ -1,3 +1,4 @@
+import RoleAccessCard from "../components/RoleAccessCard";
 import { STATE_TAX } from "../lib/stateTax";
 import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
@@ -62,7 +63,7 @@ function SettingsInner() {
   const toast = useToast();
   const ask = useConfirm();
   const [params, setParams] = useSearchParams();
-  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", state: "", address: "", review_url: "", yelp_url: "" });
+  const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", text_number: "", state: "", address: "", review_url: "", yelp_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
 
@@ -80,7 +81,7 @@ function SettingsInner() {
   }
 
   useEffect(() => {
-    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "", yelp_url: business.yelp_url ?? "" });
+    setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), text_number: business.text_number ?? "", state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "", yelp_url: business.yelp_url ?? "" });
   }, [business]);
 
   useEffect(() => {
@@ -94,8 +95,8 @@ function SettingsInner() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const bizDirty = f.name !== business.name || f.phone !== business.phone || f.email !== business.email || (parseFloat(f.tax_rate) || 0) !== business.tax_rate || (f.state || "") !== (business.state ?? "") || f.address !== (business.address ?? "") || f.review_url.trim() !== (business.review_url ?? "") || f.yelp_url.trim() !== (business.yelp_url ?? "");
-  useRegisterSave("business", !loading && bizDirty, () => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, address: f.address, review_url: f.review_url.trim(), yelp_url: f.yelp_url.trim() }); }, "Business details saved"));
+  const bizDirty = f.name !== business.name || f.phone !== business.phone || f.email !== business.email || (parseFloat(f.tax_rate) || 0) !== business.tax_rate || f.text_number.trim() !== (business.text_number ?? "") || (f.state || "") !== (business.state ?? "") || f.address !== (business.address ?? "") || f.review_url.trim() !== (business.review_url ?? "") || f.yelp_url.trim() !== (business.yelp_url ?? "");
+  useRegisterSave("business", !loading && bizDirty, () => run("save", async () => { await store.saveBusiness({ name: f.name, phone: f.phone, email: f.email, tax_rate: parseFloat(f.tax_rate) || 0, state: f.state || null, text_number: f.text_number.trim(), address: f.address, review_url: f.review_url.trim(), yelp_url: f.yelp_url.trim() }); }, "Business details saved"));
 
   if (loading) return <Spinner />;
 
@@ -132,6 +133,8 @@ function SettingsInner() {
         </div>
         <Field label="Business address (printed on invoices)"><textarea className="textarea" rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="123 Main St, Roseville, CA 95678" /></Field>
         <div className="grid2 stack-sm">
+          <Field label="Business texting number"><input className="input" type="tel" value={f.text_number} onChange={(e) => setF({ ...f, text_number: e.target.value })} placeholder="Your Quo or business number" />
+            <div className="small muted" style={{ marginTop: 4 }}>Shown on the send screen so you text from this number in your Quo app. Automatic sending from it comes later.</div></Field>
           <Field label="Default sales tax %">
             <input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} />
             {!(parseFloat(f.tax_rate) > 0) && STATE_TAX[f.state] !== undefined && <div className="small muted" style={{ marginTop: 4 }}>Left at 0, new estimates and invoices use your state's base rate of {STATE_TAX[f.state]}%. Enter your full local rate to override it.</div>}
@@ -193,6 +196,8 @@ function SettingsInner() {
           </details>
         </div>
       </details>
+
+      {hasSupabase && me.isOwner && <RoleAccessCard />}
 
       <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>

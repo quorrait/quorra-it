@@ -21,6 +21,8 @@ export interface Business {
   yelp_url?: string; // Yelp review link, also used by "Ask for a review"
   review_url?: string; // Google review link, used by "Ask for a review"
   lead_form?: LeadFormSettings; // website request form wording and fields
+  role_access?: Partial<Record<string, string[]>> | null; // owner-set screen access per role
+  text_number?: string; // business number used for texting customers
   vendors?: Vendor[]; // preset vendors for purchase orders
   pay_period?: PayPeriod; // how timesheets are grouped
   reminders?: { customer_hours?: number; team_hours?: number }; // hours before a visit; 0 = off

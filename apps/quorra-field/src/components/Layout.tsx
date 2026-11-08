@@ -37,6 +37,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "timesheets", to: "/timesheets", label: "Timesheets", icon: Icon.cal, end: false },
     { f: "reports", to: "/reports", label: "Reports", icon: Icon.invoice, end: false },
     { f: "import", to: "/import", label: "Import", icon: Icon.send, end: false },
+    { f: "settings", to: "/integrations", label: "Integrations", icon: Icon.send, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
     { f: "billing", to: "/billing", label: "Billing", icon: Icon.card, end: false },
   ] },

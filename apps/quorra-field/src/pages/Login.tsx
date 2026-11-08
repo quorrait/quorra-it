@@ -16,6 +16,7 @@ export default function Login() {
   const [mode, setMode] = useState<"in" | "up">(code ? "up" : "in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [remember, setRemember] = useState(true);
   const [confirm, setConfirm] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -35,6 +36,7 @@ export default function Login() {
     try {
       if (mode === "in") {
         await auth.signIn(email, password);
+        try { sessionStorage.setItem("qd_alive", "1"); remember ? localStorage.removeItem("qd_no_remember") : localStorage.setItem("qd_no_remember", "1"); } catch { /* ignore */ }
         // Ask the browser to offer "save password" right now, not later when the screen changes.
         try { const PC = (window as unknown as { PasswordCredential?: new (d: { id: string; password: string; name?: string }) => Credential }).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: email })); } catch { /* not supported */ }
       }
@@ -81,6 +83,7 @@ export default function Login() {
           </Field>
         )}
 
+        {mode === "in" && <label className="check-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember me on this device</label>}
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
 

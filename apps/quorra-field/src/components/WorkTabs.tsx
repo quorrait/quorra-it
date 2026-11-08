@@ -8,13 +8,13 @@ export default function WorkTabs() {
   const { can } = useData();
   const tabs = [
     { to: "/leads", label: "Leads", f: "leads" },
-    { to: "/estimates", label: "Quotes", f: "estimates" },
+    { to: "/estimates", label: "Estimates", f: "estimates" },
     { to: "/jobs", label: "Jobs", f: "jobs" },
   ] as const;
   return (
-    <div className="chips" style={{ marginBottom: 12 }}>
+    <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
       {tabs.filter((t) => can(t.f as never)).map((t) => (
-        <button key={t.to} className={`chip${pathname.startsWith(t.to) ? " on" : ""}`} onClick={() => nav(t.to)}>{t.label}</button>
+        <button key={t.to} className={`btn${pathname.startsWith(t.to) ? " primary" : ""}`} style={{ flex: 1, minHeight: 52, fontSize: 17, fontWeight: 700 }} onClick={() => nav(t.to)}>{t.label}</button>
       ))}
     </div>
   );

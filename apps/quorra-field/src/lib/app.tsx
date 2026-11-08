@@ -4,7 +4,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, Subscription, TeamMember, TimeEntry } from "./types";
 import { acceptInvite, pendingInviteCode, rememberInvite } from "./team";
 import type { Store } from "./store";
-import { canAccess, type Feature } from "./access";
+import { canAccess, type Feature, type RoleAccess } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
 import { createSupabaseStore } from "./supabaseStore";
 import { hasSupabase, supabase } from "./supabase";
@@ -37,7 +37,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       return;
     }
-    supabase.auth.getSession().then(({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
+      // "Remember me" off: the sign-in only lasts until the browser is closed.
+      try {
+        if (data.session && localStorage.getItem("qd_no_remember") && !sessionStorage.getItem("qd_alive")) {
+          await supabase!.auth.signOut({ scope: "local" });
+          localStorage.removeItem("qd_no_remember");
+          setEmail(null); setReady(true); return;
+        }
+      } catch { /* storage blocked */ }
       setEmail(data.session?.user.email ?? null);
       setReady(true);
     });
@@ -249,7 +257,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
   const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: !isStaff && (hasSupabase ? true : role === "Owner") };
-  const subOk = !hasSupabase || !requireSub || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
+  const subOk = !hasSupabase || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
   const locked = !subOk;
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
 
@@ -258,7 +266,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       me,
       subscription,
       locked,
-      can: (f) => canAccess(me.role, f),
+      can: (f) => canAccess(me.role, f, business.role_access as RoleAccess | null | undefined),
       viewAs(id) { try { localStorage.setItem("qf-view-as", id); } catch { /* ignore */ } setAsId(id); },
       store,
       loading,

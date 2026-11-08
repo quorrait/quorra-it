@@ -50,10 +50,11 @@ export default function Billing() {
     void openEmbedded("checkout", pl, iv);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, loading, isOwner, hasPlan]);
+  const [upcoming, setUpcoming] = useState<{ amount_cents: number; date: string } | null>(null);
   useEffect(() => {
     if (!isOwner || !hasPlan) return;
     if (!hasSupabase || !supabase) { setCharges(DEMO_CHARGES); return; }
-    void supabase.functions.invoke("billing-history").then(({ data }) => setCharges((data?.charges as Charge[]) ?? [])).catch(() => setCharges([]));
+    void supabase.functions.invoke("billing-history").then(({ data }) => { setCharges((data?.charges as Charge[]) ?? []); setUpcoming((data?.upcoming as { amount_cents: number; date: string } | null) ?? null); }).catch(() => setCharges([]));
   }, [isOwner, hasPlan, sub?.current_period_end]);
 
   if (loading) return <Spinner />;
@@ -106,7 +107,7 @@ export default function Billing() {
       return;
     }
     toast("You're in. Your plan can take a few seconds to show as active.");
-    void refresh(); [3000, 8000].forEach((ms) => setTimeout(() => void refresh(), ms));
+    void refresh(); [2000, 5000, 9000, 15000, 25000].forEach((ms) => setTimeout(() => void refresh(), ms));
   }
 
   async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string, interval?: string) {
@@ -157,7 +158,10 @@ export default function Billing() {
           </>
         )}
         {sub?.current_period_end && active && !sub.comped && (
+          <>
+          {upcoming && !sub.cancel_at_period_end && <div className="row between"><span className="muted">Next payment amount</span><b className="num">{money(upcoming.amount_cents)}</b></div>}
           <div className="row between"><span className="muted">{sub.cancel_at_period_end ? "Access until" : sub.trialing ? "Free trial ends, first charge" : "Next payment"}</span><b>{new Date(sub.current_period_end).getFullYear() > 1971 ? fmtDate(sub.current_period_end) : "-"}</b></div>
+          </>
         )}
         {status === "past_due" && <div className="notice">The last payment did not go through. Update your card to keep your access.</div>}
         {sub?.comped && <div className="small muted">This account is on a complimentary plan. No payment is needed.</div>}

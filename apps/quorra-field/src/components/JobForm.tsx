@@ -38,6 +38,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   const startLocal = `${date}T${time}`;
   const [hours, setHours] = useState(String(hrs0));
   const [allDay, setAllDay] = useState(false);
+  const [later, setLater] = useState(false);
   const { business } = useData();
   function toggleAllDay(on: boolean) {
     setAllDay(on);
@@ -69,6 +70,13 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
       if (cid === NEW) {
         const c = await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address, notes: "" });
         cid = c.id;
+      }
+      if (later && !job && !fromLead) {
+        // Not scheduled yet: keep it as an open lead. Scheduling it from Leads turns it into a work order.
+        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
+        await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "contacted", notes: description, customer_id: cid, estimate_id: null, job_id: null, created_at: new Date().toISOString() });
+        await refresh(); toast("Saved as an open lead. Schedule it from Leads when ready."); onClose();
+        return;
       }
       const startIso = fromLocalInput(startLocal);
       const endIso = new Date(new Date(startIso).getTime() + Number(hours) * 3600_000).toISOString();
@@ -124,6 +132,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
         <Field label="Address">
           <input className="input" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Job site address" />
         </Field>
+        {!job && !fromLead && <label className="check-row"><input type="checkbox" checked={later} onChange={(e) => setLater(e.target.checked)} /> Not scheduled yet (keep as an open lead)</label>}
         <Field label="Date">
           <input className="input" type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
           <div className="chips" style={{ marginTop: 8 }}>

@@ -15,12 +15,25 @@ export const ACCESS: Record<Role, Feature[]> = {
   Technician: ["calendar", "jobs", "customers"],
 };
 
-export const canAccess = (role: Role, f: Feature) => ACCESS[role].includes(f);
+/** The owner can change what each role sees (stored on the business). Owner always sees everything; only the owner sees Billing. */
+export type RoleAccess = Partial<Record<Role, Feature[]>>;
+export const FEATURE_LABEL: Record<Feature, string> = {
+  money: "Money and totals", calendar: "Calendar", jobs: "Jobs", customers: "Customers", leads: "Leads", estimates: "Estimates", invoices: "Invoices",
+  pricebook: "Price book", templates: "Templates", import: "Import", plans: "Service plans", purchase_orders: "Purchase orders", team: "Team",
+  timesheets: "Timesheets", reports: "Reports", settings: "Settings", billing: "Billing",
+};
+export const EDITABLE: Feature[] = ALL.filter((f) => f !== "billing");
+export const canAccess = (role: Role, f: Feature, custom?: RoleAccess | null) => {
+  if (role === "Owner") return true;
+  if (f === "billing") return false;
+  const list = custom?.[role];
+  return (list ?? ACCESS[role]).includes(f);
+};
 export const isManager = (role: Role) => role === "Owner" || role === "Manager";
 
 /** Route path -> feature required */
 export const ROUTE_FEATURE: Record<string, Feature> = {
   "/leads": "leads", "/estimates": "estimates", "/pricebook": "pricebook", "/templates": "templates", "/import": "import", "/plans": "plans",
   "/purchase-orders": "purchase_orders", "/team": "team", "/timesheets": "timesheets", "/reports": "reports",
-  "/settings": "settings", "/billing": "billing", "/invoices": "invoices", "/customers": "customers",
+  "/settings": "settings", "/integrations": "settings", "/billing": "billing", "/invoices": "invoices", "/customers": "customers",
 };

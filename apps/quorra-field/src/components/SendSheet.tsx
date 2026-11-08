@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useData } from "../lib/app";
 import type { jsPDF } from "jspdf";
 import { Sheet, useToast } from "./ui";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -13,6 +14,7 @@ export default function SendSheet({ kind = "quote", title, filename, makePdf, to
   docTitle: string; amount?: string; validUntil?: string; confirmLabel?: string; onConfirm?(): Promise<void>; onClose(): void;
 }) {
   const toast = useToast();
+  const { business } = useData();
   const [mode, setMode] = useState<Mode | null>(null);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
@@ -31,8 +33,8 @@ export default function SendSheet({ kind = "quote", title, filename, makePdf, to
   async function copy() {
     try {
       if (mode === "pdf") { await savePdf(await makePdf(), filename); return void sent("PDF saved. Marked as sent"); }
-      await navigator.clipboard.writeText(message);
-      void sent("Copied. Marked as sent");
+      await navigator.clipboard.writeText(mode === "portal" ? portalLink ?? message : message);
+      void sent(mode === "portal" ? "Link copied. Marked as sent" : "Copied. Marked as sent");
     } catch { toast("Copy failed. Select the text and copy it."); }
   }
 
@@ -80,10 +82,11 @@ export default function SendSheet({ kind = "quote", title, filename, makePdf, to
           <>
             <button className="btn" onClick={() => setMode(null)} style={{ alignSelf: "flex-start" }}>Back</button>
             <div className="small muted">{modes.find((m) => m.id === mode)?.label}: {mode === "pdf" ? "email it, or save it to share." : "copy it, text it, or email it."}</div>
-            {mode !== "pdf" && <div className="small" style={{ whiteSpace: "pre-wrap", padding: 10, border: "1px solid var(--line, #ddd)", borderRadius: 8 }}>{message}</div>}
+            {mode !== "pdf" && <div className="small" style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere", wordBreak: "break-word", padding: 10, border: "1px solid var(--line, #ddd)", borderRadius: 8 }}>{message}</div>}
+            {mode !== "pdf" && business.text_number && <div className="small muted">Texting from {business.text_number}: tap Copy, then paste it into your Quo app. "Text from my phone" uses this phone's own number.</div>}
             {problem && <div className="error-banner" style={{ margin: 0 }}>{problem}</div>}
             <div className="grid2 stack-sm">
-              <button className="btn" onClick={() => void copy()}>{mode === "pdf" ? "Download" : "Copy"}</button>
+              <button className="btn" onClick={() => void copy()}>{mode === "pdf" ? "Download" : mode === "portal" ? "Copy link" : "Copy text"}</button>
               {mode === "pdf"
                 ? <button className="btn" onClick={() => void shareOrText()}>Share or text</button>
                 : <a className="btn" href={`sms:${phone ?? ""}?&body=${enc(message)}`} onClick={() => void sent("Messages opened. Marked as sent")}>Text from my phone</a>}
