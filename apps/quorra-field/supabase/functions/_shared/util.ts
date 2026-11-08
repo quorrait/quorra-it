@@ -72,3 +72,12 @@ export const invoiceTotalCents = (items: LineItem[], taxRate: number) => {
 
 /** Where the app lives (for redirects). Set once as a secret: APP_URL=https://app.example.com */
 export const appUrl = () => env("APP_URL").replace(/\/$/, "");
+
+/** The account owner's id for billing. The real owner, or a team member whose role is set to Owner, may manage billing. */
+export async function billingOwner(userId: string): Promise<string> {
+  const { data } = await admin().from("account_members").select("owner_id, team_member_id").eq("user_id", userId).maybeSingle();
+  if (!data) return userId;
+  const { data: tm } = await admin().from("team_members").select("role").eq("id", data.team_member_id).maybeSingle();
+  if (tm?.role === "Owner") return data.owner_id as string;
+  throw new HttpError(403, "Only the account owner can manage billing");
+}

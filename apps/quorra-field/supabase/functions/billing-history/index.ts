@@ -1,12 +1,12 @@
 // Lists what the owner has been charged for their Quorra Dispatch plan (Stripe invoices), newest first.
 // Secrets: STRIPE_SECRET_KEY.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { accountOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
-  if ((await accountOwner(user.id)) !== user.id) throw new HttpError(403, "Only the account owner can see billing");
-  const { data: sub } = await admin().from("subscriptions").select("stripe_customer_id,stripe_subscription_id,cancel_at_period_end").eq("owner_id", user.id).maybeSingle();
+  const owner = await billingOwner(user.id);
+  const { data: sub } = await admin().from("subscriptions").select("stripe_customer_id,stripe_subscription_id,cancel_at_period_end").eq("owner_id", owner).maybeSingle();
   if (!sub?.stripe_customer_id) return json({ charges: [] });
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   const list = await stripe.invoices.list({ customer: sub.stripe_customer_id, limit: 24 });

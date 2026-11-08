@@ -1,21 +1,21 @@
 // Opens Stripe's customer portal: update card, see receipts, change plan, cancel.
 // Secrets: STRIPE_SECRET_KEY, APP_URL. Configure the portal once in the Stripe dashboard (Settings > Billing > Customer portal).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, billingOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
-  if ((await accountOwner(user.id)) !== user.id) throw new HttpError(403, "Only the account owner can manage billing");
+  const owner = await billingOwner(user.id);
   const { flow } = await req.json().catch(() => ({ flow: undefined }));
 
-  const { data: sub } = await admin().from("subscriptions").select("stripe_customer_id, stripe_subscription_id").eq("owner_id", user.id).maybeSingle();
+  const { data: sub } = await admin().from("subscriptions").select("stripe_customer_id, stripe_subscription_id").eq("owner_id", owner).maybeSingle();
   if (!sub?.stripe_customer_id) throw new HttpError(400, "No subscription yet. Subscribe first.");
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   if (flow === "resume") {
     if (!sub.stripe_subscription_id) throw new HttpError(400, "No subscription to resume");
     await stripe.subscriptions.update(sub.stripe_subscription_id, { cancel_at_period_end: false, cancel_at: "" as unknown as undefined });
-    await admin().from("subscriptions").update({ cancel_at_period_end: false }).eq("owner_id", user.id);
+    await admin().from("subscriptions").update({ cancel_at_period_end: false }).eq("owner_id", owner);
     return json({ ok: true });
   }
   const params: Stripe.BillingPortal.SessionCreateParams = { customer: sub.stripe_customer_id, return_url: `${appUrl()}/billing` };

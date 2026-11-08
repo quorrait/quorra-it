@@ -256,7 +256,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
-  const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: !isStaff && (hasSupabase ? true : role === "Owner") };
+  const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
   const subOk = !hasSupabase || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
   const locked = !subOk;
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
