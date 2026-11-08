@@ -242,7 +242,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   // Who is using the app. Real accounts: match the login email to a team member (no match = the account owner).
   // Demo: the "View as" switcher picks any team member so you can see each role's screens.
   const meMember = hasSupabase
-    ? team.find((t) => t.id === myMemberId) ?? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase()) ?? (isStaff ? undefined : team.find((t) => t.role === "Owner"))
+    ? team.find((t) => t.id === myMemberId) ?? (isStaff ? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase()) : team.find((t) => t.role === "Owner"))
     : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
