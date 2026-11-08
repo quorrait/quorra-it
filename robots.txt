@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /field-test/
+
+Sitemap: https://www.quorrait.com/sitemap.xml
