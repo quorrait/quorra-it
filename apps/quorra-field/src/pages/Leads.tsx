@@ -1,3 +1,4 @@
+import WorkTabs from "../components/WorkTabs";
 import { FlagBanner } from "../components/FlagBanner";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -138,6 +139,7 @@ export default function Leads() {
 
   return (
     <div className="stack">
+      <WorkTabs />
       <div className="page-head">
         <div><h1 className="page-title">Leads</h1><p className="page-sub">New requests, quotes out, and accepted work.</p></div>
         <button className="btn primary" onClick={() => setEdit("new")}>{Icon.plus} New lead</button>

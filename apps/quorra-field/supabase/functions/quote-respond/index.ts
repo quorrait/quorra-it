@@ -35,7 +35,10 @@ handler(async (req) => {
     const back = typeof b.return_to === "string" && b.return_to.startsWith("https://") ? b.return_to.split("?")[0] : "";
     const quoteLink = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(typeof b.api === "string" ? b.api : "")}` : null;
     await db.from("estimates").update({ accepted_at: new Date().toISOString(), schedule_nudges: 0, quote_link: quoteLink }).eq("id", est.id); // needs SQL 0025
-    const { data: c2 } = await db.from("customers").select("name").eq("id", est.customer_id).maybeSingle();
+    const { data: c2 } = await db.from("customers").select("name,phone,email,address").eq("id", est.customer_id).maybeSingle();
+    // Every accepted quote shows up in Leads until a time is booked, even if it was never built from a lead.
+    if (lead) { if (lead.stage !== "work_order" && lead.stage !== "completed") await db.from("leads").update({ stage: "quote_sent" }).eq("id", lead.id); }
+    else await db.from("leads").insert({ owner_id: est.owner_id, name: c2?.name ?? "Customer", phone: c2?.phone ?? "", email: c2?.email ?? "", address: c2?.address ?? "", service: est.title, notes: "", source: "Quote", stage: "quote_sent", value_cents: 0, customer_id: est.customer_id, estimate_id: est.id });
     await notifyAccount(db, est.owner_id, { title: `Quote accepted: ${est.title}`, body: `${c2?.name ?? "A customer"} accepted the quote. They have not picked a time yet; we will remind them.`, link: `/estimates/${est.id}` });
     return json({ ok: true, status: "approved" });
   }

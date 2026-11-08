@@ -58,6 +58,29 @@ export function PricePicker({ onPick, onClose, useCost }: { onPick(row: Row): vo
   );
 }
 
+/** Pull the items of a purchase order onto a quote or invoice. */
+function POPicker({ onPick, onClose }: { onPick(rows: Row[]): void; onClose(): void }) {
+  const { purchaseOrders } = useData();
+  return (
+    <Sheet title="Add from a purchase order" onClose={onClose}>
+      <div className="card flush" style={{ maxHeight: "50vh", overflowY: "auto" }}>
+        {purchaseOrders.length === 0 && <div className="empty">No purchase orders yet.</div>}
+        <div className="list">
+          {purchaseOrders.map((po) => (
+            <div key={po.id} className="list-item" onClick={() => { onPick(po.items.map(toRow)); onClose(); }}>
+              <div className="grow">
+                <div className="title">PO #{po.number} · {po.vendor || "No vendor"}</div>
+                <div className="small muted">{po.items.length} item{po.items.length === 1 ? "" : "s"}. Prices are your cost, so adjust them for the customer.</div>
+              </div>
+              <div className="bold num">{money(po.items.reduce((t, i) => t + Math.round(i.qty * i.unit_cents), 0))}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Sheet>
+  );
+}
+
 export function LineItemsEditor({ rows, setRows, useCost, priceLabel = "Price" }: {
   rows: Row[];
   setRows(r: Row[]): void;
@@ -65,6 +88,7 @@ export function LineItemsEditor({ rows, setRows, useCost, priceLabel = "Price" }
   priceLabel?: string;
 }) {
   const [picking, setPicking] = useState(false);
+  const [poPick, setPoPick] = useState(false);
   const set = (i: number, patch: Partial<Row>) => setRows(rows.map((r, k) => (k === i ? { ...r, ...patch } : r)));
   const blank = { description: "", qty: "1", price: "" };
   const isBlank = (r: Row) => !r.description.trim() && !r.price;
@@ -85,7 +109,9 @@ export function LineItemsEditor({ rows, setRows, useCost, priceLabel = "Price" }
       <div className="row wrap">
         <button className="btn sm" onClick={() => setRows([...rows, blank])}>+ Add line</button>
         <button className="btn sm" onClick={() => setPicking(true)}>+ From price book</button>
+        {!useCost && <button className="btn sm" onClick={() => setPoPick(true)}>+ From PO</button>}
       </div>
+      {poPick && <POPicker onClose={() => setPoPick(false)} onPick={(add) => setRows([...rows.filter((r) => !isBlank(r)), ...add])} />}
       {picking && (
         <PricePicker
           useCost={useCost}

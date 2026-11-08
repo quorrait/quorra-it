@@ -33,7 +33,7 @@ handler(async (req) => {
   };
   if (body.embedded) {
     // Shown inside our own page; no redirect to Stripe. Needs the publishable key (pk_live_...) as a secret.
-    const session = await stripe.checkout.sessions.create({ ...base, ui_mode: "embedded", redirect_on_completion: "if_required" });
+    const session = await stripe.checkout.sessions.create({ ...base, ui_mode: "embedded", redirect_on_completion: "never" });
     return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY") });
   }
   const session = await stripe.checkout.sessions.create({

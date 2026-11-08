@@ -14,6 +14,8 @@ handler(async (req) => {
   const id = sub.stripe_subscription_id as string;
 
   if (b.action === "cancel") {
+    const c0 = await stripe.subscriptions.retrieve(id);
+    if (c0.schedule) await stripe.subscriptionSchedules.release(typeof c0.schedule === "string" ? c0.schedule : c0.schedule.id);
     await stripe.subscriptions.update(id, { cancel_at_period_end: true });
     await db.from("subscriptions").update({ cancel_at_period_end: true }).eq("owner_id", user.id);
     return json({ ok: true });
@@ -29,10 +31,29 @@ handler(async (req) => {
     const plan = String(b.plan ?? "").toLowerCase();
     if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
     const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${b.interval === "year" ? "_ANNUAL" : ""}`);
-    const cur = await stripe.subscriptions.retrieve(id);
+    let cur = await stripe.subscriptions.retrieve(id);
+    // An earlier scheduled downgrade would block a direct change, so drop it first.
+    if (cur.schedule) { await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id); cur = await stripe.subscriptions.retrieve(id); }
     const item = cur.items.data[0];
-    await stripe.subscriptions.update(id, { items: [{ id: item.id, price: priceId }], proration_behavior: "create_prorations", cancel_at_period_end: false });
-    return json({ ok: true });
+    const yearly = (p: Stripe.Price) => (p.unit_amount ?? 0) * (p.recurring?.interval === "year" ? 1 : 12);
+    const next = await stripe.prices.retrieve(priceId);
+    if (next.id === item.price.id) return json({ ok: true, mode: "same" });
+    if (yearly(next) > yearly(item.price)) {
+      // Upgrade: switch now and charge the prorated difference for the rest of the period.
+      await stripe.subscriptions.update(id, { items: [{ id: item.id, price: priceId }], proration_behavior: "always_invoice", cancel_at_period_end: false });
+      return json({ ok: true, mode: "upgrade" });
+    }
+    // Downgrade: no refund, the new plan starts at the next billing date.
+    const sch = await stripe.subscriptionSchedules.create({ from_subscription: id });
+    const ph = sch.phases[0];
+    await stripe.subscriptionSchedules.update(sch.id, {
+      end_behavior: "release",
+      phases: [
+        { items: [{ price: item.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date },
+        { items: [{ price: priceId, quantity: 1 }] },
+      ],
+    });
+    return json({ ok: true, mode: "downgrade", effective: ph.end_date });
   }
   throw new HttpError(400, "Unknown action");
 });

@@ -35,7 +35,7 @@ handler(async (req) => {
     currency: "usd",
     customer: sub.stripe_customer_id,
     ui_mode: "embedded",
-    redirect_on_completion: "if_required",
+    redirect_on_completion: "never",
     payment_method_types: ["card"],
   });
   return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY"), current });

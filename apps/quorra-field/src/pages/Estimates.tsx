@@ -1,3 +1,4 @@
+import WorkTabs from "../components/WorkTabs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -41,6 +42,7 @@ export default function Estimates() {
 
   return (
     <div className="stack">
+      <WorkTabs />
       <div className="page-head">
         <h1 className="page-title">Estimates</h1>
         <button className="btn primary" onClick={() => setAdding(true)}>{Icon.plus} New estimate</button>

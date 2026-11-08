@@ -67,9 +67,10 @@ export default function Billing() {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy("change");
     try {
-      const { error } = await supabase.functions.invoke("billing-change", { body });
+      const { data, error } = await supabase.functions.invoke("billing-change", { body });
       if (error) throw error;
-      toast(done);
+      const r = data as { mode?: string; effective?: number } | null;
+      toast(r?.mode === "upgrade" ? "Upgraded. You were charged the prorated difference for this period." : r?.mode === "downgrade" ? `Downgrade scheduled for ${r.effective ? new Date(r.effective * 1000).toLocaleDateString() : "your next billing date"}. No change until then.` : done);
       setChangeOpen(false); setCancelOpen(false);
       await refresh();
       setTimeout(() => void refresh(), 4000);

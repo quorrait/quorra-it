@@ -1,3 +1,4 @@
+import WorkTabs from "../components/WorkTabs";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -42,6 +43,7 @@ export default function Jobs() {
 
   return (
     <div className="stack">
+      <WorkTabs />
       <div className="page-head">
         <h1 className="page-title">Jobs</h1>
         <button className="btn primary" onClick={() => setAdding(true)}>{Icon.plus} New job</button>

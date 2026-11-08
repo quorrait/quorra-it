@@ -106,7 +106,7 @@
     } else if (d.status === "sent") {
       h += '<div class="card actions"><b>Accept this quote</b><div class="muted">Next you will choose a time that works for you.</div>' +
         '<button class="accept" id="acc">Accept quote</button>' +
-        '<details><summary>Decline this quote</summary><label>Reason (optional)<select id="why"><option value="">Select a reason</option><option>Price too high</option><option>Went with someone else</option><option>Not ready yet</option><option>Other</option></select></label><button class="decline" id="dec">Decline quote</button></details>' +
+        '<details><summary>Decline this quote</summary><label>Reason (optional)<select id="why"><option value="">Select a reason</option><option>Price too high</option><option>Went with someone else</option><option>Not ready yet</option><option>Other</option></select></label><label id="whyo" style="display:none">Tell us more<input id="whyt" type="text" maxlength="150" placeholder="Type your reason"></label><button class="decline" id="dec">Decline quote</button></details>' +
         '<div id="out" role="status"></div></div>';
     } else {
       h += '<div class="card"><div class="msg">This quote is not available to accept yet.</div></div>';
@@ -178,10 +178,12 @@
           .catch(function (e) { book.disabled = false; book.textContent = "Confirm time"; out("err", e.message); });
       };
     }
+    var whySel = document.getElementById("why");
+    if (whySel) whySel.onchange = function () { document.getElementById("whyo").style.display = whySel.value === "Other" ? "block" : "none"; };
     var dec = document.getElementById("dec");
     if (dec) dec.onclick = function () {
       dec.disabled = true;
-      post({ action: "decline", reason: document.getElementById("why").value })
+      post({ action: "decline", reason: (function () { var v = document.getElementById("why").value; var o = document.getElementById("whyt").value.trim(); return v === "Other" && o ? "Other: " + o : v; })() })
         .then(function () { return load(); })
         .catch(function (e) { dec.disabled = false; out("err", e.message); });
     };

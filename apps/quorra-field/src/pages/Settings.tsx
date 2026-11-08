@@ -11,7 +11,7 @@ import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components
 import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
-import { hasSupabase } from "../lib/supabase";
+import { hasSupabase, supabase } from "../lib/supabase";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
 
@@ -137,7 +137,7 @@ function SettingsInner() {
             {!(parseFloat(f.tax_rate) > 0) && STATE_TAX[f.state] !== undefined && <div className="small muted" style={{ marginTop: 4 }}>Left at 0, new estimates and invoices use your state's base rate of {STATE_TAX[f.state]}%. Enter your full local rate to override it.</div>}
           </Field>
           <Field label="State you work in (for the price guide)">
-            <select className="select" value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })}>
+            <select className="select" value={f.state} onChange={(e) => { const ns = e.target.value; const cur = parseFloat(f.tax_rate) || 0; const auto = !(cur > 0) || cur === (STATE_TAX[f.state] ?? -1); setF({ ...f, state: ns, tax_rate: auto && STATE_TAX[ns] !== undefined ? String(STATE_TAX[ns]) : f.tax_rate }); }}>
               <option value="">Not set</option>
               {Object.entries(STATE_NAMES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
@@ -197,6 +197,7 @@ function SettingsInner() {
       <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
+        {hasSupabase && me.isOwner && <button className="btn block" onClick={async () => { const { data, error } = await supabase!.functions.invoke("send-test-email"); toast(error ? "Could not send. Deploy the send-test-email function." : data?.ok ? `Sample customer emails sent to ${data.to}` : data?.reason || "Could not send"); }}>Email me samples of customer emails</button>}
         <div className="row wrap">
           <button className="btn grow" onClick={signOut}>Sign out</button>
           {hasSupabase && me.isOwner && <button className="btn danger grow" onClick={() => setDelOpen(true)}>Delete my company</button>}

@@ -32,7 +32,12 @@ const DEFAULT_BUSINESS: Business = {
 
 async function invoke<T>(fn: string, body: object): Promise<T> {
   const { data, error } = await sb().functions.invoke(fn, { body });
-  if (error) throw error;
+  if (error) {
+    // Edge Function failures arrive as a generic message; the real reason is in the response body.
+    let m = "";
+    try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? ""; } catch { /* ignore */ }
+    throw m ? new Error(m) : error;
+  }
   if (data && typeof data === "object" && "error" in data) throw new Error(String((data as { error: unknown }).error));
   return data as T;
 }
