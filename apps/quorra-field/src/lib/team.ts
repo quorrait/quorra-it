@@ -51,10 +51,22 @@ export async function inviteInfo(code: string): Promise<{ business: string; emai
 }
 
 /** Join the business that sent the invite. Returns an error message, or null on success. */
-export async function acceptInvite(code: string): Promise<string | null> {
-  if (!supabase) return null;
-  const { error } = await supabase.rpc("accept_invite", { p_code: code });
-  return error ? error.message : null;
+const inflight = new Map<string, Promise<string | null>>();
+/** Accepts an invite once even if two screens ask at the same time. A repeat after success is not an error: the person is already in. */
+export function acceptInvite(code: string): Promise<string | null> {
+  if (!supabase) return Promise.resolve(null);
+  const live = inflight.get(code);
+  if (live) return live;
+  const sb = supabase;
+  const run = (async () => {
+    const { error } = await sb.rpc("accept_invite", { p_code: code });
+    if (!error) return null;
+    const uid = (await sb.auth.getUser()).data.user?.id ?? "";
+    const { data } = await sb.from("account_members").select("user_id").eq("user_id", uid).maybeSingle();
+    return data ? null : error.message;
+  })().finally(() => setTimeout(() => inflight.delete(code), 5000));
+  inflight.set(code, run);
+  return run;
 }
 
 /** Emails the invite link through the send-invite function. Returns an error message, or null when the email went out. */
