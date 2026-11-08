@@ -20,7 +20,8 @@ handler(async (req) => {
   }
   if (b.action === "resume") {
     const cur = await stripe.subscriptions.retrieve(id);
-    await stripe.subscriptions.update(id, cur.cancel_at ? { cancel_at: "" as unknown as undefined, cancel_at_period_end: false } : { cancel_at_period_end: false });
+    // Stripe accepts only one of the two; clear whichever one is set.
+    await stripe.subscriptions.update(id, cur.cancel_at ? { cancel_at: "" as unknown as undefined } : { cancel_at_period_end: false });
     await db.from("subscriptions").update({ cancel_at_period_end: false }).eq("owner_id", user.id);
     return json({ ok: true });
   }
