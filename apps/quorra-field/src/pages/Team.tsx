@@ -113,13 +113,14 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
             if (!f.name.trim()) return toast("Add a name");
             if (!f.email.trim()) return toast("Add an email address to invite them");
             const saved = await store.saveRow("team_members", { name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active });
+            onClose();
             try {
               const inv = await createInvite({ id: saved.id, email: f.email, role: f.role });
               const bad = await emailInvite(inv.code);
               toast(bad ? `Saved. ${bad}` : `Invite emailed to ${f.email}`);
             }
             catch (e) { toast(errMsg(e, "Saved, but the invite failed")); }
-            await refresh(); await reload(); onClose();
+            await refresh(); await reload();
           }}>Save and send invite</button>
         )}
         {m && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this member?", message: "Their past time entries stay.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("team_members", m.id); await refresh(); onClose(); } }}>Delete</button>}

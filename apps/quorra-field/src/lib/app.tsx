@@ -71,7 +71,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           return { needsConfirm: false };
         }
         const { data, error } = await supabase.auth.signUp({ email: e, password: p, options: { data: { business_name: businessName ?? "" } } });
-        if (error) throw error;
+        if (error) throw /already registered/i.test(error.message) ? new Error("That email already has a login. Sign in instead, or use a different email.") : error;
+        if (data.user && data.user.identities && data.user.identities.length === 0) throw new Error("That email already has a login. Sign in instead, or use a different email.");
         return { needsConfirm: !data.session };
       },
       async signOut() {
