@@ -22,6 +22,7 @@ export default function Billing() {
   const [params, setParams] = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [changeOpen, setChangeOpen] = useState(false);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
 
@@ -45,6 +46,23 @@ export default function Billing() {
   const named = planByName(sub?.plan) ?? PLANS.find((p) => p.price_cents === sub?.amount_cents);
   const planLabel = named ? named.name : sub?.plan ?? "No plan yet";
   const active = status === "active" || status === "past_due" || sub?.comped;
+
+  async function change(body: Record<string, unknown>, done: string) {
+    if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
+    setBusy("change");
+    try {
+      const { error } = await supabase.functions.invoke("billing-change", { body });
+      if (error) throw error;
+      toast(done);
+      setChangeOpen(false); setCancelOpen(false);
+      await refresh();
+      setTimeout(() => void refresh(), 4000);
+    } catch (e) {
+      let m = errMsg(e, "That did not work");
+      try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
+      toast(m);
+    } finally { setBusy(null); }
+  }
 
   async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string, interval?: string) {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
@@ -121,15 +139,10 @@ export default function Billing() {
           <div className="pay-btns">
             <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal")}>Update card and see receipts</button>
             {sub?.cancel_at_period_end ? (
-              <button className="btn primary" disabled={busy !== null} onClick={async () => {
-                setBusy("resume");
-                try { const { error } = await supabase!.functions.invoke("billing-portal", { body: { flow: "resume" } }); if (error) throw error; toast("Plan resumed. It will keep renewing."); await refresh(); }
-                catch (e) { toast(errMsg(e, "Could not resume your plan")); }
-                finally { setBusy(null); }
-              }}>Resume plan</button>
+              <button className="btn primary" disabled={busy !== null} onClick={() => void change({ action: "resume" }, "Plan resumed. It will keep renewing.")}>Resume plan</button>
             ) : (
               <>
-                <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal", "update")}>Upgrade or downgrade</button>
+                <button className="btn" disabled={busy !== null} onClick={() => setChangeOpen(true)}>Upgrade or downgrade</button>
                 <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
               </>
             )}
@@ -156,10 +169,17 @@ export default function Billing() {
                 const { error } = await supabase.functions.invoke("cancel-feedback", { body: { reason: why.reason, details: why.details, contact_me: why.contact, phone: why.phone } });
                 if (error) { let m = errMsg(error, "Could not send your feedback"); try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } return toast(m); }
               }
-              setCancelOpen(false);
-              void go("billing-portal", "cancel");
-            }}>Continue to cancel</button>
+              await change({ action: "cancel" }, "Your plan is canceled. You keep access until the end of the period you paid for.");
+            }}>Cancel my plan</button>
             <button className="btn block" onClick={() => setCancelOpen(false)}>Keep my plan</button>
+          </div>
+        </Sheet>
+      )}
+      {changeOpen && (
+        <Sheet title="Change your plan" onClose={() => setChangeOpen(false)}>
+          <div className="stack">
+            <p className="small muted" style={{ margin: 0 }}>Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference.</p>
+            <PlanCards backTo="/billing" busy={busy} current={sub?.plan ?? undefined} cta="Switch to" onChoose={(p, iv) => void change({ action: "change", plan: p.id, interval: iv }, `You are now on ${p.name}.`)} />
           </div>
         </Sheet>
       )}

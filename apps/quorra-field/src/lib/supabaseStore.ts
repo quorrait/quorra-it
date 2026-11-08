@@ -76,6 +76,10 @@ export function createSupabaseStore(): Store {
       if (error) throw error;
     },
 
+    async deleteCustomer(id) {
+      const { error } = await sb().from("customers").delete().eq("id", id);
+      if (error) throw error;
+    },
     async deleteInvoice(id) {
       const { error } = await sb().from("invoices").delete().eq("id", id);
       if (error) throw error;

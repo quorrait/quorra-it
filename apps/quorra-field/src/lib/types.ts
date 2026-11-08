@@ -41,6 +41,8 @@ export interface Customer {
   email: string;
   address: string;
   notes: string;
+  flag?: "" | "caution" | "blocked"; // caution = be careful, blocked = do not serve
+  flag_note?: string; // what the problem was
 }
 
 export interface Job {

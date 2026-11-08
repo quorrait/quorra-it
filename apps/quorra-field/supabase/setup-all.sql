@@ -715,3 +715,7 @@ grant update (reminders) on public.business to authenticated;
 alter table public.jobs add column if not exists customer_reminded_at timestamptz;
 alter table public.jobs add column if not exists team_reminded_at timestamptz;
 notify pgrst, 'reload schema';
+-- Flag a customer (caution or do not serve) with a note about what happened.
+alter table public.customers add column if not exists flag text not null default '';
+alter table public.customers add column if not exists flag_note text not null default '';
+notify pgrst, 'reload schema';

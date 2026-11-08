@@ -24,7 +24,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
             {iv === "month"
               ? <div className="plan-price"><span className="num">{money(p.price_cents).replace(".00", "")}</span><span className="muted"> / month</span></div>
               : <div className="plan-price"><span className="num">{money(annualCents(p)).replace(".00", "")}</span><span className="muted"> / year</span><div className="small muted" style={{ fontWeight: 400 }}>{money(Math.round(annualCents(p) / 12)).replace(".00", "")} / month, {ANNUAL_DISCOUNT}% off</div></div>}
-            <div className="small bold" style={{ color: "var(--brand-dark, #c2410c)" }}>{TRIAL_DAYS}-day free trial</div>
+            {cta === "Start" && <div className="small bold" style={{ color: "var(--brand-dark, #c2410c)" }}>{TRIAL_DAYS}-day free trial</div>}
             <ul className="plan-list">{p.extras.map((x) => <li key={x} className={x.endsWith(":") ? "plan-sub" : undefined}>{x}</li>)}</ul>
             <button className={`btn block ${p.popular ? "primary" : ""}`} disabled={busy !== null && busy !== undefined} onClick={() => onChoose(p, iv)}>
               {current?.toLowerCase() === p.name.toLowerCase() ? "Your plan" : busy === p.id ? "One moment..." : cta === "Start" ? `Start ${TRIAL_DAYS}-day free trial` : `${cta} ${p.name}`}

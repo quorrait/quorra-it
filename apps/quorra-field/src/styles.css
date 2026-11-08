@@ -437,3 +437,4 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .appfoot .pubfoot { color: var(--muted, #64748b) !important; padding-top: 28px; } .appfoot .pubfoot .pf-name { color: var(--ink, #0f172a) !important; }
 .main { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; } .appfoot { margin-top: auto; }
 .plan-list li.plan-sub { padding-left: 0; font-weight: 800; } .plan-list li.plan-sub::before { display: none; }
+.notice.bad { background: var(--bad-soft); color: var(--bad); } .notice.warn { background: #fef3c7; color: #92400e; }

@@ -14,6 +14,7 @@ export interface Store {
   saveJob(j: New<Job>): Promise<Job>;
   deleteJob(id: string): Promise<void>;
   deleteInvoice(id: string): Promise<void>;
+  deleteCustomer(id: string): Promise<void>;
 
   listInvoices(): Promise<Invoice[]>;
   saveInvoice(i: New<Invoice>): Promise<Invoice>;
