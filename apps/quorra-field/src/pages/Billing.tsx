@@ -1,5 +1,6 @@
 import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
+import EmbeddedStripe from "../components/EmbeddedStripe";
 import { useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -23,12 +24,15 @@ export default function Billing() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string } | null>(null);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
 
   useEffect(() => {
     if (params.get("canceled")) { toast("Your plan is canceled. You keep access until the end of the period you paid for."); setParams({}, { replace: true }); void refresh(); return; }
     if (params.get("subscribed")) { toast("Thanks. Your plan can take a few seconds to show as active."); setParams({}, { replace: true }); const t = [3000, 8000].map((ms) => setTimeout(() => void refresh(), ms)); void refresh(); return () => t.forEach(clearTimeout); }
+    const st = params.get("start");
+    if (st) { const [pl, iv] = st.split(":"); setParams({}, { replace: true }); void openEmbedded("checkout", pl, iv); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -62,6 +66,31 @@ export default function Billing() {
       try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
       toast(m);
     } finally { setBusy(null); }
+  }
+
+  async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string) {
+    if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
+    setBusy(plan ?? kind);
+    try {
+      const { data, error } = await supabase.functions.invoke(kind === "checkout" ? "billing-checkout" : "billing-card", { body: { plan, interval, embedded: true } });
+      if (error) throw error;
+      if (!data?.client_secret) throw new Error(data?.error ?? "Could not open the payment form");
+      setEmbed({ kind, secret: data.client_secret, pk: data.publishable_key, title: kind === "card" ? "Update your card" : "Start your free trial" });
+    } catch (e) {
+      let m = errMsg(e, "Could not open the payment form");
+      try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
+      toast(m);
+    } finally { setBusy(null); }
+  }
+
+  async function embedDone() {
+    const e = embed; setEmbed(null);
+    if (e?.kind === "card" && supabase) {
+      try { await supabase.functions.invoke("billing-card", { body: { action: "finish", session_id: e.secret.split("_secret_")[0] } }); toast("Card updated"); } catch { toast("Card saved, but could not be set as default. Try again."); }
+      return;
+    }
+    toast("You're in. Your plan can take a few seconds to show as active.");
+    void refresh(); [3000, 8000].forEach((ms) => setTimeout(() => void refresh(), ms));
   }
 
   async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string, interval?: string) {
@@ -131,13 +160,13 @@ export default function Billing() {
       {!active && !sub?.comped ? (
         <div className="stack">
           <div className="card-title" style={{ margin: 0 }}>Choose your plan</div>
-          <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p, iv) => void go("billing-checkout", undefined, p.id, iv)} />
+          <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p, iv) => void openEmbedded("checkout", p.id, iv)} />
         </div>
       ) : !sub?.comped && (
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Manage your plan</div>
           <div className="pay-btns">
-            <button className="btn" disabled={busy !== null} onClick={() => go("billing-portal")}>Update card and see receipts</button>
+            <button className="btn" disabled={busy !== null} onClick={() => void openEmbedded("card")}>Update card</button>
             {sub?.cancel_at_period_end ? (
               <button className="btn primary" disabled={busy !== null} onClick={() => void change({ action: "resume" }, "Plan resumed. It will keep renewing.")}>Resume plan</button>
             ) : (
@@ -147,7 +176,7 @@ export default function Billing() {
               </>
             )}
           </div>
-          <div className="small muted">These open Stripe's secure billing page. Cancelling keeps your access until the end of the period you already paid for.</div>
+          <div className="small muted">Payment history and receipts are listed above. Cancelling keeps your access until the end of the period you already paid for.</div>
         </div>
       )}
       {cancelOpen && (
@@ -173,6 +202,11 @@ export default function Billing() {
             }}>Cancel my plan</button>
             <button className="btn block" onClick={() => setCancelOpen(false)}>Keep my plan</button>
           </div>
+        </Sheet>
+      )}
+      {embed && (
+        <Sheet title={embed.title} onClose={() => setEmbed(null)}>
+          <EmbeddedStripe publishableKey={embed.pk} clientSecret={embed.secret} onComplete={() => void embedDone()} />
         </Sheet>
       )}
       {changeOpen && (

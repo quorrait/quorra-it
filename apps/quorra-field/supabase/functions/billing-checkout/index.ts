@@ -23,13 +23,21 @@ handler(async (req) => {
     await db.from("subscriptions").upsert({ owner_id: user.id, stripe_customer_id: customer }, { onConflict: "owner_id" });
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
+  const base = {
+    mode: "subscription" as const,
     customer,
     client_reference_id: user.id,
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
     subscription_data: { trial_period_days: 14, metadata: { owner_id: user.id } },
+  };
+  if (body.embedded) {
+    // Shown inside our own page; no redirect to Stripe. Needs the publishable key (pk_live_...) as a secret.
+    const session = await stripe.checkout.sessions.create({ ...base, ui_mode: "embedded", redirect_on_completion: "if_required" });
+    return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY") });
+  }
+  const session = await stripe.checkout.sessions.create({
+    ...base,
     success_url: `${appUrl()}/billing?subscribed=1`,
     cancel_url: `${appUrl()}/billing`,
   });

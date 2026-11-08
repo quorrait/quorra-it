@@ -33,13 +33,7 @@ export default function Start() {
       const r = await auth.signUp(email, password, biz.trim());
       if (r.needsConfirm) { setInfo("Check your email to confirm your account, then sign in. You will be asked to start your plan."); return; }
       if (hasSupabase && supabase) {
-        const { data, error } = await supabase.functions.invoke("billing-checkout", { body: { plan: plan.id, interval } });
-        if (error || !data?.url) {
-          let m = data?.error ?? "Your account is created, but we could not open payment. Sign in and choose your plan under Billing.";
-          try { const ctx = (error as { context?: Response } | null)?.context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
-          throw new Error(m);
-        }
-        location.href = data.url as string; // Stripe Checkout
+        location.hash = `#/billing?start=${plan.id}:${interval}`; // payment form opens inside the app
       }
     } catch (e2) {
       setErr(errMsg(e2, "Something went wrong. Please try again."));
