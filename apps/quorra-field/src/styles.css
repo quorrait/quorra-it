@@ -240,8 +240,8 @@ h1, h2, h3, p { margin: 0; }
 .auth-card { width: 100%; max-width: 400px; background: #fff; border-radius: 22px; padding: 28px 22px; }
 .auth-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 14px 0 4px; }
 
-.toast { position: fixed; left: 50%; bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 18px); transform: translateX(-50%); z-index: 90; background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: up .2s; max-width: 90vw; }
-@media (min-width: 900px) { .toast { bottom: 28px; } }
+.toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 90; background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: up .2s; max-width: 90vw; }
+
 .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; margin: 40px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -438,3 +438,10 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .main { display: flex; flex-direction: column; min-height: 100vh; min-height: 100dvh; } .appfoot { margin-top: auto; }
 .plan-list li.plan-sub { padding-left: 0; font-weight: 800; } .plan-list li.plan-sub::before { display: none; }
 .notice.bad { background: var(--bad-soft); color: var(--bad); } .notice.warn { background: #fef3c7; color: #92400e; }
+
+/* Change-plan sheet: wide, plans side by side, no sideways scroll */
+.sheet:has(.plan-grid) { max-width: 1040px; overflow-x: hidden; }
+.sheet .plan-grid { grid-template-columns: 1fr; }
+@media (min-width: 760px) { .sheet .plan-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.hours-row .input[type="time"] { width: 150px; min-width: 150px; padding-right: 6px; }
+.check-row { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; }

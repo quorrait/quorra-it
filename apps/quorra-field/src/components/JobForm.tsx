@@ -9,11 +9,13 @@ import { addDays, fromLocalInput, snapTime, timeOptions, toInputDate, toLocalInp
 
 const NEW = "__new__";
 
-export default function JobForm({ job, defaultStart, defaultCustomer, defaultTitle, onClose, onSaved }: {
+export default function JobForm({ job, defaultStart, defaultCustomer, defaultTitle, fromLead, onClose, onSaved }: {
   job?: Job;
   defaultStart?: Date;
   defaultCustomer?: string;
   defaultTitle?: string;
+  fromLead?: boolean; // the caller already tracks this job as a lead
+
   onClose(): void;
   onSaved?(j: Job): void;
 }) {
@@ -67,6 +69,13 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
         end_at: endIso,
         assigned_to: assigned.trim(),
       });
+      if (!job && !fromLead) {
+        // Every new job also appears in Leads as a work order, so everything is tracked in one place.
+        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
+        try {
+          await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "work_order", notes: "", customer_id: cid, estimate_id: null, job_id: saved.id, created_at: new Date().toISOString() });
+        } catch { /* the job itself is saved; the lead is a convenience */ }
+      }
       await refresh();
       toast(job ? "Job updated" : "Job scheduled");
       onSaved?.(saved);

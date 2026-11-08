@@ -31,8 +31,9 @@ export function zonedToUtc(y: number, m: number, d: number, h: number, min: numb
 const mins = (s: string) => { const [h, m] = s.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
 
 /** Start times (ISO) a customer may pick. Pass excludeJobId when rescheduling so the job does not block itself. */
-export async function availableSlots(db: SupabaseClient, ownerId: string, hoursRaw: Hours | null | undefined, excludeJobId?: string): Promise<{ slots: string[]; tz: string; job_minutes: number }> {
+export async function availableSlots(db: SupabaseClient, ownerId: string, hoursRaw: Hours | null | undefined, excludeJobId?: string, jobMinutes?: number): Promise<{ slots: string[]; tz: string; job_minutes: number }> {
   const h = normHours(hoursRaw);
+  if (jobMinutes && jobMinutes > 0) h.job_minutes = jobMinutes; // the estimate's own length wins over the business default
   const now = Date.now();
   const horizon = now + (h.max_days + 2) * 86400_000;
   const [{ data: jobs }, { data: techs }] = await Promise.all([

@@ -18,19 +18,28 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
   const [rows, setRows] = useState<Row[]>(po ? po.items.map(toRow) : [{ description: "", qty: "1", price: "" }]);
   const [exp, setExp] = useState(po?.expected_at ? toDateInput(po.expected_at) : "");
   const [notes, setNotes] = useState(po?.notes ?? "");
+  const vendors = business.vendors ?? [];
+  const [adding, setAdding] = useState(false);
+  const [saveVendor, setSaveVendor] = useState(true);
   return (
     <Sheet title={po ? `PO #${po.number}` : "New purchase order"} onClose={onClose}>
       <div className="stack">
-        {(business.vendors ?? []).length > 0 && (
-          <Field label="Vendor">
-            <select className="select" value={(business.vendors ?? []).some((v) => v.name === vendor) ? vendor : vendor ? "__other" : ""} onChange={(e) => setVendor(e.target.value === "__other" ? "" : e.target.value)}>
+        <Field label="Vendor">
+          <div className="row" style={{ gap: 8 }}>
+            <select className="select grow" value={vendors.some((v) => v.name === vendor) ? vendor : adding || vendor ? "__other" : ""} onChange={(e) => { if (e.target.value === "__other") { setAdding(true); setVendor(""); } else { setAdding(false); setVendor(e.target.value); } }}>
               <option value="">Choose a vendor</option>
-              {(business.vendors ?? []).map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
+              {vendors.map((v) => <option key={v.name} value={v.name}>{v.name}</option>)}
               <option value="__other">Other (type it)</option>
             </select>
-          </Field>
+            <button type="button" className="btn" aria-label="Add a new vendor" title="Add a new vendor" onClick={() => { setAdding(true); setVendor(""); }}>+</button>
+          </div>
+        </Field>
+        {(adding || (vendor && !vendors.some((v) => v.name === vendor))) && (
+          <>
+            <Field label="Vendor name"><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. Ferguson, Home Depot" /></Field>
+            <label className="check-row"><input type="checkbox" checked={saveVendor} onChange={(e) => setSaveVendor(e.target.checked)} /> Add to my vendor list for next time</label>
+          </>
         )}
-        {(!(business.vendors ?? []).length || !(business.vendors ?? []).some((v) => v.name === vendor)) && <Field label={(business.vendors ?? []).length ? "Other vendor" : "Vendor"}><input className="input" value={vendor} onChange={(e) => setVendor(e.target.value)} placeholder="e.g. Ferguson, Home Depot" /></Field>}
         <Field label="For job (optional)">
           <select className="select" value={jobId} onChange={(e) => setJobId(e.target.value)}>
             <option value="">No job</option>
@@ -43,6 +52,9 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
         <button className="btn primary block" onClick={async () => {
           const items = rowsToItems(rows);
           if (!vendor.trim() || !items.length) return toast("Add a vendor and at least one item");
+          if (saveVendor && !vendors.some((v) => v.name.toLowerCase() === vendor.trim().toLowerCase())) {
+            try { await store.saveBusiness({ vendors: [...vendors, { name: vendor.trim() }] }); } catch { toast("PO saved, but the vendor list could not be updated"); }
+          }
           await store.saveRow("purchase_orders", {
             id: po?.id, number: po?.number ?? Math.max(5000, ...purchaseOrders.map((p) => p.number)) + 1, vendor: vendor.trim(),
             job_id: jobId || null, status: po?.status ?? "draft", items, ordered_at: po?.ordered_at ?? new Date().toISOString(),

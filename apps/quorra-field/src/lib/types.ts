@@ -107,6 +107,7 @@ export interface Estimate {
   notes: string;
   job_id: string | null;
   invoice_id: string | null;
+  duration_min?: number; // how long the job takes; 0 or empty = business default
   public_token?: string; // lets the customer open and accept the quote from a link (live mode)
 }
 

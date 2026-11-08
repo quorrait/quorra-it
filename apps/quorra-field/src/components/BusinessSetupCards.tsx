@@ -66,7 +66,7 @@ export function HoursCard() {
           {h.days.map((d, i) => (
             <div key={i} className="row wrap" style={{ gap: 10 }}>
               <label className="row" style={{ width: 120 }}><input type="checkbox" checked={d.open} onChange={(e) => day(i, { open: e.target.checked })} /> <b>{DAY[i]}</b></label>
-              {d.open ? (<><input className="input" style={{ width: 120 }} type="time" value={d.start} onChange={(e) => day(i, { start: e.target.value })} /><span className="muted">to</span><input className="input" style={{ width: 120 }} type="time" value={d.end} onChange={(e) => day(i, { end: e.target.value })} /></>) : <span className="muted small">Closed</span>}
+              {d.open ? (<><input className="input" style={{ width: 150 }} type="time" value={d.start} onChange={(e) => day(i, { start: e.target.value })} /><span className="muted">to</span><input className="input" style={{ width: 150 }} type="time" value={d.end} onChange={(e) => day(i, { end: e.target.value })} /></>) : <span className="muted small">Closed</span>}
             </div>
           ))}
         </div>

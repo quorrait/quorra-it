@@ -7,6 +7,7 @@ import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
 import PriceGuide from "./PriceGuide";
+import DurationField from "./DurationField";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
 export default function EstimateForm({ estimate, customerId, title: defaultTitle, onClose, onSaved }: {
@@ -26,6 +27,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
   const [taxRate, setTaxRate] = useState(String(estimate?.tax_rate ?? business.tax_rate ?? 0));
   const [valid, setValid] = useState(toDateInput(estimate?.valid_until ?? addDays(new Date(), 30).toISOString()));
   const [notes, setNotes] = useState(estimate?.notes ?? "");
+  const [hours, setHours] = useState(estimate?.duration_min ? String(+(estimate.duration_min / 60).toFixed(4)) : "");
   const [busy, setBusy] = useState(false);
 
   const items = rowsToItems(rows);
@@ -51,6 +53,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
         issued_at: estimate?.issued_at ?? new Date().toISOString(),
         valid_until: fromDateInput(valid),
         notes,
+        duration_min: Math.round((parseFloat(hours) || 0) * 60),
         job_id: estimate?.job_id ?? null,
         invoice_id: estimate?.invoice_id ?? null,
       });
@@ -87,6 +90,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
           <input className="input" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Replace 3-ton AC condenser" />
         </Field>
         <LineItemsEditor rows={rows} setRows={setRows} />
+        <DurationField label="How long will the job take? (used for online booking)" value={hours} onChange={setHours} />
         <PriceGuide title={title} items={items} estimateId={estimate?.id} />
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>

@@ -6,6 +6,7 @@ import type { Estimate, Invoice, LineItem } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
+import PriceGuide from "./PriceGuide";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
 export default function InvoiceForm({ invoice, jobId, customerId, estimateId, onClose, onSaved }: {
@@ -125,6 +126,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
         )}
         {!invoice && <TemplatePicker kind="estimate" onPick={(t) => { setTouched(true); setFromEst(undefined); setRows(t.items.map(toRow)); }} />}
         <LineItemsEditor rows={rows} setRows={(r) => { setTouched(true); setRows(r); }} />
+        {!fromEst && !invoice && <PriceGuide title={job?.title ?? ""} items={rowsToItems(rows)} />}
 
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>

@@ -46,9 +46,9 @@ handler(async (req) => {
   if (oldJob && oldJob.status !== "scheduled") throw new HttpError(409, "This visit can no longer be changed online. Please call us.");
   const hours = normHours(biz?.hours);
   if (oldJob && new Date(oldJob.start_at).getTime() - Date.now() < hours.notice_hours * 3600_000) throw new HttpError(409, `Visits can be changed online up to ${hours.notice_hours} hours ahead. Please call us.`);
-  const { slots } = await availableSlots(db, est.owner_id, biz?.hours, oldJob?.id);
+  const { slots } = await availableSlots(db, est.owner_id, biz?.hours, oldJob?.id, est.duration_min);
   if (!slots.includes(new Date(startMs).toISOString())) throw new HttpError(409, "Sorry, that time was just taken. Please pick another.");
-  const start = new Date(startMs), end = new Date(startMs + hours.job_minutes * 60000);
+  const start = new Date(startMs), end = new Date(startMs + (est.duration_min > 0 ? est.duration_min : hours.job_minutes) * 60000);
 
   let jobId = oldJob?.id as string | undefined;
   if (jobId) {

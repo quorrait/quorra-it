@@ -236,7 +236,7 @@ export default function Leads() {
       )}
 
       {schedule && (
-        <JobForm defaultCustomer={schedule.customerId} defaultTitle={schedule.lead.service || schedule.lead.name} onClose={() => setSchedule(null)}
+        <JobForm fromLead defaultCustomer={schedule.customerId} defaultTitle={schedule.lead.service || schedule.lead.name} onClose={() => setSchedule(null)}
           onSaved={async (job) => {
             const est = estimates.find((e) => e.id === schedule.lead.estimate_id);
             if (est) await store.saveRow("estimates", { ...est, status: "approved", job_id: job.id });
