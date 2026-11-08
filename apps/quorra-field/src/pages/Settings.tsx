@@ -11,7 +11,8 @@ import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components
 import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
-import { hasSupabase, supabase } from "../lib/supabase";
+import { hasSupabase } from "../lib/supabase";
+import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
 
 export function More() {
@@ -58,8 +59,6 @@ function SettingsInner() {
   const { loading, store, business, refresh, resetDemo, me } = useData();
   const { signOut, email } = useAuth();
   const [delOpen, setDelOpen] = useState(false);
-  const [delText, setDelText] = useState("");
-  const [delBusy, setDelBusy] = useState(false);
   const toast = useToast();
   const ask = useConfirm();
   const [params, setParams] = useSearchParams();
@@ -204,22 +203,7 @@ function SettingsInner() {
           {store.mode === "demo" && <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Reset all demo data?", message: "Everything you added in the demo will be removed.", confirmLabel: "Reset", danger: true })) resetDemo(); }}>Reset demo data</button>}
         </div>
       </div>
-      {delOpen && (
-        <Sheet title="Delete your company" onClose={() => setDelOpen(false)}>
-          <div className="stack">
-            <div className="error-banner" style={{ margin: 0 }}>This permanently deletes your login, your company and everything in it: customers, jobs, estimates, invoices and team access. It also cancels your plan. It cannot be undone.</div>
-            <Field label={`Type ${email ?? "your email"} to confirm`}><input className="input" value={delText} onChange={(e) => setDelText(e.target.value)} autoComplete="off" /></Field>
-            <button className="btn danger block" disabled={delBusy || delText.trim().toLowerCase() !== (email ?? "").toLowerCase()} onClick={async () => {
-              setDelBusy(true);
-              try {
-                const { error } = await supabase!.functions.invoke("delete-account", { body: { confirm: delText } });
-                if (error) { let m = errMsg(error, "Could not delete"); try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
-                await signOut(); location.reload();
-              } catch (e) { toast(errMsg(e, "Could not delete")); setDelBusy(false); }
-            }}>{delBusy ? "Deleting..." : "Delete everything"}</button>
-          </div>
-        </Sheet>
-      )}
+      {delOpen && <DeleteCompanySheet onClose={() => setDelOpen(false)} />}
     </div>
   );
 }

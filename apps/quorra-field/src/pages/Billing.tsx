@@ -1,6 +1,7 @@
 import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
 import EmbeddedStripe from "../components/EmbeddedStripe";
+import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import { useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -24,6 +25,7 @@ export default function Billing() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [delOpen, setDelOpen] = useState(false);
   const [payErr, setPayErr] = useState<{ msg: string; plan?: string; interval?: string } | null>(null);
   const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string; current?: { brand: string; last4: string; exp_month: number; exp_year: number } | null } | null>(null);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
@@ -241,6 +243,8 @@ export default function Billing() {
           </div>
         </Sheet>
       )}
+      {hasSupabase && !active && !sub?.comped && <button className="btn sm" style={{ alignSelf: "center" }} onClick={() => setDelOpen(true)}>Delete this company</button>}
+      {delOpen && <DeleteCompanySheet onClose={() => setDelOpen(false)} />}
     </div>
   );
 }
