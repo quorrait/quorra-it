@@ -24,6 +24,7 @@ export default function Billing() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
+  const [payErr, setPayErr] = useState<{ msg: string; plan?: string; interval?: string } | null>(null);
   const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string; current?: { brand: string; last4: string; exp_month: number; exp_year: number } | null } | null>(null);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
@@ -79,7 +80,7 @@ export default function Billing() {
 
   async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string) {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
-    setBusy(plan ?? kind);
+    setBusy(plan ?? kind); setPayErr(null);
     try {
       const { data, error } = await supabase.functions.invoke(kind === "checkout" ? "billing-checkout" : "billing-card", { body: { plan, interval, embedded: true } });
       if (error) throw error;
@@ -89,6 +90,7 @@ export default function Billing() {
       let m = errMsg(e, "Could not open the payment form");
       try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
       toast(m);
+      setPayErr({ msg: m, plan, interval }); // stays on screen, unlike the pop-up
     } finally { setBusy(null); }
   }
 
@@ -124,6 +126,12 @@ export default function Billing() {
     <div className="stack">
       <div className="page-head"><div><h1 className="page-title">Billing</h1><p className="page-sub">Your Quorra Dispatch plan.</p></div></div>
 
+      {payErr && (
+        <div className="error-banner" style={{ margin: 0 }}>
+          <b>We could not open the payment form.</b> {payErr.msg}
+          <div style={{ marginTop: 8 }}><button className="btn sm" onClick={() => void openEmbedded("checkout", payErr.plan, payErr.interval)}>Try again</button></div>
+        </div>
+      )}
       {locked && <div className="error-banner" style={{ margin: 0 }}>Your plan is not active, so the rest of the app is locked. Start your free trial below to continue.</div>}
 
       <div className="card stack">
