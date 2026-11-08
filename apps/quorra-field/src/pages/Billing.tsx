@@ -78,7 +78,7 @@ export default function Billing() {
     } finally { setBusy(null); }
   }
 
-  async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string) {
+  async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string, retried = false): Promise<void> {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? kind); setPayErr(null);
     try {
@@ -89,6 +89,8 @@ export default function Billing() {
     } catch (e) {
       let m = errMsg(e, "Could not open the payment form");
       try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
+      // Right after sign-up the new session can take a moment to be accepted; try once more before showing an error.
+      if (!retried && /not signed in|jwt|401/i.test(m)) { await new Promise((r) => setTimeout(r, 1800)); setBusy(null); return openEmbedded(kind, plan, interval, true); }
       toast(m);
       setPayErr({ msg: m, plan, interval }); // stays on screen, unlike the pop-up
     } finally { setBusy(null); }
