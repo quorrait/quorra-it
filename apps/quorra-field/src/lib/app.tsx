@@ -176,8 +176,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
           rememberInvite(null);
           if (err) setError(err);
         }
+        const uid = (await supabase.auth.getUser()).data.user?.id ?? "";
         const [mem, sub, set, rol] = await Promise.all([
-          supabase.from("account_members").select("team_member_id").maybeSingle(),
+          supabase.from("account_members").select("team_member_id").eq("user_id", uid).maybeSingle(),
           supabase.from("subscriptions").select("*").maybeSingle(),
           supabase.from("platform_settings").select("require_subscription").maybeSingle(),
           supabase.rpc("my_role"),
