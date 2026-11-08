@@ -1,3 +1,4 @@
+import SearchBox, { searchHit } from "../components/SearchBox";
 import WorkTabs from "../components/WorkTabs";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -26,10 +27,11 @@ export default function Estimates() {
   const nav = useNavigate();
   const [filter, setFilter] = useState<Filter>("all");
   const [adding, setAdding] = useState(false);
+  const [q, setQ] = useState("");
 
   const rows = useMemo(
-    () => estimates.filter((e) => filter === "all" || e.status === filter).sort((a, b) => b.number - a.number),
-    [estimates, filter],
+    () => estimates.filter((e) => (filter === "all" || e.status === filter) && searchHit(q, [e.number, e.title, e.status, customerById(e.customer_id)?.name, customerById(e.customer_id)?.address, customerById(e.customer_id)?.phone, ...e.items.map((i) => i.description)], invoiceTotals(e).total)).sort((a, b) => b.number - a.number),
+    [estimates, filter, q, customerById],
   );
 
   if (loading) return <Spinner />;
@@ -51,10 +53,11 @@ export default function Estimates() {
       <div className="kpi-grid">
         <div className="kpi"><div className="lbl">Waiting on customer</div><div className="val num">{moneyShort(openValue)}</div><div className="sub">{estimates.filter((e) => e.status === "sent").length} sent</div></div>
         <div className="kpi"><div className="lbl">Approved</div><div className="val num">{moneyShort(won.reduce((s, e) => s + total(e), 0))}</div><div className="sub">{won.length} estimates</div></div>
-        <div className="kpi"><div className="lbl">Win rate</div><div className="val">{winRate === null ? "-" : `${winRate}%`}</div><div className="sub">approved vs declined</div></div>
+        <div className="kpi"><div className="lbl">Acceptance rate</div><div className="val">{winRate === null ? "-" : `${winRate}%`}</div><div className="sub">approved vs declined</div></div>
         <div className="kpi"><div className="lbl">Drafts</div><div className="val">{estimates.filter((e) => e.status === "draft").length}</div><div className="sub">not sent yet</div></div>
       </div>
 
+      <SearchBox value={q} onChange={setQ} placeholder="Search by customer, address, job type, number or amount" />
       <div className="chips">
         {([["all", "All"], ["draft", "Draft"], ["sent", "Sent"], ["approved", "Approved"], ["declined", "Declined"]] as [Filter, string][]).map(([k, label]) => (
           <button key={k} className={`chip${filter === k ? " on" : ""}`} onClick={() => setFilter(k)}>{label}</button>

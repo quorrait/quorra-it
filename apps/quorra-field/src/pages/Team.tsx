@@ -1,3 +1,5 @@
+import AccessEditor from "../components/AccessEditor";
+import { ACCESS, type Feature, type RoleAccess } from "../lib/access";
 import { errMsg } from "../lib/errors";
 import { useEffect, useState } from "react";
 import { useData } from "../lib/app";
@@ -82,9 +84,10 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
 }
 
 function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: Invite[]; reload(): Promise<void>; onClose(): void }) {
-  const { store, refresh, team } = useData();
+  const { store, refresh, team, business } = useData();
   const toast = useToast();
   const ask = useConfirm();
+  const [custom, setCustom] = useState<Feature[] | null>((m?.access as Feature[] | null | undefined) ?? null);
   const [f, setF] = useState({ name: m?.name ?? "", role: m?.role ?? ("Technician" as Role), phone: m?.phone ?? "", email: m?.email ?? "", rate: centsToStr(m?.hourly_cents ?? 0), comm: String(m?.commission_pct ?? 0), color: m?.color ?? COLORS[team.length % COLORS.length], active: m?.active ?? true });
   const set = (k: keyof typeof f) => (e: { target: { value: string } }) => setF({ ...f, [k]: e.target.value });
   return (
@@ -101,11 +104,21 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
           <Field label="Commission %"><input className="input" inputMode="decimal" value={f.comm} onChange={set("comm")} /></Field>
         </div>
         <Field label="Color"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} swatches={COLORS} label="Team color" /></Field>
+        {m && f.role !== "Owner" && (
+          <div className="stack" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 12 }}>
+            <div className="bold">What {f.name || "this person"} can see</div>
+            <div className="chips">
+              <button type="button" className={`chip${custom ? "" : " on"}`} onClick={() => setCustom(null)}>Same as {f.role}</button>
+              <button type="button" className={`chip${custom ? " on" : ""}`} onClick={() => setCustom(custom ?? [...(((business.role_access ?? {}) as RoleAccess)[f.role] ?? ACCESS[f.role])])}>Custom for {f.name.split(" ")[0] || "them"}</button>
+            </div>
+            {custom && <AccessEditor list={custom} onChange={setCustom} />}
+          </div>
+        )}
         {m && <InvitePanel m={{ ...m, email: f.email, name: f.name || m.name, phone: f.phone, role: f.role }} invites={invites} reload={reload} />}
         <Field label="Status"><select className="select" value={f.active ? "1" : "0"} onChange={(e) => setF({ ...f, active: e.target.value === "1" })}><option value="1">Active: can be assigned jobs</option><option value="0">Inactive: hidden from scheduling</option></select></Field>
         <button className="btn primary block" onClick={async () => {
           if (!f.name.trim()) return toast("Add a name");
-          await store.saveRow("team_members", { id: m?.id, name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active });
+          await store.saveRow("team_members", { id: m?.id, name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active, ...(m ? { access: f.role === "Owner" ? null : custom } : {}) });
           await refresh(); toast("Saved"); onClose();
         }}>Save</button>
         {!m && (

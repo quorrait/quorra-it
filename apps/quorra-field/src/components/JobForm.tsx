@@ -96,7 +96,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
         const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
         try {
           await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "work_order", notes: "", customer_id: cid, estimate_id: null, job_id: saved.id, created_at: new Date().toISOString() });
-        } catch { /* the job itself is saved; the lead is a convenience */ }
+        } catch (e) { toast(errMsg(e, "The job is saved, but it could not be added to Leads")); }
       }
       await refresh();
       toast(job ? "Job updated" : "Job scheduled");

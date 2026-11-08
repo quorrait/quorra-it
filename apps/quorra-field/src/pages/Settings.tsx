@@ -1,3 +1,4 @@
+import EmailTemplatesCard from "../components/EmailTemplatesCard";
 import RoleAccessCard from "../components/RoleAccessCard";
 import { STATE_TAX } from "../lib/stateTax";
 import { errMsg } from "../lib/errors";
@@ -66,7 +67,7 @@ function SettingsInner() {
   const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", text_number: "", state: "", address: "", review_url: "", yelp_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
-  const [tab, setTab] = useState<"business" | "documents" | "schedule" | "access" | "account">("business");
+  const [tab, setTab] = useState<"business" | "documents" | "emails" | "schedule" | "access" | "account">("business");
   const nav = useNavigate();
 
 
@@ -120,7 +121,7 @@ function SettingsInner() {
     <div className="stack">
       <h1 className="page-title">Settings</h1>
       <div className="chips" style={{ flexWrap: "wrap" }}>
-        {([["business", "Business"], ["documents", "Documents"], ["schedule", "Schedule and alerts"], ...(hasSupabase && me.isOwner ? [["access", "Access"]] : []), ["account", "Account"]] as [typeof tab, string][]).map(([k, l]) => (
+        {([["business", "Business"], ["documents", "Documents"], ["emails", "Emails"], ["schedule", "Schedule and alerts"], ...(hasSupabase && me.isOwner ? [["access", "Access"]] : []), ["account", "Account"]] as [typeof tab, string][]).map(([k, l]) => (
           <button key={k} className={`chip${tab === k ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => setTab(k)}>{l}</button>
         ))}
       </div>
@@ -162,6 +163,7 @@ function SettingsInner() {
 
 
       {tab === "schedule" && <><HoursCard /><NotifyCard /></>}
+      {tab === "emails" && <EmailTemplatesCard />}
       {tab === "documents" && <><InvoiceLayoutCard /><VendorsCard /><LeadFormCard /></>}
 
       {tab === "access" && hasSupabase && me.isOwner && <RoleAccessCard />}

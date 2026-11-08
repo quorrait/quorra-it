@@ -1,22 +1,23 @@
 import { useState, type ReactNode } from "react";
 import { useData } from "../lib/app";
-import { Icon, Sheet, useToast } from "../components/ui";
+import { Field, Icon, Sheet, useToast } from "../components/ui";
+import { hasSupabase, supabase } from "../lib/supabase";
 import CalendarSync from "../components/CalendarSync";
 import { errMsg } from "../lib/errors";
 
-interface Item { id: string; name: string; what: string; color: string; mark: string; live: boolean }
+interface Item { id: string; name: string; what: string; color: string; mark: string; live: boolean; slug?: string; cat: string }
 
 const ITEMS: Item[] = [
-  { id: "stripe", name: "Stripe", what: "Take card and Apple Pay payments. Money goes straight to your bank.", color: "#635bff", mark: "S", live: true },
-  { id: "qbo", name: "QuickBooks Online", what: "Send customers, invoices and payments to your books.", color: "#2ca01c", mark: "Qb", live: true },
-  { id: "cal", name: "Phone calendar", what: "See your jobs in Apple, Google or Outlook calendar.", color: "#2563eb", mark: "31", live: true },
-  { id: "xero", name: "Xero", what: "Accounting sync for Xero users.", color: "#13b5ea", mark: "X", live: false },
-  { id: "zapier", name: "Zapier", what: "Connect Quorra Dispatch to thousands of other apps.", color: "#ff4a00", mark: "Z", live: false },
-  { id: "gbp", name: "Google Business Profile", what: "Ask for reviews and answer them from the app.", color: "#4285f4", mark: "G", live: false },
-  { id: "gusto", name: "Gusto", what: "Send timesheets to payroll.", color: "#f45d48", mark: "g", live: false },
-  { id: "mailchimp", name: "Mailchimp", what: "Add customers to email campaigns.", color: "#f5b800", mark: "M", live: false },
-  { id: "sheets", name: "Google Sheets", what: "Export customers, jobs and invoices automatically.", color: "#0f9d58", mark: "Sh", live: false },
-  { id: "quo", name: "Quo", what: "Text customers from your Quo business number.", color: "#111827", mark: "Q", live: false },
+  { id: "stripe", name: "Stripe", what: "Take card and Apple Pay payments. Money goes straight to your bank.", color: "#635bff", mark: "S", live: true, slug: "stripe", cat: "Payments" },
+  { id: "qbo", name: "QuickBooks Online", what: "Send customers, invoices and payments to your books.", color: "#2ca01c", mark: "Qb", live: true, slug: "quickbooks", cat: "Accounting" },
+  { id: "cal", name: "Phone calendar", what: "See your jobs in Apple, Google or Outlook calendar.", color: "#4285f4", mark: "31", live: true, slug: "googlecalendar", cat: "Scheduling" },
+  { id: "xero", name: "Xero", what: "Accounting sync for Xero users.", color: "#13b5ea", mark: "X", live: false, slug: "xero", cat: "Accounting" },
+  { id: "zapier", name: "Zapier", what: "Connect Quorra Dispatch to thousands of other apps.", color: "#ff4a00", mark: "Z", live: false, slug: "zapier", cat: "Automation" },
+  { id: "gbp", name: "Google Business Profile", what: "Ask for reviews and answer them from the app.", color: "#4285f4", mark: "G", live: false, slug: "google", cat: "Marketing" },
+  { id: "gusto", name: "Gusto", what: "Send timesheets to payroll.", color: "#f45d48", mark: "g", live: false, slug: "gusto", cat: "Payroll" },
+  { id: "mailchimp", name: "Mailchimp", what: "Add customers to email campaigns.", color: "#ffe01b", mark: "M", live: false, slug: "mailchimp", cat: "Marketing" },
+  { id: "sheets", name: "Google Sheets", what: "Export customers, jobs and invoices automatically.", color: "#0f9d58", mark: "Sh", live: false, slug: "googlesheets", cat: "Reporting" },
+  { id: "quo", name: "Quo", what: "Text customers from your Quo business number.", color: "#111827", mark: "Q", live: false, cat: "Texting" },
 ];
 
 /** Every app Quorra Dispatch connects to, as a grid. Tap a card to connect it. */
@@ -24,6 +25,7 @@ export default function Integrations() {
   const { business, store, refresh } = useData();
   const toast = useToast();
   const [open, setOpen] = useState<Item | null>(null);
+  const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   async function run(key: string, fn: () => Promise<void>, done?: string) {
@@ -52,21 +54,61 @@ export default function Integrations() {
   );
   if (open?.id === "cal") body = <CalendarSync />;
 
+  const live = ITEMS.filter((i) => i.live), soon = ITEMS.filter((i) => !i.live);
+  const card = (i: Item) => (
+    <button key={i.id} className={`int-card${i.live ? "" : " soon"}`} disabled={!i.live} onClick={() => i.live && setOpen(i)}>
+      <span className="int-cat">{i.cat}</span>
+      <span className="int-logo"><Logo item={i} /></span>
+      <span className="int-name">{i.name}</span>
+      <span className="int-what">{i.what}</span>
+      {i.live ? <span className={`int-cta${connected(i.id) ? " on" : ""}`}>{connected(i.id) ? "Connected" : "Set up"}</span> : <span className="int-cta soon">Coming soon</span>}
+    </button>
+  );
+
   return (
     <div className="stack">
-      <div className="page-head"><div><h1 className="page-title">Integrations</h1><p className="page-sub">Connect the apps you already use.</p></div></div>
-      <div className="int-grid">
-        {ITEMS.map((i) => (
-          <button key={i.id} className="int-card" disabled={!i.live} onClick={() => i.live && setOpen(i)}>
-            <span className="int-logo" style={{ background: i.color }}>{i.mark}</span>
-            <span className="int-name">{i.name}</span>
-            <span className="int-what">{i.what}</span>
-            {i.live ? <span className={`badge ${connected(i.id) ? "good" : "blue"}`}>{connected(i.id) ? "Connected" : "Set up"}</span> : <span className="badge gray">Coming soon</span>}
-          </button>
-        ))}
-      </div>
-      <a className="btn block" href={`mailto:quorrait@gmail.com?subject=${encodeURIComponent("Integration request")}&body=${encodeURIComponent("Which app would you like Quorra Dispatch to connect to?\n\nApp name:\nWhat it should do:")}`}>Request another integration</a>
+      <div className="page-head"><div><h1 className="page-title">Integrations</h1><p className="page-sub">Connect the apps you already use, so you enter things once.</p></div></div>
+      <div className="int-section">Ready to connect</div>
+      <div className="int-grid">{live.map(card)}</div>
+      <div className="int-section">Coming soon</div>
+      <div className="int-grid">{soon.map(card)}</div>
+      <button className="btn block" style={{ minHeight: 48 }} onClick={() => setAsk(true)}>Request another integration</button>
       {open && body && <Sheet title={open.name} onClose={() => setOpen(null)}>{body}</Sheet>}
+      {ask && <RequestSheet onClose={() => setAsk(false)} />}
     </div>
+  );
+}
+
+function Logo({ item }: { item: Item }) {
+  const [bad, setBad] = useState(!item.slug);
+  if (bad) return <span style={{ color: item.color, fontWeight: 800, fontSize: 24 }}>{item.mark}</span>;
+  return <img src={`https://cdn.simpleicons.org/${item.slug}`} alt={item.name} width={36} height={36} onError={() => setBad(true)} />;
+}
+
+function RequestSheet({ onClose }: { onClose(): void }) {
+  const toast = useToast();
+  const [app, setApp] = useState("");
+  const [what, setWhat] = useState("");
+  const [busy, setBusy] = useState(false);
+  async function send() {
+    if (!app.trim()) return toast("Tell us which app you want");
+    setBusy(true);
+    try {
+      if (hasSupabase && supabase) {
+        const { error } = await supabase.functions.invoke("integration-request", { body: { app: app.trim(), what: what.trim() } });
+        if (error) throw error;
+      }
+      toast("Thanks. We got your request");
+      onClose();
+    } catch (e) { toast(errMsg(e, "Could not send. Please try again.")); } finally { setBusy(false); }
+  }
+  return (
+    <Sheet title="Request an integration" onClose={onClose}>
+      <div className="stack">
+        <Field label="Which app?"><input className="input" value={app} onChange={(e) => setApp(e.target.value)} placeholder="For example, Jobber or Slack" /></Field>
+        <Field label="What should it do?"><textarea className="textarea" rows={4} value={what} onChange={(e) => setWhat(e.target.value)} placeholder="Tell us how you would use it" /></Field>
+        <button className="btn primary block" disabled={busy} onClick={() => void send()}>{busy ? "Sending..." : "Send request"}</button>
+      </div>
+    </Sheet>
   );
 }

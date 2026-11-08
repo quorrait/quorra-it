@@ -1,3 +1,4 @@
+import SearchBox, { searchHit } from "../components/SearchBox";
 import WorkTabs from "../components/WorkTabs";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -15,6 +16,7 @@ export default function Invoices() {
   const [params] = useSearchParams();
   const [filter, setFilter] = useState<Filter>((params.get("f") as Filter) || "all");
   const [adding, setAdding] = useState(false);
+  const [q, setQ] = useState("");
 
   const rows = useMemo(() => {
     return invoices
@@ -26,8 +28,9 @@ export default function Invoices() {
         if (filter === "draft") return i.status === "draft";
         return true;
       })
+      .filter((i) => searchHit(q, [i.number, `inv-${i.number}`, i.status, customerById(i.customer_id)?.name, customerById(i.customer_id)?.address, customerById(i.customer_id)?.phone, i.notes, ...i.items.map((x) => x.description)], invoiceTotals({ items: i.items, tax_rate: i.tax_rate }).total))
       .sort((a, b) => b.number - a.number);
-  }, [invoices, payments, filter]);
+  }, [invoices, payments, filter, q, customerById]);
 
   if (loading) return <Spinner />;
 
@@ -44,6 +47,7 @@ export default function Invoices() {
         <button className="btn primary" onClick={() => setAdding(true)}>{Icon.plus} New invoice</button>
       </div>
 
+      <SearchBox value={q} onChange={setQ} placeholder="Search by customer, address, invoice number, job or amount" />
       <div className="chips">
         {([["all", "All"], ["unpaid", "Unpaid"], ["overdue", "Overdue"], ["paid", "Paid"], ["draft", "Drafts"]] as [Filter, string][]).map(([k, label]) => (
           <button key={k} className={`chip${filter === k ? " on" : ""}`} onClick={() => setFilter(k)}>{label}</button>

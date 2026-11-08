@@ -19,9 +19,9 @@ handler(async (req) => {
   await sendEmail({ to, replyTo: r.email || undefined, subject: `Quorra Dispatch contact: ${r.name}${r.company ? ` (${r.company})` : ""}`,
     text: `Name: ${r.name}\nCompany: ${r.company}\nEmail: ${r.email}\nPhone: ${r.phone}\nBest way to reach: ${r.best_way}\n\nHow can we help?\n${r.message}`,
     html: emailHtml({
-      heading: "New contact request", preheader: `${r.name} wants to talk about Quorra Dispatch.`,
+      heading: `${r.name} wants to talk`, preheader: `${r.name} wants to talk about Quorra Dispatch.`,
       rows: [{ label: "Name", value: r.name }, ...(r.company ? [{ label: "Company", value: r.company }] : []), ...(r.email ? [{ label: "Email", value: r.email }] : []), ...(r.phone ? [{ label: "Phone", value: r.phone }] : []), ...(r.best_way ? [{ label: "Best way to reach", value: r.best_way }] : [])],
-      paragraphs: [r.message],
+      paragraphs: ["Their message:", r.message],
       button: r.email ? { label: `Reply to ${r.name.split(" ")[0]}`, url: `mailto:${r.email}` } : r.phone ? { label: `Call ${r.name.split(" ")[0]}`, url: `tel:${r.phone}` } : undefined,
     }) });
   if (r.email) await sendEmail({ to: r.email, subject: "We got your message", text: `Hi ${r.name.split(" ")[0]}, thanks for contacting Quorra Dispatch. We reply within 1-2 business days.`,

@@ -1,6 +1,7 @@
 // Saves why an owner is cancelling and emails it to you. Signed-in owners only (leave Verify JWT ON).
 import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
 
 const clean = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -19,7 +20,18 @@ handler(async (req) => {
   await sendEmail({
     to: Deno.env.get("CONTACT_TO") ?? "quorrait@gmail.com",
     subject: `${r.contact_me ? "[CONTACT ME] " : ""}Cancellation: ${r.business || r.email}`,
+    replyTo: r.email || undefined,
     text: `Business: ${r.business}\nEmail: ${r.email}\nPhone: ${r.phone}\nWants a call back: ${r.contact_me ? "YES" : "no"}\nReason: ${r.reason}\n\n${r.details}`,
+    html: emailHtml({
+      heading: r.contact_me ? "Cancellation: wants a call back" : "A customer is cancelling",
+      preheader: `${r.business || r.email}: ${r.reason}`,
+      rows: [
+        { label: "Business", value: r.business || "-" }, { label: "Email", value: r.email || "-" }, ...(r.phone ? [{ label: "Phone", value: r.phone }] : []),
+        { label: "Reason", value: r.reason }, { label: "Wants a call back", value: r.contact_me ? "Yes" : "No" },
+      ],
+      paragraphs: r.details ? [r.details] : [],
+      button: r.contact_me && r.phone ? { label: `Call ${r.phone}`, url: `tel:${r.phone}` } : r.email ? { label: "Reply", url: `mailto:${r.email}` } : undefined,
+    }),
   });
   return json({ ok: true });
 });

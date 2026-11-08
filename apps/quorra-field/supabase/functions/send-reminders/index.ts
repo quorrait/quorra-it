@@ -5,6 +5,7 @@ import { admin, handler, HttpError, json } from "../_shared/util.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { normHours } from "../_shared/schedule.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { fill, getTpl } from "../_shared/templates.ts";
 
 handler(async (req) => {
   const secret = Deno.env.get("CRON_SECRET");
@@ -20,7 +21,7 @@ handler(async (req) => {
   const bizCache = new Map<string, Record<string, unknown> | null>();
   for (const j of jobs ?? []) {
     if (!bizCache.has(j.owner_id)) {
-      const { data } = await db.from("business").select("name,phone,email,hours,reminders,notify_email,notify_phone").eq("owner_id", j.owner_id).maybeSingle();
+      const { data } = await db.from("business").select("name,phone,email,hours,reminders,notify_email,notify_phone,email_templates").eq("owner_id", j.owner_id).maybeSingle();
       bizCache.set(j.owner_id, data);
     }
     const biz = bizCache.get(j.owner_id) as { name?: string; phone?: string; email?: string; hours?: never; reminders?: { customer_hours?: number; team_hours?: number }; notify_email?: string; notify_phone?: string } | null;
@@ -36,8 +37,13 @@ handler(async (req) => {
       const first = (cust?.name ?? "").split(" ")[0] || "there";
       const msg = `Reminder: ${biz?.name ?? "We"} will be at ${j.address || "your address"} for ${j.title} on ${when}.${biz?.phone ? ` Questions? Call ${biz.phone}.` : ""}`;
       if (cust?.phone) await sendSms({ to: cust.phone, body: `Hi ${first}. ${msg}` });
-      if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Reminder: ${j.title} ${when}`, text: `Hi ${first},\n\n${msg}`,
-        html: emailHtml({ brand: biz?.name || "Your contractor", heading: "Your visit is coming up", paragraphs: [`Hi ${first}, a quick reminder about your upcoming service.`], rows: [{ label: "What", value: j.title }, { label: "When", value: when }, ...(j.address ? [{ label: "Where", value: j.address }] : []), ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])] }) });
+      if (cust?.email) {
+        const t = getTpl(biz?.email_templates, "reminder");
+        const [dateStr, ...timeParts] = when.split(" at ");
+        const vars = { customer: first, business: biz?.name ?? "us", service: j.title, date: dateStr, time: timeParts.join(" at ") || when, address: j.address || "", phone: biz?.phone ?? "", total: "" };
+        await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: fill(t.subject, vars), text: fill(t.message, vars),
+          html: emailHtml({ brand: biz?.name || "Your contractor", heading: fill(t.heading, vars), paragraphs: fill(t.message, vars).split(/\n{2,}/), rows: [{ label: "Service", value: j.title }, { label: "Appointment", value: when }, ...(j.address ? [{ label: "Location", value: j.address }] : [])] }) });
+      }
       await db.from("jobs").update({ customer_reminded_at: new Date().toISOString() }).eq("id", j.id);
     }
     if (dueTeam) {
@@ -75,14 +81,18 @@ handler(async (req) => {
     const waitedH = (now - new Date(e.accepted_at as string).getTime()) / 3600_000;
     if (waitedH < (e.schedule_nudges === 0 ? 24 : 72)) continue;
     const [{ data: biz }, { data: cust }] = await Promise.all([
-      db.from("business").select("name,phone,email").eq("owner_id", e.owner_id).maybeSingle(),
+      db.from("business").select("name,phone,email,email_templates").eq("owner_id", e.owner_id).maybeSingle(),
       db.from("customers").select("name,phone,email").eq("id", e.customer_id).maybeSingle(),
     ]);
     const first = (cust?.name ?? "").split(" ")[0] || "there";
     const msg = `Hi ${first}, you accepted the quote for ${e.title} with ${biz?.name ?? "us"}. Pick a time that works for you: ${e.quote_link}`;
     if (cust?.phone) await sendSms({ to: cust.phone, body: msg });
-    if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Pick a time for your ${e.title}`, text: msg,
-      html: emailHtml({ brand: biz?.name || "Your contractor", heading: "Pick a time for your visit", paragraphs: [`Hi ${first}, thanks for accepting the quote for ${e.title}. Choose a day and time that works for you.`], button: { label: "Choose my time", url: e.quote_link as string }, fine: biz?.phone ? `Prefer to call? ${biz.phone}` : undefined }) });
+    if (cust?.email) {
+      const t = getTpl(biz?.email_templates, "nudge");
+      const vars = { customer: first, business: biz?.name ?? "us", service: e.title, date: "", time: "", address: "", phone: biz?.phone ?? "", total: "" };
+      await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: fill(t.subject, vars), text: `${fill(t.message, vars)}\n\n${e.quote_link}`,
+        html: emailHtml({ brand: biz?.name || "Your contractor", heading: fill(t.heading, vars), paragraphs: fill(t.message, vars).split(/\n{2,}/), button: { label: "Choose my time", url: e.quote_link as string } }) });
+    }
     await db.from("estimates").update({ schedule_nudges: (e.schedule_nudges ?? 0) + 1 }).eq("id", e.id);
     nudges++;
   }

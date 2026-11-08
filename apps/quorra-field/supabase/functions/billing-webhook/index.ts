@@ -2,7 +2,7 @@
 // Events: checkout.session.completed, customer.subscription.created, customer.subscription.updated, customer.subscription.deleted, invoice.payment_failed.
 // Secrets: STRIPE_SECRET_KEY, STRIPE_BILLING_WEBHOOK_SECRET.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, env } from "../_shared/util.ts";
+import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 
@@ -68,12 +68,12 @@ Deno.serve(async (req) => {
       const inv = event.data.object as Stripe.Invoice;
       if (inv.customer_email && inv.amount_paid > 0) {
         const amt = `$${(inv.amount_paid / 100).toFixed(2)}`;
-        const link = inv.hosted_invoice_url ?? "";
+        const link = `${appUrl()}/billing`; // receipts are our own PDF inside the app
         await sendEmail({
           to: inv.customer_email,
           subject: `Receipt for your Quorra Dispatch payment (${amt})`,
-          text: `Thanks for your payment of ${amt} to Quorra Dispatch.${link ? `\n\nView or download your receipt: ${link}` : ""}\n\nQuestions? Reply to this email.`,
-          html: emailHtml({ heading: "Thanks for your payment", paragraphs: [`We received your payment of ${amt} for Quorra Dispatch.`], rows: [{ label: "Amount", value: amt }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }], button: link ? { label: "View receipt", url: link } : undefined, fine: "Questions about your bill? Just reply to this email." }),
+          text: `Thanks for your payment of ${amt} to Quorra Dispatch.${link ? `\n\nDownload your receipt from Billing: ${link}` : ""}\n\nQuestions? Reply to this email.`,
+          html: emailHtml({ heading: "Thanks for your payment", paragraphs: [`We received your payment of ${amt} for Quorra Dispatch.`], rows: [{ label: "Amount", value: amt }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }], button: link ? { label: "Open billing", url: link } : undefined, fine: "Questions about your bill? Just reply to this email." }),
         });
       }
     } else if (event.type === "invoice.payment_failed") {

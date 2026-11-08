@@ -14,6 +14,7 @@ import { hasSupabase, supabase } from "./supabase";
 interface AuthCtx {
   ready: boolean;
   email: string | null;
+  name: string;
   mode: "demo" | "supabase";
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, businessName?: string): Promise<{ needsConfirm: boolean }>;
@@ -26,6 +27,7 @@ const DEMO_SESSION = "quorra-field-demo-session";
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const [authName, setAuthName] = useState("");
 
   useEffect(() => {
     if (!supabase) {
@@ -47,9 +49,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch { /* storage blocked */ }
       setEmail(data.session?.user.email ?? null);
+      setAuthName(String(data.session?.user.user_metadata?.name ?? ""));
       setReady(true);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => setEmail(session?.user.email ?? null));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { setEmail(session?.user.email ?? null); setAuthName(String(session?.user.user_metadata?.name ?? "")); });
     const stop = watchSession(() => { void supabase!.auth.signOut({ scope: "local" }); });
     return () => { sub.subscription.unsubscribe(); stop(); };
   }, []);
@@ -58,6 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     () => ({
       ready,
       email,
+      name: authName,
       mode: hasSupabase ? "supabase" : "demo",
       async signIn(e, p) {
         if (!supabase) {
@@ -96,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
       },
     }),
-    [ready, email],
+    [ready, email, authName],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -151,7 +155,7 @@ const EMPTY_BUSINESS: Business = {
 };
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { email } = useAuth();
+  const { email, name: authName } = useAuth();
   const [asId, setAsId] = useState<string | null>(() => { try { return localStorage.getItem("qf-view-as"); } catch { return null; } });
   const store = useMemo<Store>(() => (hasSupabase ? createSupabaseStore() : createDemoStore()), []);
   const [loading, setLoading] = useState(true);
@@ -245,8 +249,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
     void refresh();
     // Live accounts receive website leads and quote answers while the app is open.
     if (!hasSupabase) return;
-    const t = setInterval(() => void refresh(), 60_000);
-    return () => clearInterval(t);
+    const t = setInterval(() => void refresh(), 20_000);
+    const back = () => { if (document.visibilityState === "visible") void refresh(); };
+    document.addEventListener("visibilitychange", back);
+    window.addEventListener("focus", back);
+    return () => { clearInterval(t); document.removeEventListener("visibilitychange", back); window.removeEventListener("focus", back); };
   }, [refresh]);
 
   // Who is using the app. Real accounts: match the login email to a team member (no match = the account owner).
@@ -256,7 +263,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
-  const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
+  const me = { id: meMember?.id ?? null, name: meMember?.name ?? (authName || fromEmail), email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
   const subOk = !hasSupabase || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
   const locked = !subOk;
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
@@ -266,7 +273,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       me,
       subscription,
       locked,
-      can: (f) => canAccess(me.role, f, business.role_access as RoleAccess | null | undefined),
+      can: (f) => canAccess(me.role, f, business.role_access as RoleAccess | null | undefined, meMember?.access as Feature[] | null | undefined),
       viewAs(id) { try { localStorage.setItem("qf-view-as", id); } catch { /* ignore */ } setAsId(id); },
       store,
       loading,

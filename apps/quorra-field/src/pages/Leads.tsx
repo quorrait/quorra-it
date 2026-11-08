@@ -1,3 +1,4 @@
+import SearchBox, { searchHit } from "../components/SearchBox";
 import WorkTabs from "../components/WorkTabs";
 import { FlagBanner } from "../components/FlagBanner";
 import { useState } from "react";
@@ -77,6 +78,7 @@ export default function Leads() {
   const askDel = useConfirm();
   const nav = useNavigate();
   const [tab, setTab] = useState<Tab>("pipeline");
+  const [q, setQ] = useState("");
   const [edit, setEdit] = useState<Lead | "new" | null>(null);
   const [over, setOver] = useState<LeadStage | null>(null);
   const [quote, setQuote] = useState<{ lead: Lead; customerId: string } | null>(null);
@@ -113,12 +115,13 @@ export default function Leads() {
     return patch(l, { stage });
   }
 
-  const pipeline = leads.filter((l) => PIPELINE.includes(l.stage));
+  const hit = (l: Lead) => searchHit(q, [l.name, l.phone, l.email, l.address, l.service, l.notes, l.source], l.value_cents);
+  const pipeline = leads.filter((l) => PIPELINE.includes(l.stage) && hit(l));
   const jobDone = (l: Lead) => Boolean(l.job_id && jobs.find((j) => j.id === l.job_id)?.status === "completed");
-  const work = leads.filter((l) => l.stage === "work_order" && !jobDone(l));
-  const completed = leads.filter((l) => l.stage === "completed" || (l.stage === "work_order" && jobDone(l)));
+  const work = leads.filter((l) => l.stage === "work_order" && !jobDone(l) && hit(l));
+  const completed = leads.filter((l) => (l.stage === "completed" || (l.stage === "work_order" && jobDone(l))) && hit(l));
   const del = async (l: Lead) => { if (await askDel({ title: "Delete this work order?", message: "It is removed from this list. The job on your calendar is not deleted.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("leads", l.id); await refresh(); toast("Deleted"); } };
-  const declined = leads.filter((l) => l.stage === "declined");
+  const declined = leads.filter((l) => l.stage === "declined" && hit(l));
   const sum = (a: Lead[]) => a.reduce((s, l) => s + l.value_cents, 0);
   const won = work.length + completed.length;
   const rate = won + declined.length ? Math.round((won / (won + declined.length)) * 100) : null;
@@ -152,6 +155,7 @@ export default function Leads() {
         <div className="kpi"><div className="lbl">Close rate</div><div className="val">{rate === null ? "-" : `${rate}%`}</div><div className="sub">accepted vs declined</div></div>
       </div>
 
+      <SearchBox value={q} onChange={setQ} placeholder="Search by name, phone, address, job type or amount" />
       <div className="chips">
         <button className={`chip${tab === "pipeline" ? " on" : ""}`} onClick={() => setTab("pipeline")}>Open leads ({pipeline.length})</button>
         <button className={`chip${tab === "work" ? " on" : ""}`} onClick={() => setTab("work")}>Work orders ({work.length})</button>

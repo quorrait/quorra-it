@@ -1,0 +1,61 @@
+// Step 2 of signup: the card was verified, so now create the login, the business and the 14-day trial. Public (Verify JWT OFF).
+// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_* , optional STRIPE_AUTOMATIC_TAX.
+import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
+import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
+
+function planName(id?: string): string {
+  for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
+    if (id && (id === Deno.env.get(`STRIPE_PRICE_${key}`) || id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
+  }
+  return "Quorra Dispatch";
+}
+
+handler(async (req) => {
+  const b = await req.json().catch(() => ({}));
+  const email = String(b.email ?? "").trim().toLowerCase();
+  const password = String(b.password ?? "");
+  if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters.");
+  const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
+  const s = await stripe.checkout.sessions.retrieve(String(b.session_id), { expand: ["setup_intent"] });
+  if (s.status !== "complete" || s.metadata?.signup !== "1" || s.metadata?.email !== email) throw new HttpError(403, "The card step was not completed.");
+  const si = s.setup_intent as Stripe.SetupIntent | null;
+  const pmRaw = si?.payment_method;
+  if (si?.status !== "succeeded" || !pmRaw) throw new HttpError(400, "Your card could not be verified. Please try another card.");
+  const pm = typeof pmRaw === "string" ? await stripe.paymentMethods.retrieve(pmRaw) : pmRaw;
+  const customer = String(s.customer);
+  const db = admin();
+
+  // One checkout can create one account.
+  const { data: used } = await db.from("subscriptions").select("owner_id").eq("stripe_customer_id", customer).maybeSingle();
+  if (used) throw new HttpError(409, "This signup was already completed. Sign in instead.");
+
+  const { data: created, error: cErr } = await db.auth.admin.createUser({
+    email, password, email_confirm: true,
+    user_metadata: { business_name: s.metadata?.business ?? "", name: s.metadata?.name ?? "" },
+  });
+  if (cErr || !created.user) throw new HttpError(409, /already/i.test(cErr?.message ?? "") ? "That email already has a login. Sign in instead." : (cErr?.message ?? "Could not create the account"));
+  const ownerId = created.user.id;
+
+  await stripe.customers.update(customer, {
+    metadata: { owner_id: ownerId },
+    invoice_settings: { default_payment_method: pm.id },
+    ...(pm.billing_details?.address?.country ? { address: pm.billing_details.address as Stripe.AddressParam } : {}),
+  });
+  const plan = s.metadata?.plan ?? "essentials";
+  const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${s.metadata?.interval === "year" ? "_ANNUAL" : ""}`);
+  const params = { customer, items: [{ price: priceId, quantity: 1 }], trial_period_days: 14, default_payment_method: pm.id, metadata: { owner_id: ownerId } };
+  let sub: Stripe.Subscription;
+  try {
+    sub = await stripe.subscriptions.create(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { ...params, automatic_tax: { enabled: true } } : params);
+  } catch {
+    sub = await stripe.subscriptions.create(params); // tax could not be worked out from the address; still start the trial
+  }
+  const item = sub.items.data[0];
+  await db.from("subscriptions").upsert({
+    owner_id: ownerId, status: "active", plan: planName(item?.price?.id), amount_cents: item?.price?.unit_amount ?? 30000,
+    billing_interval: item?.price?.recurring?.interval ?? "month", trialing: true,
+    current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
+  }, { onConflict: "owner_id" });
+  return json({ ok: true });
+});

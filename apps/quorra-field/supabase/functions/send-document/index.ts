@@ -3,6 +3,7 @@
 import { accountOwner, admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { fill, getTpl } from "../_shared/templates.ts";
 
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 
@@ -24,7 +25,7 @@ handler(async (req) => {
   const digits = (s: string) => s.replace(/\D/g, "").slice(-10);
   const cust = (custs ?? []).find((c) => (to && String(c.email ?? "").toLowerCase() === to) || (phone && digits(phone).length >= 7 && digits(String(c.phone ?? "")) === digits(phone)));
   if (!cust) throw new HttpError(403, "That contact is not one of your customers");
-  const { data: biz } = await db.from("business").select("name,email,phone").eq("owner_id", owner).maybeSingle();
+  const { data: biz } = await db.from("business").select("name,email,phone,email_templates").eq("owner_id", owner).maybeSingle();
   const bizName = biz?.name || "Your contractor";
   const first = String(cust.name ?? "").split(" ")[0] || "there";
   const title = clip(b.doc_title, 160), amount = clip(b.amount, 40), valid = clip(b.valid_until, 60);
@@ -33,17 +34,19 @@ handler(async (req) => {
   const out: { email?: unknown; text?: unknown } = {};
   if (wantEmail) {
     const att = typeof b.pdf_base64 === "string" && b.pdf_base64.length > 100 && b.pdf_base64.length < 20_000_000 ? [{ filename: clip(b.filename, 80) || `${noun}.pdf`, content: b.pdf_base64 }] : undefined;
+    const t = getTpl(biz?.email_templates, kind === "invoice" ? "invoice" : "quote");
+    const vars = { customer: first, business: bizName, service: title, date: valid, time: "", address: "", phone: biz?.phone ?? "", total: amount };
     out.email = await sendEmail({
       to, replyTo: biz?.email || undefined, attachments: att,
-      subject: kind === "invoice" ? `Invoice from ${bizName}${amount ? `: ${amount}` : ""}` : `Your quote from ${bizName}${amount ? `: ${amount}` : ""}`,
-      text: `Hi ${first},\n\nHere is your ${noun} for ${title}${amount ? ` (${amount})` : ""}.${link ? `\n\n${kind === "invoice" ? "View and pay it online" : "View and accept it online"}: ${link}` : ""}\n\nThank you,\n${bizName}${biz?.phone ? `\n${biz.phone}` : ""}`,
+      subject: fill(t.subject, vars),
+      text: `${fill(t.message, vars)}${link ? `\n\n${link}` : ""}\n\n${bizName}${biz?.phone ? `\n${biz.phone}` : ""}`,
       html: emailHtml({
         brand: bizName, preheader: `${kind === "invoice" ? "Invoice" : "Quote"} for ${title}`,
-        heading: kind === "invoice" ? "Your invoice is ready" : "Your quote is ready",
-        paragraphs: [`Hi ${first}, here is your ${noun} for ${title}.`],
+        heading: fill(t.heading, vars),
+        paragraphs: fill(t.message, vars).split(/\n{2,}/),
         rows: [{ label: kind === "invoice" ? "Invoice for" : "Quote for", value: title }, ...(amount ? [{ label: kind === "invoice" ? "Balance due" : "Total", value: amount }] : []), ...(valid ? [{ label: kind === "invoice" ? "Due" : "Valid until", value: valid }] : [])],
         button: link ? { label: kind === "invoice" ? "View and pay invoice" : "View and accept quote", url: link } : undefined,
-        fine: `${att ? "A PDF copy is attached. " : ""}Questions? Reply to this email${biz?.phone ? ` or call ${biz.phone}` : ""}.`,
+        fine: `${att ? "A PDF copy is attached. " : ""}${biz?.phone ? `Questions? Call ${biz.phone} or reply to this email.` : "Questions? Reply to this email."}`,
       }),
     });
   }

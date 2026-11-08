@@ -115,8 +115,8 @@ export default function Reports() {
         <div className="card"><div className="card-title">Receivables aging</div>
           {["Current (0-30)", "31-60 days", "61-90 days", "90+ days"].map((l, i) => <div key={l} className="row between" style={{ padding: "6px 0" }}><span>{l}</span><b className="num">{money(r.aging[i])}</b></div>)}
         </div>
-        <div className="card"><div className="card-title">Win rates and payment types</div>
-          <div className="row between" style={{ padding: "6px 0" }}><span>Estimate win rate</span><b>{r.estRate === null ? "-" : `${r.estRate}%`}</b></div>
+        <div className="card"><div className="card-title">Acceptance rates and payment types</div>
+          <div className="row between" style={{ padding: "6px 0" }}><span>Estimate acceptance rate</span><b>{r.estRate === null ? "-" : `${r.estRate}%`}</b></div>
           <div className="row between" style={{ padding: "6px 0" }}><span>Lead conversion</span><b>{r.leadRate === null ? "-" : `${r.leadRate}%`}</b></div>
           {top(r.byMethod).map(([m, v]) => <div key={m} className="row between" style={{ padding: "6px 0" }}><span style={{ textTransform: "capitalize" }}>{m} payments</span><b className="num">{money(v)}</b></div>)}
         </div>

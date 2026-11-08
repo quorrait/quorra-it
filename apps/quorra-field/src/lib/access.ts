@@ -23,9 +23,10 @@ export const FEATURE_LABEL: Record<Feature, string> = {
   timesheets: "Timesheets", reports: "Reports", settings: "Settings", billing: "Billing",
 };
 export const EDITABLE: Feature[] = ALL.filter((f) => f !== "billing");
-export const canAccess = (role: Role, f: Feature, custom?: RoleAccess | null) => {
+export const canAccess = (role: Role, f: Feature, custom?: RoleAccess | null, personal?: Feature[] | null) => {
   if (role === "Owner") return true;
   if (f === "billing") return false;
+  if (personal) return personal.includes(f); // set on the person, wins over the role
   const list = custom?.[role];
   return (list ?? ACCESS[role]).includes(f);
 };

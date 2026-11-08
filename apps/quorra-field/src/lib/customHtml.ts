@@ -59,8 +59,9 @@ export function renderTemplate(tpl: string, d: DocData): string {
   const rows = d.items.map((li) => `<tr><td>${esc(li.description || "Item")}</td><td style="text-align:right">${esc(li.qty)}</td><td style="text-align:right">${esc(money(li.unit_cents))}</td><td style="text-align:right">${esc(money(lineTotal(li)))}</td></tr>`).join("");
   const table = `<table style="width:100%;border-collapse:collapse"><thead><tr><th style="text-align:left">Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Amount</th></tr></thead><tbody>${rows}</tbody></table>`;
   const pos = ds0.logo_pos ?? "left", al = ds0.company_align ?? "left", px = { small: 36, medium: 60, large: 90 }[ds0.logo_size ?? "medium"];
-  const logoMargin = pos === "center" ? "0 auto 8px" : pos === "right" ? "0 0 8px auto" : "0 0 8px 0";
-  const logo = d.business.logo && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(d.business.logo) ? `<img src="${esc(d.business.logo)}" alt="" style="display:block;margin:${logoMargin};max-height:${px}px;max-width:70%">` : "";
+  const justify = pos === "center" ? "center" : pos === "right" ? "flex-end" : "flex-start";
+  // The logo gets its own full-width row with a fixed height, so position and size act on the logo only and never reflow the company text.
+  const logo = d.business.logo && /^data:image\/(png|jpe?g|gif|webp);base64,/i.test(d.business.logo) ? `<div style="display:flex;justify-content:${justify};min-width:260px;margin:0 0 10px"><img src="${esc(d.business.logo)}" alt="" style="display:block;height:${px}px;width:auto;max-width:100%;object-fit:contain"></div>` : "";
   const ds = d.business.doc_settings ?? {};
   const defTitle = (d.kind === "Invoice" ? ds.title_invoice : ds.title_estimate)?.trim() || d.kind.toUpperCase();
   const v: Record<string, string> = {

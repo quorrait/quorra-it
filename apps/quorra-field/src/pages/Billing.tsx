@@ -3,9 +3,11 @@ import { useEffect, useState } from "react";
 import EmbeddedStripe from "../components/EmbeddedStripe";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import { useSearchParams } from "react-router-dom";
-import { useData } from "../lib/app";
+import { useAuth, useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
+import { buildReceiptPdf } from "../lib/receipt";
+import { savePdf } from "../lib/pdf";
 import { money } from "../lib/money";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
@@ -19,7 +21,8 @@ const DEMO_CHARGES: Charge[] = [
 
 /** Plan, status and the buttons that hand off to Stripe for card, receipts, plan changes and cancelling. */
 export default function Billing() {
-  const { loading, subscription: sub, me, refresh, locked } = useData();
+  const { loading, subscription: sub, me, refresh, locked, business } = useData();
+  const { email } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
   const [busy, setBusy] = useState<string | null>(null);
@@ -175,7 +178,7 @@ export default function Billing() {
                 <div key={c.id} className="list-item">
                   <div className="grow"><div className="title">{c.description}</div><div className="small muted">{fmtDate(c.date)}</div></div>
                   <div className="right"><b className="num">{money(c.amount_cents)}</b><br /><span className={`badge ${c.status === "paid" ? "good" : "bad"}`}>{c.status === "paid" ? "Paid" : c.status === "unpaid" ? "Unpaid" : c.status}</span></div>
-                  {c.receipt_url && <a className="btn sm" href={c.receipt_url} target="_blank" rel="noreferrer">Receipt</a>}
+                  {c.status === "paid" && <button className="btn sm" onClick={() => void savePdf(buildReceiptPdf({ ...c, billedTo: business.name, email: email ?? "" }), `Quorra-Dispatch-receipt-${c.date.slice(0, 10)}.pdf`)}>Receipt</button>}
                 </div>
               ))}
             </div>
