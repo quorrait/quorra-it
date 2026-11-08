@@ -29,6 +29,8 @@ export async function createInvite(member: { id: string; email: string; role: st
     demoSave([inv, ...demoList().filter((i) => i.team_member_id !== member.id)]);
     return inv;
   }
+  const me = (await supabase.auth.getSession()).data.session?.user.email?.toLowerCase();
+  if (me && me === member.email.trim().toLowerCase()) throw new Error("That is your own login email. Use a different email for team members. Tip: yourname+tech@gmail.com also reaches your inbox.");
   // one open invite per person
   await supabase.from("invites").update({ status: "revoked" }).eq("team_member_id", member.id).eq("status", "pending");
   const { data, error } = await supabase.from("invites").insert({ team_member_id: member.id, email: member.email.trim().toLowerCase(), role: member.role }).select().single();
