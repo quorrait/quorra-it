@@ -1,3 +1,4 @@
+import { STATE_TAX } from "../lib/stateTax";
 import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
 import { HoursCard, NotifyCard, VendorsCard } from "../components/BusinessSetupCards";
@@ -128,7 +129,10 @@ function SettingsInner() {
         </div>
         <Field label="Business address (printed on invoices)"><textarea className="textarea" rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="123 Main St, Roseville, CA 95678" /></Field>
         <div className="grid2 stack-sm">
-          <Field label="Default sales tax %"><input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} /></Field>
+          <Field label="Default sales tax %">
+            <input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} />
+            {!(parseFloat(f.tax_rate) > 0) && STATE_TAX[f.state] !== undefined && <div className="small muted" style={{ marginTop: 4 }}>Left at 0, new estimates and invoices use your state's base rate of {STATE_TAX[f.state]}%. Enter your full local rate to override it.</div>}
+          </Field>
           <Field label="State you work in (for the price guide)">
             <select className="select" value={f.state} onChange={(e) => setF({ ...f, state: e.target.value })}>
               <option value="">Not set</option>

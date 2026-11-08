@@ -1,3 +1,4 @@
+import { FlagBanner, useBlockedGuard } from "./FlagBanner";
 import DurationField from "./DurationField";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
@@ -36,6 +37,17 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   const [time, setTime] = useState(snapTime(init.slice(11, 16)));
   const startLocal = `${date}T${time}`;
   const [hours, setHours] = useState(String(hrs0));
+  const [allDay, setAllDay] = useState(false);
+  const { business } = useData();
+  function toggleAllDay(on: boolean) {
+    setAllDay(on);
+    if (!on) return;
+    // Block the whole working day from the business hours (default 8 to 5).
+    const dh = business.hours?.days?.[new Date(`${date}T12:00`).getDay()];
+    const [sh, sm] = (dh?.open ? dh.start : "08:00").split(":").map(Number), [eh, em] = (dh?.open ? dh.end : "17:00").split(":").map(Number);
+    setTime(`${String(sh).padStart(2, "0")}:${String(sm).padStart(2, "0")}`);
+    setHours(String(+((eh * 60 + em - sh * 60 - sm) / 60).toFixed(2)));
+  }
   const [assigned, setAssigned] = useState(job?.assigned_to ?? "");
   const [busy, setBusy] = useState(false);
 
@@ -46,8 +58,10 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
     if (c && address === customers.find((x) => x.id === customerId)?.address) setAddress(c.address);
   }
 
+  const guard = useBlockedGuard();
   async function save() {
     if (!title.trim()) return toast("Add a job title");
+    if (!job && !(await guard(customers.find((x) => x.id === customerId)))) return;
     if (customerId === NEW && !newName.trim()) return toast("Add the customer's name");
     setBusy(true);
     try {
@@ -91,6 +105,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
     <Sheet title={job ? "Edit job" : "New job"} onClose={onClose}>
       <div className="stack">
         {!job && <TemplatePicker kind="job" onPick={(t) => { setTitle(t.title || t.name); setDescription(t.notes); setHours(String(t.hours)); }} />}
+        <FlagBanner c={customers.find((x) => x.id === customerId)} />
         <Field label="Customer">
           <select className="select" value={customerId} onChange={(e) => pickCustomer(e.target.value)}>
             <option value={NEW}>+ New customer</option>
@@ -124,7 +139,9 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
             </select>
           </Field>
         </div>
-        <DurationField value={hours} onChange={setHours} />
+        <label className="check-row"><input type="checkbox" checked={allDay} onChange={(e) => toggleAllDay(e.target.checked)} /> All day (blocks your whole working day)</label>
+        {!allDay && <DurationField value={hours} onChange={setHours} />}
+        {allDay && <div className="small muted">Starts at {time} and runs {hours} hours. Uncheck to set a shorter job, or use a longer duration for multi-day work.</div>}
         <Field label="Assigned to">
           <select className="select" value={assigned} onChange={(e) => setAssigned(e.target.value)}>
             <option value="">Unassigned</option>

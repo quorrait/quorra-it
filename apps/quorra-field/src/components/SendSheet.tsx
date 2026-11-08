@@ -1,70 +1,94 @@
 import { useState } from "react";
 import type { jsPDF } from "jspdf";
 import { Sheet, useToast } from "./ui";
-import { sendDoc, type Channel } from "../lib/sendDoc";
+import { hasSupabase, supabase } from "../lib/supabase";
 import { savePdf } from "../lib/pdf";
+import { sendDoc } from "../lib/sendDoc";
 
-/** Send a document to the customer with its PDF attached. */
-export default function SendSheet({ title, filename, makePdf, to: toAddr, phone, subject, body, portalLink, linkTitle = "Customer portal link", linkDesc = "No file. They tap a link to view the invoice and pay online.", confirmLabel, onConfirm, onClose }: {
-  title: string; filename: string; makePdf(): jsPDF | Promise<jsPDF>; to?: string; phone?: string; subject: string; body: string; portalLink?: string; linkTitle?: string; linkDesc?: string;
-  confirmLabel?: string; onConfirm?(): Promise<void>; onClose(): void;
+interface Result { sent: boolean; reason?: string }
+
+/** Send a quote or invoice: pick email and/or text, and one button sends a clean message with a link. Other ways are tucked underneath. */
+export default function SendSheet({ kind = "quote", title, filename, makePdf, to: toAddr, phone, subject, body, portalLink, docTitle, amount, validUntil, onConfirm, onClose }: {
+  kind?: "quote" | "invoice"; title: string; filename: string; makePdf(): jsPDF | Promise<jsPDF>; to?: string; phone?: string; subject: string; body: string; portalLink?: string;
+  docTitle: string; amount?: string; validUntil?: string; confirmLabel?: string; onConfirm?(): Promise<void>; onClose(): void;
 }) {
   const toast = useToast();
-  const [note, setNote] = useState("");
+  const [email, setEmail] = useState(Boolean(toAddr));
+  const [text, setText] = useState(!toAddr && Boolean(phone));
+  const [pdf, setPdf] = useState(kind === "invoice");
   const [busy, setBusy] = useState(false);
-
-  async function go(channel: Channel) {
-    const r = await sendDoc({ pdf: await makePdf(), filename, channel, to: channel === "email" ? toAddr : phone, subject, body });
-    if (r === "downloaded") setNote("The PDF was saved to this device and your message app opened. Attach the saved PDF to the message before sending.");
-    else if (r === "shared") setNote("Choose Mail or Messages in the share sheet. The PDF is attached.");
-  }
-
-  /** Opens the phone's Messages or the email app with just text (no PDF). */
-  function plain(channel: Channel, text: string) {
-    const to = channel === "email" ? (toAddr ?? "") : (phone ?? "");
-    window.location.href = channel === "email" ? `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}` : `sms:${to}?&body=${encodeURIComponent(text)}`;
-  }
+  const [problem, setProblem] = useState<string | null>(null);
+  const [fallbackText, setFallbackText] = useState(false);
+  const noun = kind === "invoice" ? "invoice" : "quote";
   const withLink = portalLink ? `${body}\n\nOpen it online: ${portalLink}` : body;
+  const smsBody = `${subject}${amount ? ` (${amount})` : ""}: ${portalLink ?? ""}`.trim();
 
-  const S = { fill: "none", stroke: "currentColor", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" } as const;
-  const ico = {
-    pdf: <svg viewBox="0 0 24 24" {...S}><path d="M6 3h8l5 5v13H6z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>,
-    link: <svg viewBox="0 0 24 24" {...S}><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1" /></svg>,
-    msg: <svg viewBox="0 0 24 24" {...S}><path d="M4 5h16v11H9l-5 4z" /></svg>,
-  };
-  const Option = ({ icon, title, tag, desc, onEmail, onText, extra }: { extra?: JSX.Element; icon: JSX.Element; title: string; tag?: string; desc: string; onEmail(): void; onText(): void }) => (
-    <div className="send-opt">
-      <div className="send-opt-head">
-        <span className="send-ico">{icon}</span>
-        <div className="grow">
-          <div className="send-title">{title}{tag && <span className="send-tag">{tag}</span>}</div>
-          <div className="small muted">{desc}</div>
-        </div>
-      </div>
-      <div className="grid2 stack-sm">
-        <button className="btn" onClick={onEmail}>Email{toAddr ? "" : " (no email on file)"}</button>
-        <button className="btn" onClick={onText}>Text{phone ? "" : " (no phone on file)"}</button>
-      </div>
-      {extra}
-    </div>
-  );
+  async function send() {
+    setProblem(null); setFallbackText(false);
+    if (!email && !text) return setProblem("Pick email, text, or both.");
+    if (!hasSupabase || !supabase) { // demo: nothing can really be sent
+      return toast("Demo mode: nothing is sent. Use Other ways to send below.");
+    }
+    setBusy(true);
+    try {
+      let pdf_base64: string | undefined;
+      if (pdf && email) pdf_base64 = (await makePdf()).output("datauristring").split(",")[1];
+      const { data, error } = await supabase.functions.invoke("send-document", { body: { kind, to: toAddr, phone, link: portalLink, subject, doc_title: docTitle, amount, valid_until: validUntil, channels: { email, text }, pdf_base64, filename } });
+      if (error) { let m = error.message; try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
+      const em = data?.email as Result | undefined, tx = data?.text as Result | undefined;
+      const problems: string[] = [];
+      if (em && !em.sent) problems.push(`Email did not send: ${em.reason ?? "unknown error"}`);
+      if (tx && !tx.sent) { problems.push(`Text did not send: ${tx.reason ?? "unknown error"}`); setFallbackText(true); }
+      const ok = [em, tx].some((r) => r?.sent);
+      if (ok) {
+        toast(em?.sent && tx?.sent ? `${noun[0].toUpperCase() + noun.slice(1)} emailed and texted` : em?.sent ? `${noun[0].toUpperCase() + noun.slice(1)} emailed` : `${noun[0].toUpperCase() + noun.slice(1)} texted`);
+        if (onConfirm) await onConfirm();
+      }
+      if (problems.length) setProblem(problems.join(" "));
+      else if (ok) onClose();
+    } catch (e) {
+      setProblem(e instanceof Error ? e.message : "Could not send");
+    } finally { setBusy(false); }
+  }
+
+  const enc = encodeURIComponent;
+  const gmail = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(toAddr ?? "")}&su=${enc(subject)}&body=${enc(withLink)}`;
+  const outlook = `https://outlook.office.com/mail/deeplink/compose?to=${enc(toAddr ?? "")}&subject=${enc(subject)}&body=${enc(withLink)}`;
+  const mailto = `mailto:${toAddr ?? ""}?subject=${enc(subject)}&body=${enc(withLink)}`;
 
   return (
     <Sheet title={title} onClose={onClose}>
       <div className="stack">
-        <div className="small muted">Sending to <b>{toAddr || "no email on file"}</b> · <b>{phone || "no phone on file"}</b>. Pick how you want it to arrive.</div>
-        <Option icon={ico.pdf} title="PDF attached" desc="The invoice as a PDF file, looking exactly like your chosen layout." onEmail={() => void go("email")} onText={() => void go("text")} />
-        {portalLink && <Option icon={ico.link} title={linkTitle} tag="Easiest" desc={linkDesc} onEmail={() => plain("email", withLink)} onText={() => plain("text", withLink)} extra={<button className="btn block" onClick={async () => { try { await navigator.clipboard.writeText(portalLink); toast("Link copied"); } catch { toast("Copy failed. Select the link and copy it."); } }}>Copy link</button>} />}
-        <Option icon={ico.msg} title="Message only" desc="Just the short note with the amount. No PDF and no link." onEmail={() => plain("email", body)} onText={() => plain("text", body)} />
-        {note ? <div className="notice">{note}</div> : <div className="small muted">On a phone the PDF attaches automatically. On a computer it downloads and your email app opens so you can attach it.</div>}
-        <div className="row wrap" style={{ justifyContent: "space-between" }}>
-          <button className="btn sm" onClick={async () => void savePdf(await makePdf(), filename)}>Just download the PDF</button>
-        </div>
-        {onConfirm && (
-          <button className="btn good block" disabled={busy} onClick={async () => { setBusy(true); try { await onConfirm(); toast("Marked as sent"); onClose(); } finally { setBusy(false); } }}>
-            {confirmLabel ?? "Mark as sent"}
-          </button>
-        )}
+        <div className="small muted">Your customer gets a link to the {noun} online{kind === "quote" ? ", where they can accept it and pick a time" : ", where they can pay by card"}.</div>
+
+        <label className={`send-pick${email ? " on" : ""}`}>
+          <input type="checkbox" checked={email} disabled={!toAddr} onChange={(e) => setEmail(e.target.checked)} />
+          <span><b>Email</b><br /><span className="small muted">{toAddr || "No email on file for this customer"}</span></span>
+        </label>
+        <label className={`send-pick${text ? " on" : ""}`}>
+          <input type="checkbox" checked={text} disabled={!phone} onChange={(e) => setText(e.target.checked)} />
+          <span><b>Text message</b><br /><span className="small muted">{phone || "No phone on file for this customer"}</span></span>
+        </label>
+        {email && <label className="check-row"><input type="checkbox" checked={pdf} onChange={(e) => setPdf(e.target.checked)} /> Also attach a PDF copy to the email</label>}
+
+        {problem && <div className="error-banner" style={{ margin: 0 }}>{problem}</div>}
+        {fallbackText && <a className="btn block" href={`sms:${phone ?? ""}?&body=${enc(smsBody)}`}>Open my Messages app instead</a>}
+        <button className="btn primary block" disabled={busy || (!email && !text)} onClick={() => void send()}>{busy ? "Sending..." : `Send ${noun}`}</button>
+
+        <details className="send-more">
+          <summary>Other ways to send</summary>
+          <div className="stack" style={{ marginTop: 10 }}>
+            <button className="btn block" onClick={async () => { try { await navigator.clipboard.writeText(portalLink ?? ""); toast("Link copied"); } catch { toast("Copy failed. Select the link and copy it."); } }}>Copy link</button>
+            <div className="grid2 stack-sm">
+              <a className="btn" href={gmail} target="_blank" rel="noreferrer">Write in Gmail</a>
+              <a className="btn" href={outlook} target="_blank" rel="noreferrer">Write in Outlook</a>
+            </div>
+            <a className="btn block" href={mailto}>Open my mail app</a>
+            <button className="btn block" onClick={async () => { const r = await sendDoc({ pdf: await makePdf(), filename, channel: "email", to: toAddr, subject, body: withLink }); if (r === "downloaded") toast("PDF saved. Attach it to the message."); }}>Share the PDF</button>
+            <button className="btn block" onClick={async () => void savePdf(await makePdf(), filename)}>Download the PDF</button>
+            {onConfirm && <button className="btn block" onClick={async () => { await onConfirm(); toast("Marked as sent"); onClose(); }}>I sent it another way, mark as sent</button>}
+          </div>
+        </details>
       </div>
     </Sheet>
   );

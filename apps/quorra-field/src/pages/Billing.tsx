@@ -24,20 +24,29 @@ export default function Billing() {
   const [busy, setBusy] = useState<string | null>(null);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [changeOpen, setChangeOpen] = useState(false);
-  const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string } | null>(null);
+  const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string; current?: { brand: string; last4: string; exp_month: number; exp_year: number } | null } | null>(null);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
 
   useEffect(() => {
     if (params.get("canceled")) { toast("Your plan is canceled. You keep access until the end of the period you paid for."); setParams({}, { replace: true }); void refresh(); return; }
     if (params.get("subscribed")) { toast("Thanks. Your plan can take a few seconds to show as active."); setParams({}, { replace: true }); const t = [3000, 8000].map((ms) => setTimeout(() => void refresh(), ms)); void refresh(); return () => t.forEach(clearTimeout); }
-    const st = params.get("start");
-    if (st) { const [pl, iv] = st.split(":"); setParams({}, { replace: true }); void openEmbedded("checkout", pl, iv); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const isOwner = me.isOwner;
   const hasPlan = Boolean(sub && !sub.comped && sub.status !== "none");
+  // Straight after sign-up, open the card form for the plan they picked (the link or the saved choice, whichever arrives first).
+  useEffect(() => {
+    let st = params.get("start");
+    if (!st) { try { st = sessionStorage.getItem("qd_start"); } catch { st = null; } }
+    if (!st || loading || !isOwner || hasPlan) return;
+    try { sessionStorage.removeItem("qd_start"); } catch { /* ignore */ }
+    if (params.get("start")) setParams({}, { replace: true });
+    const [pl, iv] = st.split(":");
+    void openEmbedded("checkout", pl, iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, loading, isOwner, hasPlan]);
   useEffect(() => {
     if (!isOwner || !hasPlan) return;
     if (!hasSupabase || !supabase) { setCharges(DEMO_CHARGES); return; }
@@ -75,7 +84,7 @@ export default function Billing() {
       const { data, error } = await supabase.functions.invoke(kind === "checkout" ? "billing-checkout" : "billing-card", { body: { plan, interval, embedded: true } });
       if (error) throw error;
       if (!data?.client_secret) throw new Error(data?.error ?? "Could not open the payment form");
-      setEmbed({ kind, secret: data.client_secret, pk: data.publishable_key, title: kind === "card" ? "Update your card" : "Start your free trial" });
+      setEmbed({ kind, secret: data.client_secret, pk: data.publishable_key, title: kind === "card" ? "Update your card" : "Start your free trial", current: data.current });
     } catch (e) {
       let m = errMsg(e, "Could not open the payment form");
       try { const ctx = (e as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ }
@@ -206,6 +215,11 @@ export default function Billing() {
       )}
       {embed && (
         <Sheet title={embed.title} onClose={() => setEmbed(null)}>
+          {embed.kind === "card" && (
+            <div className="notice" style={{ marginBottom: 12 }}>
+              {embed.current ? <>Card on file: <b style={{ textTransform: "capitalize" }}>{embed.current.brand} ending {embed.current.last4}</b>, expires {String(embed.current.exp_month).padStart(2, "0")}/{String(embed.current.exp_year).slice(-2)}. Enter a new card below to replace it.</> : "No card on file yet. Enter one below."}
+            </div>
+          )}
           <EmbeddedStripe publishableKey={embed.pk} clientSecret={embed.secret} onComplete={() => void embedDone()} />
         </Sheet>
       )}

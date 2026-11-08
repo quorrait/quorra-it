@@ -189,6 +189,10 @@ export default function InvoiceDetail() {
 
       {sendOpen && (
         <SendSheet
+          kind="invoice"
+          docTitle={`Invoice #${inv.number}`}
+          amount={money(balance)}
+          validUntil={fmtDate(inv.due_at)}
           title="Send invoice"
           filename={`Invoice-${inv.number}.pdf`}
           makePdf={makePdf}
@@ -198,7 +202,6 @@ export default function InvoiceDetail() {
           subject={subject}
           body={body}
           onConfirm={inv.status === "draft" ? () => setStatus("sent", "Invoice sent") : undefined}
-          confirmLabel="I sent it, mark as sent"
           onClose={() => setSendOpen(false)}
         />
       )}

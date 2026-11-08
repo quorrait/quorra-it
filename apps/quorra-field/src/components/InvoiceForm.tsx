@@ -1,3 +1,4 @@
+import { FlagBanner, useBlockedGuard } from "./FlagBanner";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
@@ -6,6 +7,7 @@ import type { Estimate, Invoice, LineItem } from "../lib/types";
 import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
+import { defaultTaxRate } from "../lib/stateTax";
 import PriceGuide from "./PriceGuide";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
@@ -42,7 +44,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
   const [rows, setRows] = useState<Row[]>(
     invoice ? invoice.items.map(toRow) : est0 ? fill(est0) : [{ description: job?.title ?? "", qty: "1", price: "" }],
   );
-  const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? est0?.tax_rate ?? business.tax_rate ?? 0));
+  const [taxRate, setTaxRate] = useState(String(invoice?.tax_rate ?? est0?.tax_rate ?? defaultTaxRate(business)));
   const [due, setDue] = useState(toDateInput(invoice?.due_at ?? addDays(new Date(), 14).toISOString()));
   const [issued, setIssued] = useState(toDateInput(invoice?.issued_at ?? new Date().toISOString()));
   const [notes, setNotes] = useState(invoice?.notes ?? (est0 ? `For estimate #${est0.number}: ${est0.title}` : ""));
@@ -51,8 +53,10 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
   const items: LineItem[] = rowsToItems(rows);
   const totals = invoiceTotals({ items, tax_rate: parseFloat(taxRate) || 0 });
 
+  const guard = useBlockedGuard();
   async function save() {
     if (!cust) return toast("Pick a customer");
+    if (!invoice && !(await guard(customers.find((x) => x.id === cust)))) return;
     if (cust === "__new__" && !newName.trim()) return toast("Add the customer's name");
     if (items.length === 0) return toast("Add at least one line item");
     setBusy(true);
@@ -97,6 +101,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
   return (
     <Sheet title={invoice ? `Edit invoice #${invoice.number}` : "New invoice"} onClose={onClose}>
       <div className="stack">
+        <FlagBanner c={customers.find((x) => x.id === cust)} />
         <Field label="Customer">
           <select className="select" value={cust} onChange={(e) => {
             setCust(e.target.value);

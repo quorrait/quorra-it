@@ -59,6 +59,38 @@ function CustomerForm({ customer, onClose }: { customer?: Customer; onClose(): v
   );
 }
 
+function FlagSheet({ customer, onClose }: { customer: Customer; onClose(): void }) {
+  const { store, refresh } = useData();
+  const toast = useToast();
+  const [flag, setFlag] = useState<string>(customer.flag || "blocked");
+  const [note, setNote] = useState(customer.flag_note ?? "");
+  const [busy, setBusy] = useState(false);
+  async function save(clear: boolean) {
+    if (!clear && !note.trim()) return toast("Add a note about what the problem was");
+    setBusy(true);
+    try {
+      await store.saveCustomer({ ...customer, flag: clear ? "" : (flag as "caution" | "blocked"), flag_note: clear ? "" : note.trim() });
+      await refresh(); toast(clear ? "Flag removed" : flag === "blocked" ? "Customer blacklisted" : "Customer flagged"); onClose();
+    } catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); }
+  }
+  return (
+    <Sheet title={`Flag ${customer.name}`} onClose={onClose}>
+      <div className="stack">
+        <Field label="Status">
+          <select className="select" value={flag} onChange={(e) => setFlag(e.target.value)}>
+            <option value="caution">Caution (be careful)</option>
+            <option value="blocked">Blacklist (do not serve)</option>
+          </select>
+        </Field>
+        <Field label="What was the problem? (required)"><textarea className="textarea" rows={4} value={note} onChange={(e) => setNote(e.target.value)} placeholder="Example: Bounced a check for invoice #1042 and was rude to the tech." /></Field>
+        <div className="small muted">You will see this note any time someone adds a job, estimate or invoice for this customer, and when they send a new request through your website.</div>
+        <button className="btn primary block" disabled={busy} onClick={() => void save(false)}>{flag === "blocked" ? "Blacklist customer" : "Flag customer"}</button>
+        {customer.flag && <button className="btn block" disabled={busy} onClick={() => void save(true)}>Remove flag</button>}
+      </div>
+    </Sheet>
+  );
+}
+
 export default function Customers() {
   const toast = useToast();
   const { loading, customers, jobs, invoices, payments, store, refresh, me } = useData();
@@ -69,6 +101,7 @@ export default function Customers() {
   const [editing, setEditing] = useState<Customer | "new" | null>(null);
   const [scheduling, setScheduling] = useState<Customer | null>(null);
   const [open, setOpen] = useState<Customer | null>(null);
+  const [flagging, setFlagging] = useState<Customer | null>(null);
 
   const rows = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -142,6 +175,7 @@ export default function Customers() {
               <button className="btn grow" onClick={() => { setEditing(open); setOpen(null); }}>Edit</button>
               <button className="btn grow" onClick={() => { setOpen(null); nav("/invoices"); }}>Invoices</button>
             </div>
+            <button className="btn block" onClick={() => { setFlagging(open); setOpen(null); }}>{open.flag ? "Change flag or blacklist" : "Flag or blacklist customer"}</button>
             {isManager(me.role) && (
               <button className="btn danger block" onClick={async () => {
                 const n = jobs.filter((j) => j.customer_id === open.id).length, inv = invoices.filter((i) => i.customer_id === open.id).length;
@@ -152,6 +186,7 @@ export default function Customers() {
           </div>
         </Sheet>
       )}
+      {flagging && <FlagSheet customer={flagging} onClose={() => setFlagging(null)} />}
       {editing && <CustomerForm customer={editing === "new" ? undefined : editing} onClose={() => setEditing(null)} />}
       {scheduling && <JobForm defaultCustomer={scheduling.id} onClose={() => setScheduling(null)} onSaved={(j) => nav(`/jobs/${j.id}`)} />}
     </div>

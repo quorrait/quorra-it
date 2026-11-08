@@ -21,6 +21,15 @@ handler(async (req) => {
     if (sub.stripe_subscription_id) await stripe.subscriptions.update(sub.stripe_subscription_id, { default_payment_method: id });
     return json({ ok: true });
   }
+  // The card currently on file, so the owner can see what they are replacing.
+  let current: { brand: string; last4: string; exp_month: number; exp_year: number } | null = null;
+  try {
+    const cust = await stripe.customers.retrieve(sub.stripe_customer_id) as Stripe.Customer;
+    let pmId = cust.invoice_settings?.default_payment_method as string | null;
+    if (!pmId && sub.stripe_subscription_id) { const s = await stripe.subscriptions.retrieve(sub.stripe_subscription_id); pmId = s.default_payment_method as string | null; }
+    const pm = pmId ? await stripe.paymentMethods.retrieve(pmId) : (await stripe.paymentMethods.list({ customer: sub.stripe_customer_id, type: "card", limit: 1 })).data[0];
+    if (pm?.card) current = { brand: pm.card.brand, last4: pm.card.last4, exp_month: pm.card.exp_month, exp_year: pm.card.exp_year };
+  } catch { /* showing the card is a convenience */ }
   const session = await stripe.checkout.sessions.create({
     mode: "setup",
     currency: "usd",
@@ -29,5 +38,5 @@ handler(async (req) => {
     redirect_on_completion: "if_required",
     payment_method_types: ["card"],
   });
-  return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY") });
+  return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY"), current });
 });

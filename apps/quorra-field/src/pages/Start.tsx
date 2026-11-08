@@ -33,6 +33,7 @@ export default function Start() {
       const r = await auth.signUp(email, password, biz.trim());
       if (r.needsConfirm) { setInfo("Check your email to confirm your account, then sign in. You will be asked to start your plan."); return; }
       if (hasSupabase && supabase) {
+        try { sessionStorage.setItem("qd_start", `${plan.id}:${interval}`); } catch { /* ignore */ }
         location.hash = `#/billing?start=${plan.id}:${interval}`; // payment form opens inside the app
       }
     } catch (e2) {

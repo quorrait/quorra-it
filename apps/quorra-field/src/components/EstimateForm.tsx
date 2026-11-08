@@ -1,3 +1,4 @@
+import { FlagBanner, useBlockedGuard } from "./FlagBanner";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { Field, Sheet, useToast } from "./ui";
@@ -7,6 +8,7 @@ import { addDays, fromDateInput, toDateInput } from "../lib/dates";
 import { invoiceTotals, money } from "../lib/money";
 import TemplatePicker from "./TemplatePicker";
 import PriceGuide from "./PriceGuide";
+import { defaultTaxRate } from "../lib/stateTax";
 import DurationField from "./DurationField";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
 
@@ -24,7 +26,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
   const [cust, setCust] = useState(estimate?.customer_id ?? customerId ?? customers[0]?.id ?? "");
   const [title, setTitle] = useState(estimate?.title ?? defaultTitle ?? "");
   const [rows, setRows] = useState<Row[]>(estimate ? estimate.items.map(toRow) : [{ description: "", qty: "1", price: "" }]);
-  const [taxRate, setTaxRate] = useState(String(estimate?.tax_rate ?? business.tax_rate ?? 0));
+  const [taxRate, setTaxRate] = useState(String(estimate?.tax_rate ?? defaultTaxRate(business)));
   const [valid, setValid] = useState(toDateInput(estimate?.valid_until ?? addDays(new Date(), 30).toISOString()));
   const [notes, setNotes] = useState(estimate?.notes ?? "");
   const [hours, setHours] = useState(estimate?.duration_min ? String(+(estimate.duration_min / 60).toFixed(4)) : "");
@@ -33,8 +35,10 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
   const items = rowsToItems(rows);
   const totals = invoiceTotals({ items, tax_rate: parseFloat(taxRate) || 0 });
 
+  const guard = useBlockedGuard();
   async function save() {
     if (!cust) return toast("Pick a customer");
+    if (!estimate && !(await guard(customers.find((x) => x.id === cust)))) return;
     if (cust === "__new__" && !newName.trim()) return toast("Add the customer's name");
     if (!title.trim()) return toast("Give the estimate a title");
     if (items.length === 0) return toast("Add at least one line item");
@@ -71,6 +75,7 @@ export default function EstimateForm({ estimate, customerId, title: defaultTitle
   return (
     <Sheet title={estimate ? `Edit estimate #${estimate.number}` : "New estimate"} onClose={onClose}>
       <div className="stack">
+        <FlagBanner c={customers.find((x) => x.id === cust)} />
         {!estimate && (
           <Field label="Customer">
             <select className="select" value={cust} onChange={(e) => setCust(e.target.value)}>

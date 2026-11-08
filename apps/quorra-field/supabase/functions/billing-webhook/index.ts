@@ -4,6 +4,7 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
 
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
           to: inv.customer_email,
           subject: `Receipt for your Quorra Dispatch payment (${amt})`,
           text: `Thanks for your payment of ${amt} to Quorra Dispatch.${link ? `\n\nView or download your receipt: ${link}` : ""}\n\nQuestions? Reply to this email.`,
-          html: `<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#0f172a"><h2 style="color:#EA580C;margin:0 0 12px">Quorra Dispatch</h2><p style="font-size:16px">Thanks for your payment of <b>${amt}</b>.</p>${link ? `<p><a href="${link}" style="background:#EA580C;color:#fff;padding:10px 16px;border-radius:8px;text-decoration:none;display:inline-block">View receipt</a></p>` : ""}<p style="color:#64748b;font-size:13px">Questions? Just reply to this email.</p></div>`,
+          html: emailHtml({ heading: "Thanks for your payment", paragraphs: [`We received your payment of ${amt} for Quorra Dispatch.`], rows: [{ label: "Amount", value: amt }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }], button: link ? { label: "View receipt", url: link } : undefined, fine: "Questions about your bill? Just reply to this email." }),
         });
       }
     } else if (event.type === "invoice.payment_failed") {

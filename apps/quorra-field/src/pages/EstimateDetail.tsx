@@ -150,8 +150,8 @@ export default function EstimateDetail() {
 
       {invOpen && est && <InvoiceForm estimateId={est.id} customerId={est.customer_id} jobId={est.job_id ?? undefined} onClose={() => setInvOpen(false)} onSaved={(i) => nav(`/invoices/${i.id}`)} />}
       {sendOpen && (
-        <SendSheet title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={link || portalPreviewUrl()} linkTitle="Online estimate link" linkDesc="No file. They tap a link that opens just this estimate, where they can accept it and pick a time." to={customer?.email} phone={customer?.phone} subject={subject} body={body}
-          onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} confirmLabel="I sent it, mark as sent" onClose={() => setSendOpen(false)} />
+        <SendSheet kind="quote" title="Send quote" filename={`Estimate-${est.number}.pdf`} makePdf={makePdf} portalLink={link || portalPreviewUrl()} docTitle={est.title} amount={money(totals.total)} validUntil={fmtDate(est.valid_until)} to={customer?.email} phone={customer?.phone} subject={subject} body={body}
+          onConfirm={est.status === "draft" ? () => setStatus("sent", "Quote sent") : undefined} onClose={() => setSendOpen(false)} />
       )}
       {editing && <EstimateForm estimate={est} onClose={() => setEditing(false)} />}
       {scheduling && (

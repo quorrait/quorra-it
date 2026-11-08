@@ -50,7 +50,7 @@ export default function NotificationBell() {
       </button>
       {open && (
         <div className="bell-panel">
-          <div className="row between" style={{ padding: "10px 12px" }}><b>Notifications</b><button className="btn sm" onClick={() => setOpen(false)}>Close</button></div>
+          <div className="row between" style={{ padding: "10px 12px" }}><b>Notifications</b><span className="row" style={{ gap: 6 }}>{list.length > 0 && <button className="btn sm" onClick={async () => { const ids = list.map((n) => n.id); setList([]); known.current = new Set(); const { error } = await supabase!.from("notifications").delete().in("id", ids); if (error) void (async () => { const { data } = await supabase!.from("notifications").select("*").order("created_at", { ascending: false }).limit(30); setList((data as Note[]) ?? []); })(); }}>Clear all</button>}<button className="btn sm" onClick={() => setOpen(false)}>Close</button></span></div>
           {perm === "default" && <div style={{ padding: "0 12px 8px" }}><button className="btn sm primary" onClick={() => void Notification.requestPermission().then(() => setOpen(false))}>Turn on device alerts</button></div>}
           {list.length === 0 && <div className="small muted" style={{ padding: 16 }}>Nothing yet. Bookings and reschedules show up here.</div>}
           {list.map((n) => (

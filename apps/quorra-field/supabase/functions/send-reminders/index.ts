@@ -4,6 +4,7 @@
 import { admin, handler, HttpError, json } from "../_shared/util.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { normHours } from "../_shared/schedule.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
 
 handler(async (req) => {
   const secret = Deno.env.get("CRON_SECRET");
@@ -35,7 +36,8 @@ handler(async (req) => {
       const first = (cust?.name ?? "").split(" ")[0] || "there";
       const msg = `Reminder: ${biz?.name ?? "We"} will be at ${j.address || "your address"} for ${j.title} on ${when}.${biz?.phone ? ` Questions? Call ${biz.phone}.` : ""}`;
       if (cust?.phone) await sendSms({ to: cust.phone, body: `Hi ${first}. ${msg}` });
-      if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Reminder: ${j.title} ${when}`, text: `Hi ${first},\n\n${msg}` });
+      if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Reminder: ${j.title} ${when}`, text: `Hi ${first},\n\n${msg}`,
+        html: emailHtml({ brand: biz?.name || "Your contractor", heading: "Your visit is coming up", paragraphs: [`Hi ${first}, a quick reminder about your upcoming service.`], rows: [{ label: "What", value: j.title }, { label: "When", value: when }, ...(j.address ? [{ label: "Where", value: j.address }] : []), ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])] }) });
       await db.from("jobs").update({ customer_reminded_at: new Date().toISOString() }).eq("id", j.id);
     }
     if (dueTeam) {
@@ -65,5 +67,24 @@ handler(async (req) => {
     await db.from("service_plans").update({ reminder_sent_at: new Date().toISOString() }).eq("id", p.id);
     plans++;
   }
-  return json({ ok: true, visits, plans });
+
+  // Quotes accepted but never scheduled: nudge the customer after 1 day, then 3 days (twice at most).
+  let nudges = 0;
+  const { data: waiting } = await db.from("estimates").select("id,owner_id,customer_id,title,accepted_at,schedule_nudges,quote_link").eq("status", "approved").is("job_id", null).not("accepted_at", "is", null).not("quote_link", "is", null).lt("schedule_nudges", 2);
+  for (const e of waiting ?? []) {
+    const waitedH = (now - new Date(e.accepted_at as string).getTime()) / 3600_000;
+    if (waitedH < (e.schedule_nudges === 0 ? 24 : 72)) continue;
+    const [{ data: biz }, { data: cust }] = await Promise.all([
+      db.from("business").select("name,phone,email").eq("owner_id", e.owner_id).maybeSingle(),
+      db.from("customers").select("name,phone,email").eq("id", e.customer_id).maybeSingle(),
+    ]);
+    const first = (cust?.name ?? "").split(" ")[0] || "there";
+    const msg = `Hi ${first}, you accepted the quote for ${e.title} with ${biz?.name ?? "us"}. Pick a time that works for you: ${e.quote_link}`;
+    if (cust?.phone) await sendSms({ to: cust.phone, body: msg });
+    if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Pick a time for your ${e.title}`, text: msg,
+      html: emailHtml({ brand: biz?.name || "Your contractor", heading: "Pick a time for your visit", paragraphs: [`Hi ${first}, thanks for accepting the quote for ${e.title}. Choose a day and time that works for you.`], button: { label: "Choose my time", url: e.quote_link as string }, fine: biz?.phone ? `Prefer to call? ${biz.phone}` : undefined }) });
+    await db.from("estimates").update({ schedule_nudges: (e.schedule_nudges ?? 0) + 1 }).eq("id", e.id);
+    nudges++;
+  }
+  return json({ ok: true, visits, plans, nudges });
 });

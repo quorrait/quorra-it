@@ -1,3 +1,4 @@
+import { FlagBanner } from "../components/FlagBanner";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -40,9 +41,13 @@ function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): voi
     return saved;
   }
 
+  const { customers } = useData();
+  const norm = (s: string) => s.replace(/\D/g, "").slice(-10);
+  const hit = customers.find((c) => c.flag && ((f.phone && norm(f.phone).length >= 7 && norm(c.phone) === norm(f.phone)) || (f.email && c.email.toLowerCase() === f.email.toLowerCase())));
   return (
     <Sheet title={lead ? lead.name : "New lead"} onClose={onClose}>
       <div className="stack">
+        <FlagBanner c={hit} />
         <Field label="Name"><input className="input" value={f.name} onChange={set("name")} /></Field>
         <div className="grid2 stack-sm">
           <Field label="Phone"><input className="input" type="tel" value={f.phone} onChange={set("phone")} /></Field>
@@ -126,7 +131,7 @@ export default function Leads() {
       case "new": return <>{btn("Mark contacted", () => void move(l, "contacted"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "contacted": return <>{btn("Send quote →", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move({ ...l, stage: "contacted" }, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
-      case "quote_sent": return <>{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
+      case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good">Accepted, waiting for them to pick a time</span>}{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
       default: return null;
     }
   };

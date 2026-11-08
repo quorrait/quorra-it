@@ -4,6 +4,7 @@ import { admin, handler, HttpError, json } from "../_shared/util.ts";
 import { availableSlots, normHours } from "../_shared/schedule.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -30,7 +31,12 @@ handler(async (req) => {
     if (est.status === "approved") return json({ ok: true, status: "approved" });
     if (est.status !== "sent") throw new HttpError(409, "This quote is not ready yet");
     await db.from("estimates").update({ status: "approved" }).eq("id", est.id);
-    if (lead) await db.from("leads").update({ stage: "work_order" }).eq("id", lead.id);
+    // The lead stays in the pipeline until a time is actually booked; then it becomes a work order.
+    const back = typeof b.return_to === "string" && b.return_to.startsWith("https://") ? b.return_to.split("?")[0] : "";
+    const quoteLink = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(typeof b.api === "string" ? b.api : "")}` : null;
+    await db.from("estimates").update({ accepted_at: new Date().toISOString(), schedule_nudges: 0, quote_link: quoteLink }).eq("id", est.id); // needs SQL 0025
+    const { data: c2 } = await db.from("customers").select("name").eq("id", est.customer_id).maybeSingle();
+    await notifyAccount(db, est.owner_id, { title: `Quote accepted: ${est.title}`, body: `${c2?.name ?? "A customer"} accepted the quote. They have not picked a time yet; we will remind them.`, link: `/estimates/${est.id}` });
     return json({ ok: true, status: "approved" });
   }
 
@@ -72,7 +78,10 @@ handler(async (req) => {
   const first = (cust?.name ?? "").split(" ")[0] || "there";
   const msg = `Hi ${first}, your ${est.title} with ${biz?.name ?? "us"} is scheduled for ${when}.${link ? ` Need to change it? Reschedule here: ${link}` : ""}`;
   const texted = cust?.phone ? await sendSms({ to: cust.phone, body: msg }) : { sent: false, reason: "No phone number" };
-  if (cust?.email) await sendEmail({ to: cust.email, subject: `Your visit is scheduled: ${when}`, text: msg });
+  if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Your visit is scheduled: ${when}`, text: msg,
+    html: emailHtml({ brand: biz?.name || "Your contractor", heading: oldJob ? "Your visit was rescheduled" : "You're on the schedule", paragraphs: [`Hi ${first}, your ${est.title} is booked.`],
+      rows: [{ label: "When", value: when }, ...(cust?.address ? [{ label: "Where", value: cust.address }] : []), ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])],
+      button: link ? { label: "Change my time", url: link } : undefined, fine: "You will get a reminder before your visit." }) });
   await notifyAccount(db, est.owner_id, { title: `${oldJob ? "Rescheduled" : "Booked"}: ${est.title} for ${cust?.name ?? "customer"}`, body: `${cust?.name ?? "A customer"} ${oldJob ? "moved their visit to" : "booked"} ${when}.`, link: `/jobs/${jobId}` });
   return json({ ok: true, status: "approved", scheduled_for: start.toISOString(), texted: texted.sent });
 });
