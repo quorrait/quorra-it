@@ -163,6 +163,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [requireSub, setRequireSub] = useState(false);
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
+  const [myRole, setMyRole] = useState<string | null>(null);
   const [isStaff, setIsStaff] = useState(false);
 
   const refresh = useCallback(async () => {
@@ -175,11 +176,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
           rememberInvite(null);
           if (err) setError(err);
         }
-        const [mem, sub, set] = await Promise.all([
+        const [mem, sub, set, rol] = await Promise.all([
           supabase.from("account_members").select("team_member_id").maybeSingle(),
           supabase.from("subscriptions").select("*").maybeSingle(),
           supabase.from("platform_settings").select("require_subscription").maybeSingle(),
+          supabase.rpc("my_role"),
         ]);
+        setMyRole(typeof rol.data === "string" ? rol.data : null);
         setIsStaff(Boolean(mem.data));
         setMyMemberId((mem.data?.team_member_id as string | null | undefined) ?? null);
         setSubscription((sub.data as Subscription | null) ?? null);
@@ -242,7 +245,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     ? team.find((t) => t.id === myMemberId) ?? team.find((t) => t.active && t.email.toLowerCase() === (email ?? "").toLowerCase()) ?? (isStaff ? undefined : team.find((t) => t.role === "Owner"))
     : team.find((t) => t.id === asId) ?? team.find((t) => t.role === "Owner");
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
-  const role = (meMember?.role ?? (isStaff ? "Technician" : "Owner")) as Role;
+  const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
   const me = { id: meMember?.id ?? null, name: meMember?.name ?? fromEmail, email: email ?? "", role, isOwner: !isStaff && (hasSupabase ? true : role === "Owner") };
   const subOk = !hasSupabase || !requireSub || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
   const locked = !subOk;

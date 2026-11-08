@@ -43,7 +43,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 ];
 
 export default function Layout() {
-  const { store, business, error, can, me, viewAs, team, leads, locked } = useData();
+  const { store, business, error, can, me, viewAs, team, leads, locked, loading } = useData();
   const { signOut } = useAuth();
   const nav = useNavigate();
   const ask = useConfirm();
@@ -69,7 +69,8 @@ export default function Layout() {
     return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("beforeunload", onUnload); };
   }, [ask, nav]);
   const newLeads = leads.filter((l) => l.stage === "new").length;
-  const mine = (l: NavItem) => (locked ? l.f === "billing" : !l.f || can(l.f));
+  // Wait for the role to load before showing any menu, so the wrong menu never flashes.
+  const mine = (l: NavItem) => (loading ? false : locked ? l.f === "billing" : !l.f || can(l.f));
   return (
     <div className="shell">
       <aside className="side">
