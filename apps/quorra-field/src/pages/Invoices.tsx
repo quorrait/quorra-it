@@ -1,3 +1,4 @@
+import WorkTabs from "../components/WorkTabs";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useData } from "../lib/app";
@@ -34,6 +35,7 @@ export default function Invoices() {
 
   return (
     <div className="stack">
+      <WorkTabs />
       <div className="page-head">
         <div>
           <h1 className="page-title">Invoices</h1>

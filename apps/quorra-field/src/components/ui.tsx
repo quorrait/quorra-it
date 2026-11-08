@@ -18,6 +18,7 @@ export const Icon = {
   phone: <svg viewBox="0 0 24 24" {...P}><path d="M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2z" /></svg>,
   pin: <svg viewBox="0 0 24 24" {...P}><path d="M12 21s7-6.2 7-11.5a7 7 0 10-14 0C5 14.800 12 21 12 21z" /><circle cx="12" cy="9.5" r="2.5" /></svg>,
   check: <svg viewBox="0 0 24 24" {...P}><path d="M5 12.5l4.5 4.5L19 7.500" /></svg>,
+  plug: <svg viewBox="0 0 24 24" {...P}><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4" /></svg>,
   send: <svg viewBox="0 0 24 24" {...P}><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" /></svg>,
 };
 

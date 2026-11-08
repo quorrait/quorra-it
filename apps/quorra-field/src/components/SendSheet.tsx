@@ -26,7 +26,7 @@ export default function SendSheet({ kind = "quote", title, filename, makePdf, to
 
   async function sent(what: string) {
     try { if (onConfirm) await onConfirm(); } catch { /* the message already went */ }
-    toast(what);
+    toast(onConfirm ? what : what.replace(". Marked as sent", ""));
     onClose();
   }
 

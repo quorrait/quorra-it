@@ -132,7 +132,7 @@ export default function Leads() {
       case "new": return <>{btn("Mark contacted", () => void move(l, "contacted"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "contacted": return <>{btn("Send quote →", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move({ ...l, stage: "contacted" }, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
-      case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good">Accepted, waiting for them to pick a time</span>}{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
+      case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good" style={{ whiteSpace: "normal", textAlign: "left", display: "block", lineHeight: 1.3 }}>Accepted, waiting for them to pick a time</span>}{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
       default: return null;
     }
   };

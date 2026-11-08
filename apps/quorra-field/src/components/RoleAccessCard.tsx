@@ -28,7 +28,7 @@ export default function RoleAccessCard() {
   return (
     <div className="card stack">
       <div className="card-title" style={{ margin: 0 }}>Who can see what</div>
-      <div className="small muted">Pick a role, then switch screens on or off. People with that role see the change next time the app loads. Billing is always owner-only.</div>
+      <div className="small muted">Choose what each kind of team member can open. For example, turn off "Money and totals" for Technicians so they never see prices. Pick a role below, then switch screens on or off. Billing is always owner-only.</div>
       <div className="chips">{ROLES.map((r) => <button key={r} className={`chip${role === r ? " on" : ""}`} onClick={() => setRole(r)}>{r}</button>)}</div>
       {EDITABLE.map((f) => (
         <label key={f} className="check-row" style={{ justifyContent: "space-between" }}>

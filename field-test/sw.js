@@ -1,5 +1,5 @@
 // Minimal offline shell: cache the app shell, always go to the network first for everything else.
-const CACHE = "quorra-dispatch-v9";
+const CACHE = "quorra-dispatch-v10";
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(["./", "manifest.webmanifest", "logo.png"])));
   self.skipWaiting();
@@ -11,7 +11,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then((res) => {
         const copy = res.clone();
         caches.open(CACHE).then((c) => c.put(req, copy)).catch(() => {});

@@ -6,10 +6,9 @@ import { HoursCard, NotifyCard, VendorsCard } from "../components/BusinessSetupC
 import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
 import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth, useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
-import CalendarSync from "../components/CalendarSync";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -35,7 +34,8 @@ export function More() {
           {can("timesheets") && <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>›</Link>}
           {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>}
           {can("import") && <Link to="/import" className="list-item">{Icon.send}<div className="grow title">Import</div>›</Link>}
-          {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings & integrations</div>›</Link>}
+          {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings</div>›</Link>}
+          {can("settings") && <Link to="/integrations" className="list-item">{Icon.plug}<div className="grow title">Integrations</div>›</Link>}
           {can("billing") && <Link to="/billing" className="list-item">{Icon.card}<div className="grow title">Billing</div>›</Link>}
         </div>
       </div>
@@ -66,6 +66,8 @@ function SettingsInner() {
   const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", text_number: "", state: "", address: "", review_url: "", yelp_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
+  const [tab, setTab] = useState<"business" | "documents" | "schedule" | "access" | "account">("business");
+  const nav = useNavigate();
 
 
   async function uploadLogo(file: File) {
@@ -91,6 +93,7 @@ function SettingsInner() {
       void refresh();
       toast(q === "connected" ? "QuickBooks connected" : q ? "QuickBooks connection failed" : s === "done" ? "Back from Stripe. If it still says not connected, give it a minute." : "Stripe setup not finished");
       setParams({}, { replace: true });
+      nav("/integrations", { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -116,8 +119,13 @@ function SettingsInner() {
   return (
     <div className="stack">
       <h1 className="page-title">Settings</h1>
+      <div className="chips" style={{ flexWrap: "wrap" }}>
+        {([["business", "Business"], ["documents", "Documents"], ["schedule", "Schedule and alerts"], ...(hasSupabase && me.isOwner ? [["access", "Access"]] : []), ["account", "Account"]] as [typeof tab, string][]).map(([k, l]) => (
+          <button key={k} className={`chip${tab === k ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => setTab(k)}>{l}</button>
+        ))}
+      </div>
 
-      <div className="card stack">
+      {tab === "business" && <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Business</div>
         <Field label="Logo (shows on printed estimates and invoices)">
           <div className="row">
@@ -133,8 +141,8 @@ function SettingsInner() {
         </div>
         <Field label="Business address (printed on invoices)"><textarea className="textarea" rows={2} value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} placeholder="123 Main St, Roseville, CA 95678" /></Field>
         <div className="grid2 stack-sm">
-          <Field label="Business texting number"><input className="input" type="tel" value={f.text_number} onChange={(e) => setF({ ...f, text_number: e.target.value })} placeholder="Your Quo or business number" />
-            <div className="small muted" style={{ marginTop: 4 }}>Shown on the send screen so you text from this number in your Quo app. Automatic sending from it comes later.</div></Field>
+          <Field label="Business number"><input className="input" type="tel" value={f.text_number} onChange={(e) => setF({ ...f, text_number: e.target.value })} placeholder="(916) 555-0100" />
+            <div className="small muted" style={{ marginTop: 4 }}>The number you text customers from. It shows on the send screen. Sending from it automatically comes later.</div></Field>
           <Field label="Default sales tax %">
             <input className="input" inputMode="decimal" value={f.tax_rate} onChange={(e) => setF({ ...f, tax_rate: e.target.value })} />
             {!(parseFloat(f.tax_rate) > 0) && STATE_TAX[f.state] !== undefined && <div className="small muted" style={{ marginTop: 4 }}>Left at 0, new estimates and invoices use your state's base rate of {STATE_TAX[f.state]}%. Enter your full local rate to override it.</div>}
@@ -150,56 +158,15 @@ function SettingsInner() {
         <div className="small muted" style={{ marginTop: -6 }}>In Google Business Profile, choose "Ask for reviews" and copy the link here.</div>
         <Field label="Yelp review link (optional)"><input className="input" inputMode="url" value={f.yelp_url} onChange={(e) => setF({ ...f, yelp_url: e.target.value })} placeholder="https://www.yelp.com/writeareview/biz/your-business" /></Field>
         <div className="small muted" style={{ marginTop: -6 }}>Open your Yelp business page and copy the "Write a review" link. Both links go out together when you ask for a review.</div>
-      </div>
+      </div>}
 
 
-      <HoursCard />
-      <NotifyCard />
+      {tab === "schedule" && <><HoursCard /><NotifyCard /></>}
+      {tab === "documents" && <><InvoiceLayoutCard /><VendorsCard /><LeadFormCard /></>}
 
-      <VendorsCard />
+      {tab === "access" && hasSupabase && me.isOwner && <RoleAccessCard />}
 
-      <InvoiceLayoutCard />
-
-      <LeadFormCard />
-
-      <details className="card fold">
-        <summary><span className="card-title">Integrations</span><span className="small muted">Stripe, QuickBooks, phone calendar</span></summary>
-        <div className="stack">
-          <details className="sub">
-            <summary><span className="bold">Card payments (Stripe)</span>{business.stripe_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}</summary>
-            <div className="stack">
-        <p className="small muted">Customers pay by card or Apple/Google Pay, and the money goes straight to your own Stripe account.</p>
-        {!business.stripe_connected && (
-          <button className="btn dark" disabled={busy === "stripe"} onClick={() => run("stripe", () => store.stripeConnect())}>{Icon.card} Connect Stripe</button>
-        )}
-            </div>
-          </details>
-          <details className="sub">
-            <summary><span className="bold">QuickBooks Online</span>{business.qbo_connected ? <span className="badge good">Connected</span> : <span className="badge gray">Not connected</span>}</summary>
-            <div className="stack">
-        {business.qbo_connected ? (
-          <>
-            <p className="small muted">Linked to <b>{business.qbo_company ?? "your company"}</b>. Open any sent invoice and tap "Sync to QuickBooks" to send it and its payments over.</p>
-            <button className="btn danger" disabled={busy === "qbo"} onClick={() => run("qbo", () => store.qboDisconnect(), "QuickBooks disconnected")}>Disconnect</button>
-          </>
-        ) : (
-          <>
-            <p className="small muted">Send customers, invoices and payments to QuickBooks so your books stay current without double entry.</p>
-            <button className="btn dark" disabled={busy === "qbo"} onClick={() => run("qbo", () => store.qboConnect(), "QuickBooks connected")}>Connect QuickBooks</button>
-          </>
-        )}
-            </div>
-          </details>
-          <details className="sub">
-            <summary><span className="bold">Phone calendar</span><span className="badge gray">Optional</span></summary>
-            <div className="stack"><CalendarSync /></div>
-          </details>
-        </div>
-      </details>
-
-      {hasSupabase && me.isOwner && <RoleAccessCard />}
-
-      <div className="card stack">
+      {tab === "account" && <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
         {hasSupabase && me.isOwner && <button className="btn block" onClick={async () => { const { data, error } = await supabase!.functions.invoke("send-test-email"); toast(error ? "Could not send. Deploy the send-test-email function." : data?.ok ? `Sample customer emails sent to ${data.to}` : data?.reason || "Could not send"); }}>Email me samples of customer emails</button>}
@@ -208,7 +175,7 @@ function SettingsInner() {
           {hasSupabase && me.isOwner && <button className="btn danger grow" onClick={() => setDelOpen(true)}>Delete my company</button>}
           {store.mode === "demo" && <button className="btn danger grow" onClick={async () => { if (await ask({ title: "Reset all demo data?", message: "Everything you added in the demo will be removed.", confirmLabel: "Reset", danger: true })) resetDemo(); }}>Reset demo data</button>}
         </div>
-      </div>
+      </div>}
       {delOpen && <DeleteCompanySheet onClose={() => setDelOpen(false)} />}
     </div>
   );

@@ -10,6 +10,7 @@ export default function WorkTabs() {
     { to: "/leads", label: "Leads", f: "leads" },
     { to: "/estimates", label: "Estimates", f: "estimates" },
     { to: "/jobs", label: "Jobs", f: "jobs" },
+    { to: "/invoices", label: "Invoices", f: "invoices" },
   ] as const;
   return (
     <div style={{ display: "flex", gap: 10, marginBottom: 14 }}>
