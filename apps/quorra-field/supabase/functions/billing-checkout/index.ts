@@ -30,6 +30,8 @@ handler(async (req) => {
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
     subscription_data: { trial_period_days: 14, metadata: { owner_id: user.id } },
+    // Set the secret STRIPE_AUTOMATIC_TAX to "true" once Stripe Tax is set up (head office address, registrations, SaaS tax code on the products).
+    ...(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { automatic_tax: { enabled: true }, billing_address_collection: "required" as const, customer_update: { address: "auto" as const } } : {}),
   };
   if (body.embedded) {
     // Shown inside our own page; no redirect to Stripe. Needs the publishable key (pk_live_...) as a secret.
