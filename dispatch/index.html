@@ -8,7 +8,7 @@
 <link rel="canonical" href="https://www.quorrait.com/dispatch/">
 <meta property="og:title" content="Quorra Dispatch">
 <meta property="og:description" content="From first call to paid, on one screen. Field service software for contractors.">
-<meta property="og:image" content="https://www.quorrait.com/field/icon-512.png">
+<meta property="og:image" content="https://www.quorrait.com/dispatch/reel-poster.jpg">
 <meta name="theme-color" content="#0B2545">
 <link rel="icon" href="/field/favicon-32.png">
 <link rel="apple-touch-icon" href="/field/apple-touch-icon.png">
@@ -64,13 +64,17 @@ nav .btn { padding: 11px 18px; font-size: 14px; color: #fff; }
 
 /* hero */
 .hero { background: var(--navy); color: #fff; padding: 72px 0 0; overflow: hidden; }
-.hero h1 { font-size: clamp(52px, 9.4vw, 124px); max-width: 11ch; }
+.hero h1 { font-size: clamp(52px, 7vw, 108px); max-width: 9ch; }
 .hero h1 em { font-style: normal; color: var(--orange); }
-.hero-row { display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: end; margin-top: 30px; }
+.hero-row { display: grid; grid-template-columns: .82fr 1.18fr; gap: 56px; align-items: center; margin-top: 8px; }
+.reel { position: relative; border-radius: 20px; overflow: hidden; background: #08182f; box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.1); aspect-ratio: 16 / 9; }
+.reel video { display: block; width: 100%; height: 100%; object-fit: cover; }
+.reel-btn { position: absolute; right: 12px; bottom: 12px; width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(11,37,69,.78); color: #fff; font: 700 15px var(--body); cursor: pointer; backdrop-filter: blur(6px); }
+.reel-btn:hover { background: var(--orange); }
 .hero p.lead { font-size: clamp(18px, 2vw, 21px); color: rgba(255,255,255,.82); max-width: 46ch; }
 .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 26px; }
 .fine { font-size: 14px; color: rgba(255,255,255,.62); margin-top: 14px; }
-@media (max-width: 860px) { .hero-row { grid-template-columns: 1fr; gap: 0; } .hero { padding-top: 48px; } }
+@media (max-width: 860px) { .hero-row { grid-template-columns: 1fr; gap: 36px; } .hero { padding-top: 48px; } }
 
 /* dispatch board */
 .board { margin-top: 56px; background: #fff; color: var(--ink); border-radius: 22px 22px 0 0; padding: 20px 20px 26px; box-shadow: 0 -8px 60px rgba(0,0,0,.25); position: relative; }
@@ -215,15 +219,22 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
 <main>
 <div class="hero">
   <div class="wrap">
-    <h1>Every job, first call to <em>paid.</em></h1>
     <div class="hero-row">
       <div>
-        <p class="lead">Quorra Dispatch is field service software for HVAC, plumbing and electrical crews. Quote, schedule, send the crew and collect payment from one app on your phone.</p>
+        <h1>Every job, first call to <em>paid.</em></h1>
+        <p class="lead" style="margin-top:26px">Quorra Dispatch is field service software for HVAC, plumbing and electrical crews. Quote, schedule, send the crew and collect payment from one app on your phone.</p>
         <div class="cta">
           <a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a>
           <a class="btn ghost" href="/field/">Try the demo</a>
         </div>
         <p class="fine">No charge until the trial ends. Cancel any time in the app.</p>
+      </div>
+      <div class="reel">
+        <video id="reel" muted playsinline loop autoplay preload="auto" poster="reel-poster.jpg" aria-label="A 45 second tour of Quorra Dispatch: leads, quotes, booking, crew, invoices and integrations.">
+          <source src="reel.webm" type='video/webm; codecs="vp9"'>
+          <source src="reel.mp4" type="video/mp4">
+        </video>
+        <button class="reel-btn" id="reel-btn" type="button" aria-label="Pause video">&#10074;&#10074;</button>
       </div>
     </div>
 
@@ -378,6 +389,16 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
     document.querySelectorAll("a[data-plan]").forEach(function (a) { a.href = "/field-test/#/start?plan=" + a.getAttribute("data-plan") + (yearly ? "&interval=year" : ""); });
   }
   m.onclick = function () { set(false); }; y.onclick = function () { set(true); };
+})();
+</script>
+<script>
+(function () {
+  var v = document.getElementById("reel"), b = document.getElementById("reel-btn");
+  if (!v || !b) return;
+  function sync() { var on = !v.paused; b.innerHTML = on ? "&#10074;&#10074;" : "&#9654;"; b.setAttribute("aria-label", on ? "Pause video" : "Play video"); }
+  if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { v.removeAttribute("autoplay"); v.pause(); }
+  b.addEventListener("click", function () { if (v.paused) v.play(); else v.pause(); });
+  v.addEventListener("play", sync); v.addEventListener("pause", sync); sync();
 })();
 </script>
 </body>
