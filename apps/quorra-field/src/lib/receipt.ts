@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { money } from "./money";
 
 /** Our own branded receipt for a Quorra Dispatch subscription payment. Clean white page, one accent color. */
-export function buildReceiptPdf(o: { id: string; date: string; description: string; amount_cents: number; status: string; billedTo: string; email: string }): jsPDF {
+export function buildReceiptPdf(o: { id: string; date: string; description: string; amount_cents: number; status: string; billedTo: string; email: string; logo?: string }): jsPDF {
   const pdf = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612, M = 60, R = W - M;
   const ORANGE: [number, number, number] = [234, 88, 12];
@@ -16,9 +16,8 @@ export function buildReceiptPdf(o: { id: string; date: string; description: stri
   };
 
   pdf.setFillColor(...ORANGE).rect(0, 0, W, 8, "F");
-  pdf.setFillColor(...INK).roundedRect(M, 44, 26, 26, 6, 6, "F");
-  pdf.setFillColor(...ORANGE).roundedRect(M + 7, 51, 12, 12, 3, 3, "F");
-  text("Quorra Dispatch", M + 38, 62, 17, INK, true);
+  try { if (o.logo) pdf.addImage(o.logo, "PNG", M, 40, 32, 32); } catch { /* receipt still works without the logo */ }
+  text("Quorra Dispatch", M + 44, 62, 17, INK, true);
   text("Receipt", R, 62, 17, MUTE, false, "right");
 
   // Amount hero
@@ -53,4 +52,12 @@ export function buildReceiptPdf(o: { id: string; date: string; description: stri
   text("Thank you for choosing Quorra Dispatch. Questions about this receipt? Contact quorrait@gmail.com.", M, 722, 9, MUTE);
   text("quorrait.com/dispatch", M, 738, 9, ORANGE, true);
   return pdf;
+}
+
+/** Fetches our logo as a data URL so it can be placed on the PDF. Returns undefined if it cannot be loaded. */
+export async function loadLogo(): Promise<string | undefined> {
+  try {
+    const b = await (await fetch(`${import.meta.env.BASE_URL}logo-mark-v2.png`)).blob();
+    return await new Promise((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => res(undefined); r.readAsDataURL(b); });
+  } catch { return undefined; }
 }
