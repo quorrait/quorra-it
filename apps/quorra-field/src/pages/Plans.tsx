@@ -7,6 +7,7 @@ export default function Plans() {
   return (
     <div className="pub">
       <div className="pub-wrap">
+        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href="/dispatch/">‹ Back to website</a>}
         <div className="pub-head">
           <img src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt="Quorra Dispatch" />
           <button className="btn" onClick={() => nav("/")}>Sign in</button>

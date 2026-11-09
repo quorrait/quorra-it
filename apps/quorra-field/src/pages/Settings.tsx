@@ -1,3 +1,4 @@
+import { takeTourTab } from "../lib/tourBus";
 import { useHubAdmin } from "../lib/hub";
 import EmailTemplatesCard from "../components/EmailTemplatesCard";
 import RoleAccessCard from "../components/RoleAccessCard";
@@ -72,7 +73,13 @@ function SettingsInner() {
   const [f, setF] = useState({ name: "", phone: "", email: "", tax_rate: "0", text_number: "", state: "", address: "", review_url: "", yelp_url: "" });
   const [busy, setBusy] = useState<string | null>(null);
   const [demoForm, setDemoForm] = useState(false);
-  const [tab, setTab] = useState<"business" | "documents" | "emails" | "schedule" | "access" | "account">("business");
+  type SettingsTab = "business" | "documents" | "emails" | "schedule" | "access" | "account";
+  const [tab, setTab] = useState<SettingsTab>((takeTourTab() as SettingsTab | null) ?? "business");
+  useEffect(() => {
+    const on = (e: Event) => { const t = (e as CustomEvent<string | null>).detail; if (t) setTab(t as SettingsTab); };
+    window.addEventListener("qd-settings-tab", on);
+    return () => window.removeEventListener("qd-settings-tab", on);
+  }, []);
   const nav = useNavigate();
 
 

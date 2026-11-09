@@ -490,11 +490,14 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 @media(min-width:900px){.em-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.em-prev{position:sticky;top:12px}}
 .home-cal .btn.sm{white-space:nowrap}
 
-/* first-time tour card */
-.tour { position: fixed; z-index: 80; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); max-width: 420px; margin-inline: auto; background: #0f1720; color: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 16px 48px rgba(0,0,0,.35); display: grid; gap: 8px; }
+/* first-time tour: dim, ring around the target, and a card */
+.tour-block { position: fixed; inset: 0; z-index: 78; }
+.tour-dim { position: fixed; inset: 0; z-index: 79; background: rgba(15,23,32,.6); pointer-events: none; }
+.tour-ring { position: fixed; z-index: 79; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(15,23,32,.6), 0 0 0 3px var(--brand); pointer-events: none; transition: all .25s ease; }
+.tour { position: fixed; z-index: 80; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); max-width: 380px; margin-inline: auto; background: #0f1720; color: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 16px 48px rgba(0,0,0,.4); display: grid; gap: 8px; }
 .tour p { margin: 0; color: #cfd6e0; font-size: 14px; line-height: 1.45; }
 .tour .btn { color: #0f1720; }
-.tour-dots { display: flex; gap: 5px; }
+.tour-dots { display: flex; gap: 5px; flex-wrap: wrap; }
 .tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: #3a4656; }
 .tour-dots i.on { background: var(--brand); }
-@media (min-width: 900px) { .tour { left: auto; right: 24px; bottom: 24px; margin: 0; width: 380px; } }
+@media (min-width: 900px) { .tour { margin: 0; width: 380px; max-width: 380px; } }
