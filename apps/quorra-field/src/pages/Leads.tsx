@@ -158,7 +158,7 @@ export default function Leads() {
       </div>
 
       <div className="kpi-grid">
-        <div className="kpi"><div className="lbl">Open pipeline</div><div className="val num">{moneyShort(sum(pipeline))}</div><div className="sub">{pipeline.length} leads</div></div>
+        <div className="kpi"><div className="lbl">Open leads</div><div className="val num">{moneyShort(sum(pipeline))}</div><div className="sub">{pipeline.length} leads</div></div>
         <div className="kpi"><div className="lbl">New to follow up</div><div className="val">{leads.filter((l) => l.stage === "new").length}</div><div className="sub">not contacted yet</div></div>
         <div className="kpi"><div className="lbl">Work orders</div><div className="val num">{moneyShort(sum(work))}</div><div className="sub">{work.length} accepted</div></div>
         <div className="kpi"><div className="lbl">Close rate</div><div className="val">{rate === null ? "-" : `${rate}%`}</div><div className="sub">accepted vs declined</div></div>

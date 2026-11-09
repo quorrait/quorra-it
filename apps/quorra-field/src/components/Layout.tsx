@@ -1,3 +1,4 @@
+import { useHubAdmin } from "../lib/hub";
 import Tour from "./Tour";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
@@ -71,6 +72,7 @@ export default function Layout() {
     window.addEventListener("beforeunload", onUnload);
     return () => { document.removeEventListener("click", onClick, true); window.removeEventListener("beforeunload", onUnload); };
   }, [ask, nav]);
+  const hubAdmin = useHubAdmin();
   const newLeads = leads.filter((l) => l.stage === "new").length;
   // Wait for the role to load before showing any menu, so the wrong menu never flashes.
   const mine = (l: NavItem) => (loading ? false : locked ? l.f === "billing" : !l.f || can(l.f));
@@ -93,6 +95,7 @@ export default function Layout() {
             ))}
           </div>
         ))}
+        {hubAdmin && <NavLink to="/hub" className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>{Icon.gear}Hub</NavLink>}
         <div className="side-foot">
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
           <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>

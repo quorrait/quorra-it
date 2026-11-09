@@ -1,3 +1,4 @@
+import { useHubAdmin } from "../lib/hub";
 import EmailTemplatesCard from "../components/EmailTemplatesCard";
 import RoleAccessCard from "../components/RoleAccessCard";
 import { STATE_TAX } from "../lib/stateTax";
@@ -20,6 +21,7 @@ import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
 export function More() {
   const { email, signOut } = useAuth();
   const { can, me, viewAs, team, store } = useData();
+  const hubAdmin = useHubAdmin();
   return (
     <div className="stack">
       <h1 className="page-title">More</h1>
@@ -39,6 +41,8 @@ export function More() {
           {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings</div>›</Link>}
           {can("settings") && <Link to="/integrations" className="list-item">{Icon.plug}<div className="grow title">Integrations</div>›</Link>}
           {can("billing") && <Link to="/billing" className="list-item">{Icon.card}<div className="grow title">Billing</div>›</Link>}
+          <Link to="/support" className="list-item">{Icon.send}<div className="grow title">Support</div>›</Link>
+          {hubAdmin && <Link to="/hub" className="list-item">{Icon.gear}<div className="grow title">Hub</div>›</Link>}
         </div>
       </div>
       <div className="card stack">
