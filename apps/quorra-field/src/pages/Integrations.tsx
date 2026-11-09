@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { qboPending } from "../lib/qboSync";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, useToast } from "../components/ui";
@@ -56,6 +56,12 @@ export default function Integrations() {
           for (const i of todo) { try { await store.qboSyncInvoice(i.id, { action: i.action, hash: i.hash }); ok++; } catch (e) { bad++; why = errMsg(e, ""); } }
           toast(bad ? `Synced ${ok}, ${bad} failed${why ? `: ${why}` : ""}` : `Synced ${ok} invoice${ok === 1 ? "" : "s"} to QuickBooks`);
         })}>{busy === "qbo-sync" ? "Syncing…" : "Sync everything"}</button>
+      </div>
+      <DepositCard />
+      <div className="card stack" style={{ background: "#f8fafc" }}>
+        <div className="bold">Bring in my QuickBooks history</div>
+        <p className="small muted" style={{ margin: 0 }}>Customers, invoices and payments from the last 12 months, so your earnings numbers include them. It runs automatically when you first connect, and nothing in QuickBooks is changed.</p>
+        <button className="btn" disabled={busy === "qbo-import"} onClick={() => run("qbo-import", async () => { const r = await store.qboImport(); toast(`Imported ${r.customers} customers, ${r.invoices} invoices, ${r.payments} payments`); })}>{busy === "qbo-import" ? "Importing…" : "Import now"}</button>
       </div>
       <button className="btn danger" disabled={busy === "qbo"} onClick={() => run("qbo", () => store.qboDisconnect(), "QuickBooks disconnected")}>Disconnect</button>
     </div>
@@ -123,5 +129,31 @@ function RequestSheet({ onClose }: { onClose(): void }) {
         <button className="btn primary block" disabled={busy} onClick={() => void send()}>{busy ? "Sending..." : "Send request"}</button>
       </div>
     </Sheet>
+  );
+}
+
+/** Picks the QuickBooks account that payments from the app are deposited into. */
+function DepositCard() {
+  const { business, store, refresh } = useData();
+  const toast = useToast();
+  const [accts, setAccts] = useState<{ id: string; name: string; type: string }[] | null>(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { void store.qboAccounts().then(setAccts).catch(() => setAccts([])); }, [store]);
+  async function pick(id: string) {
+    const a = accts?.find((x) => x.id === id);
+    setBusy(true);
+    try { await store.saveBusiness({ qbo_deposit_account: a && a.type !== "undeposited" ? a.id : null, qbo_deposit_name: a && a.type !== "undeposited" ? a.name : null }); await refresh(); toast("Saved. New payments will go there"); }
+    catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); }
+  }
+  return (
+    <div className="card stack" style={{ background: "#f8fafc" }}>
+      <div className="bold">Deposit payments into</div>
+      <p className="small muted" style={{ margin: 0 }}>Where QuickBooks records money from payments taken in the app. Pick your bank account to skip the matching step, or leave it on Undeposited Funds and match deposits yourself.</p>
+      <select className="select" disabled={busy || !accts} value={business.qbo_deposit_account ?? accts?.find((a) => a.type === "undeposited")?.id ?? ""} onChange={(e) => void pick(e.target.value)}>
+        {!accts && <option>Loading accounts…</option>}
+        {accts?.length === 0 && <option value="">Undeposited Funds (default)</option>}
+        {accts?.map((a) => <option key={a.id} value={a.id}>{a.name}{a.type === "undeposited" ? " (default)" : ""}</option>)}
+      </select>
+    </div>
   );
 }

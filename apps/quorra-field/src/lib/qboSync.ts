@@ -13,7 +13,7 @@ export function qboPending(invoices: Invoice[], payments: Payment[]): QboJob[] {
     if (i.status === "void") { if (i.qbo_id && i.qbo_hash !== "void") out.push({ id: i.id, action: "void", hash, key: `${i.id}:void` }); continue; }
     if (i.status !== "sent" && i.status !== "paid") continue;
     const unpaid = payments.some((p) => p.invoice_id === i.id && !p.qbo_id);
-    if (!i.qbo_id || i.qbo_hash !== hash || unpaid) out.push({ id: i.id, action: "sync", hash, key: `${i.id}:${hash}:${unpaid}` });
+    if (!i.qbo_id || (i.qbo_hash !== hash && i.qbo_hash !== "imported") || unpaid) out.push({ id: i.id, action: "sync", hash, key: `${i.id}:${hash}:${unpaid}` });
   }
   return out;
 }

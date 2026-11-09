@@ -422,6 +422,8 @@ export function createDemoStore(): Store {
       save();
       await wait(null);
     },
+    async qboAccounts() { return wait([{ id: "1", name: "Undeposited Funds", type: "undeposited" as const }, { id: "2", name: "Checking", type: "bank" as const }]); },
+    async qboImport() { return wait({ customers: 0, invoices: 0, payments: 0 }); },
     async qboSyncInvoice(invoiceId, opts) {
       const inv = db.invoices.find((x) => x.id === invoiceId);
       if (!inv) throw new Error("Invoice not found");

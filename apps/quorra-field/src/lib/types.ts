@@ -11,6 +11,9 @@ export interface Business {
   tax_rate: number; // percent, e.g. 7.75
   qbo_connected: boolean;
   qbo_company: string | null;
+  qbo_deposit_account?: string | null; // QuickBooks account payments are deposited into (blank = Undeposited Funds)
+  qbo_deposit_name?: string | null;
+  qbo_imported_at?: string | null; // when we first pulled their QuickBooks history in
   invoice_next?: number | null; // the next invoice number to use, set by the business
   stripe_connected: boolean;
   logo: string | null; // small data URL shown on printed invoices/estimates

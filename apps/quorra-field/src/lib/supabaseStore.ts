@@ -128,6 +128,8 @@ export function createSupabaseStore(): Store {
       const { error } = await sb().rpc("disconnect_qbo");
       if (error) throw error;
     },
+    qboAccounts: async () => (await invoke<{ accounts: { id: string; name: string; type: "bank" | "undeposited" }[] }>("qbo-accounts", {})).accounts,
+    qboImport: () => invoke<{ customers: number; invoices: number; payments: number }>("qbo-import", {}),
     qboSyncInvoice: (invoiceId, opts) => invoke<{ qbo_id: string }>("qbo-sync-invoice", { invoice_id: invoiceId, action: opts?.action ?? "sync", hash: opts?.hash }),
 
     async stripeConnect() {

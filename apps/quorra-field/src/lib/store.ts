@@ -33,6 +33,8 @@ export interface Store {
   /** Start QuickBooks Online connection (redirects to Intuit in live mode). */
   qboConnect(): Promise<void>;
   qboDisconnect(): Promise<void>;
+  qboAccounts(): Promise<{ id: string; name: string; type: "bank" | "undeposited" }[]>;
+  qboImport(): Promise<{ customers: number; invoices: number; payments: number }>;
   qboSyncInvoice(invoiceId: string, opts?: { action?: "sync" | "void" | "delete"; hash?: string }): Promise<{ qbo_id: string }>;
 
   /** Start Stripe onboarding so card payments land in the contractor's own account. */

@@ -269,6 +269,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const locked = !subOk;
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
 
+  // First time QuickBooks is linked: bring their existing customers, invoices and payments in, so the earnings numbers are right.
+  const qboImporting = useRef(false);
+  useEffect(() => {
+    if (!hasSupabase || !me.isOwner || !business.qbo_connected || business.qbo_imported_at || loading || qboImporting.current) return;
+    qboImporting.current = true;
+    void store.qboImport().then(() => refresh()).catch(() => undefined);
+  }, [business.qbo_connected, business.qbo_imported_at, loading, me.isOwner, store, refresh]);
+
   // QuickBooks connected: send sent and paid invoices (and their payments) over automatically, once per change.
   const qboTried = useRef(new Set<string>());
   useEffect(() => {

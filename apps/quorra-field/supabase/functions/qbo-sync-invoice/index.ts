@@ -125,11 +125,13 @@ handler(async (req) => {
 
   /* 3. Payments not yet sent. */
   const { data: pays } = await db.from("payments").select("*").eq("invoice_id", inv.id).is("qbo_id", null);
+  const { data: biz } = await db.from("business").select("qbo_deposit_account").eq("owner_id", ownerId).maybeSingle();
   for (const p of pays ?? []) {
     const created = await qbo(conn, "POST", "payment", {
       CustomerRef: { value: custId },
       TotalAmt: p.amount_cents / 100,
       TxnDate: dateOnly(p.paid_at),
+      ...(biz?.qbo_deposit_account ? { DepositToAccountRef: { value: biz.qbo_deposit_account } } : {}),
       PrivateNote: `${p.method} payment via app`,
       Line: [{ Amount: p.amount_cents / 100, LinkedTxn: [{ TxnId: qboInvoiceId, TxnType: "Invoice" }] }],
     });
