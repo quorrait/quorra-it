@@ -13,6 +13,7 @@ const ITEMS: Item[] = [
   { id: "cal", name: "Phone calendar", what: "See your jobs in Apple, Google or Outlook calendar.", color: "#4285f4", mark: "31", live: true, slug: "googlecalendar", cat: "Scheduling" },
   { id: "xero", name: "Xero", what: "Accounting sync for Xero users.", color: "#13b5ea", mark: "X", live: false, slug: "xero", cat: "Accounting" },
   { id: "zapier", name: "Zapier", what: "Connect Quorra Dispatch to thousands of other apps.", color: "#ff4a00", mark: "Z", live: false, slug: "zapier", cat: "Automation" },
+  { id: "gads", name: "Google Ads", what: "See which ads bring in leads and paid jobs.", color: "#4285f4", mark: "Ad", live: false, slug: "googleads", cat: "Marketing" },
   { id: "gbp", name: "Google Business Profile", what: "Ask for reviews and answer them from the app.", color: "#4285f4", mark: "G", live: false, slug: "google", cat: "Marketing" },
   { id: "gusto", name: "Gusto", what: "Send timesheets to payroll.", color: "#f45d48", mark: "g", live: false, slug: "gusto", cat: "Payroll" },
   { id: "mailchimp", name: "Mailchimp", what: "Add customers to email campaigns.", color: "#ffe01b", mark: "M", live: false, slug: "mailchimp", cat: "Marketing" },
