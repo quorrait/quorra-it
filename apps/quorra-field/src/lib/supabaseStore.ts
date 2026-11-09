@@ -128,7 +128,7 @@ export function createSupabaseStore(): Store {
       const { error } = await sb().rpc("disconnect_qbo");
       if (error) throw error;
     },
-    qboSyncInvoice: (invoiceId) => invoke<{ qbo_id: string }>("qbo-sync-invoice", { invoice_id: invoiceId }),
+    qboSyncInvoice: (invoiceId, opts) => invoke<{ qbo_id: string }>("qbo-sync-invoice", { invoice_id: invoiceId, action: opts?.action ?? "sync", hash: opts?.hash }),
 
     async stripeConnect() {
       const { url } = await invoke<{ url: string }>("stripe-connect-link", { origin: location.origin });

@@ -49,6 +49,9 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
   const [issued, setIssued] = useState(toDateInput(invoice?.issued_at ?? new Date().toISOString()));
   const [notes, setNotes] = useState(invoice?.notes ?? (est0 ? `For estimate #${est0.number}: ${est0.title}` : ""));
   const [busy, setBusy] = useState(false);
+  const suggested = Math.max(business.invoice_next ?? 0, Math.max(1000, ...invoices.map((i) => i.number)) + 1);
+  const [numStr, setNumStr] = useState(String(invoice?.number ?? suggested));
+  const numTouched = numStr !== String(suggested);
 
   const items: LineItem[] = rowsToItems(rows);
   const totals = invoiceTotals({ items, tax_rate: parseFloat(taxRate) || 0 });
@@ -63,10 +66,13 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
     try {
       let cid = cust;
       if (cid === "__new__") cid = (await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address: job?.address ?? "", notes: "" })).id;
-      const nextNumber = Math.max(1000, ...invoices.map((i) => i.number)) + 1;
+      const nextNumber = Math.max(business.invoice_next ?? 0, Math.max(1000, ...invoices.map((i) => i.number)) + 1);
+      const wanted = Math.floor(Number(numStr));
+      if (!Number.isFinite(wanted) || wanted < 1) { setBusy(false); return toast("Enter a valid invoice number"); }
+      if (invoices.some((i) => i.number === wanted && i.id !== invoice?.id)) { setBusy(false); return toast(`Invoice #${wanted} already exists`); }
       const build = (n: number) => ({
         id: invoice?.id,
-        number: invoice?.number ?? n,
+        number: numTouched || invoice ? wanted : n,
         customer_id: cid,
         job_id: invoice?.job_id ?? job?.id ?? fromEst?.job_id ?? null,
         status: invoice?.status ?? "draft",
@@ -135,6 +141,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
 
         <div className="grid2 stack-sm">
           <Field label="Tax rate %"><input className="input" inputMode="decimal" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} /></Field>
+          <Field label="Invoice number"><input className="input" inputMode="numeric" value={numStr} onChange={(e) => setNumStr(e.target.value.replace(/\D/g, ""))} /></Field>
           <Field label="Invoice date"><input className="input" type="date" value={issued} onChange={(e) => setIssued(e.target.value)} /></Field>
         </div>
         <Field label="Payment due">

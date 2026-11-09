@@ -167,7 +167,11 @@ export default function InvoiceDetail() {
           <button className="btn danger grow" disabled={busy} onClick={async () => {
             if (!(await ask({ title: `Delete invoice #${inv.number}?`, message: myPayments.length ? "This permanently removes the invoice and its recorded payments. It cannot be undone." : "This permanently removes the invoice. It cannot be undone.", confirmLabel: "Delete invoice", danger: true }))) return;
             setBusy(true);
-            try { await store.deleteInvoice(inv.id); await refresh(); toast("Invoice deleted"); nav("/invoices"); }
+            try {
+              let qboFail = false;
+              if (business.qbo_connected && inv.qbo_id) { try { await store.qboSyncInvoice(inv.id, { action: "delete" }); } catch { qboFail = true; } }
+              await store.deleteInvoice(inv.id); await refresh(); toast(qboFail ? "Deleted here. It could not be removed from QuickBooks, so delete it there too." : "Invoice deleted"); nav("/invoices");
+            }
             catch (e) { toast(errMsg(e, "Could not delete the invoice")); }
             finally { setBusy(false); }
           }}>Delete</button>

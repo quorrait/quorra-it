@@ -422,9 +422,10 @@ export function createDemoStore(): Store {
       save();
       await wait(null);
     },
-    async qboSyncInvoice(invoiceId) {
+    async qboSyncInvoice(invoiceId, opts) {
       const inv = db.invoices.find((x) => x.id === invoiceId);
       if (!inv) throw new Error("Invoice not found");
+      if (opts?.action === "void" || opts?.action === "delete") return wait({ qbo_id: inv.qbo_id ?? "" });
       inv.qbo_id = String(8000 + inv.number);
       save();
       return wait({ qbo_id: inv.qbo_id });

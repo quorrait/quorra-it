@@ -5,6 +5,7 @@ import { errMsg } from "../lib/errors";
 import LeadFormCard from "../components/LeadFormCard";
 import { HoursCard, NotifyCard, VendorsCard } from "../components/BusinessSetupCards";
 import InvoiceLayoutCard from "../components/InvoiceLayoutCard";
+import InvoiceNumberCard from "../components/InvoiceNumberCard";
 import { STATE_NAMES } from "../lib/priceGuide";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -164,7 +165,7 @@ function SettingsInner() {
 
       {tab === "schedule" && <><HoursCard /><NotifyCard /></>}
       {tab === "emails" && <EmailTemplatesCard />}
-      {tab === "documents" && <><InvoiceLayoutCard /><VendorsCard /><LeadFormCard /></>}
+      {tab === "documents" && <><InvoiceLayoutCard /><InvoiceNumberCard /><VendorsCard /><LeadFormCard /></>}
 
       {tab === "access" && hasSupabase && me.isOwner && <RoleAccessCard />}
 

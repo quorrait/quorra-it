@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from "react";
+import { qboPending } from "../lib/qboSync";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, useToast } from "../components/ui";
 import { hasSupabase, supabase } from "../lib/supabase";
@@ -49,10 +50,10 @@ export default function Integrations() {
         <div className="bold">Sync everything now</div>
         <p className="small muted" style={{ margin: 0 }}>A backup. Sends every sent or paid invoice and any payments that have not reached QuickBooks yet.</p>
         <button className="btn" disabled={busy === "qbo-sync"} onClick={() => run("qbo-sync", async () => {
-          const todo = invoices.filter((i) => (i.status === "sent" || i.status === "paid") && (!i.qbo_id || payments.some((p) => p.invoice_id === i.id && !p.qbo_id)));
+          const todo = qboPending(invoices, payments);
           if (!todo.length) { toast("Everything is already in QuickBooks"); return; }
           let ok = 0, bad = 0, why = "";
-          for (const i of todo) { try { await store.qboSyncInvoice(i.id); ok++; } catch (e) { bad++; why = errMsg(e, ""); } }
+          for (const i of todo) { try { await store.qboSyncInvoice(i.id, { action: i.action, hash: i.hash }); ok++; } catch (e) { bad++; why = errMsg(e, ""); } }
           toast(bad ? `Synced ${ok}, ${bad} failed${why ? `: ${why}` : ""}` : `Synced ${ok} invoice${ok === 1 ? "" : "s"} to QuickBooks`);
         })}>{busy === "qbo-sync" ? "Syncing…" : "Sync everything"}</button>
       </div>

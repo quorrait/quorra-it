@@ -11,6 +11,7 @@ export interface Business {
   tax_rate: number; // percent, e.g. 7.75
   qbo_connected: boolean;
   qbo_company: string | null;
+  invoice_next?: number | null; // the next invoice number to use, set by the business
   stripe_connected: boolean;
   logo: string | null; // small data URL shown on printed invoices/estimates
   lead_key?: string | null; // public key for the website lead form
@@ -81,6 +82,7 @@ export interface Invoice {
   issued_at: string; // ISO
   due_at: string; // ISO
   qbo_id: string | null;
+  qbo_hash?: string | null; // fingerprint of what QuickBooks last received
   notes?: string; // terms / message printed on the invoice
 }
 

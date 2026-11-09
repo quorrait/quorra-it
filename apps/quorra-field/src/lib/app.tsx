@@ -1,3 +1,4 @@
+import { qboPending } from "./qboSync";
 import { claimSession, watchSession } from "./session";
 import { errMsg } from "./errors";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -272,15 +273,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const qboTried = useRef(new Set<string>());
   useEffect(() => {
     if (!hasSupabase || !me.isOwner || !business.qbo_connected || loading) return;
-    const todo = invoices.filter((i) => i.status === "sent" || i.status === "paid").map((i) => {
-      const paidSum = payments.filter((p) => p.invoice_id === i.id).reduce((a, p) => a + p.amount_cents, 0);
-      return { i, key: `${i.id}:${i.status}:${paidSum}`, need: !i.qbo_id || payments.some((p) => p.invoice_id === i.id && !p.qbo_id) };
-    }).filter((x) => x.need && !qboTried.current.has(x.key));
+    const todo = qboPending(invoices, payments).filter((x) => !qboTried.current.has(x.key));
     if (!todo.length) return;
     todo.forEach((x) => qboTried.current.add(x.key));
     void (async () => {
       let did = false;
-      for (const x of todo.slice(0, 10)) { try { await store.qboSyncInvoice(x.i.id); did = true; } catch { /* the invoice page shows the reason and offers a retry */ } }
+      for (const x of todo.slice(0, 10)) { try { await store.qboSyncInvoice(x.id, { action: x.action, hash: x.hash }); did = true; } catch { /* Integrations has a Sync everything backup */ } }
       if (did) void refresh();
     })();
   }, [invoices, payments, business.qbo_connected, loading, me.isOwner, store, refresh]);
