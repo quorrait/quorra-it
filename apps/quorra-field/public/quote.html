@@ -46,24 +46,6 @@
   .slot { margin:0; padding:11px 4px; background:#fff; border:1px solid var(--line); color:var(--ink); }
   .slot.on { background:var(--ink); color:#fff; }
   details summary { cursor:pointer; color:var(--muted); font-size:13px; margin-top:12px; }
-  /* Phone-style layout: one narrow column, big rounded touch targets, sticky confirm button */
-  body { background:#e5e9f0; }
-  main { max-width:430px; padding:14px 14px 90px; gap:12px; min-height:100vh; }
-  @media (min-width:600px) { main { margin:24px auto; min-height:0; background:#f3f4f6; border-radius:42px; border:10px solid #111827; box-shadow:0 30px 70px rgba(15,23,42,.28); padding:22px 14px 24px; } }
-  .card { border-radius:22px; border:0; box-shadow:0 1px 3px rgba(15,23,42,.08); }
-  button { border-radius:16px; padding:15px; font-size:16px; }
-  .cal { border:0; background:#f8fafc; border-radius:20px; padding:12px; }
-  .cal-g { gap:6px; }
-  .cal-g .d { border-radius:50%; aspect-ratio:1; padding:0; display:flex; align-items:center; justify-content:center; font-size:15px; }
-  .cal-g .d.today { box-shadow:none; }
-  .cal-g .d.today::after { display:none; }
-  .cal-g .d.has { background:#fff; color:var(--ink); border-color:#fdba74; }
-  .cal-h button { border-radius:50%; width:40px; height:40px; }
-  .times { grid-template-columns:repeat(2,1fr); gap:10px; }
-  .slot { border-radius:999px; padding:14px 4px; font-size:16px; background:#fff; }
-  .slot.on { background:var(--brand); border-color:var(--brand); }
-  .cal-g .d.sel { background:var(--brand); border-color:var(--brand); }
-  #book { position:sticky; bottom:12px; box-shadow:0 8px 24px rgba(19,122,60,.35); }
   @media print { body { background:#fff; } .actions { display:none; } }
 </style>
 </head>

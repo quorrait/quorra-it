@@ -33,6 +33,7 @@ export default function Support() {
   return (
     <div className="stack">
       <h1>Support</h1>
+      <div><button type="button" className="btn" onClick={() => window.dispatchEvent(new Event("qd-tour"))}>Take the app tour</button></div>
       {sent ? (
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Message sent</div>
@@ -42,7 +43,7 @@ export default function Support() {
       ) : (
         <form className="card stack" onSubmit={submit}>
           <p className="muted" style={{ margin: 0 }}>Tell us what you need help with{business.name ? `, ${business.name}` : ""}. We reply to your login email.</p>
-          <Field label="What is this about?"><select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>{CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
+          <Field label="Topic"><select className="select" value={category} onChange={(e) => setCategory(e.target.value)}>{CATS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
           <Field label="Subject"><input className="input" value={subject} maxLength={150} onChange={(e) => setSubject(e.target.value)} /></Field>
           <Field label="Message"><textarea className="textarea" rows={6} value={message} maxLength={4000} onChange={(e) => setMessage(e.target.value)} placeholder="What happened, and what did you expect?" /></Field>
           <button className="btn primary block" disabled={busy}>{busy ? "Sending..." : "Send to support"}</button>

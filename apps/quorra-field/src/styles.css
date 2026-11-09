@@ -489,3 +489,12 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .em-grid{display:grid;gap:18px}
 @media(min-width:900px){.em-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.em-prev{position:sticky;top:12px}}
 .home-cal .btn.sm{white-space:nowrap}
+
+/* first-time tour card */
+.tour { position: fixed; z-index: 80; left: 12px; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); max-width: 420px; margin-inline: auto; background: #0f1720; color: #fff; border-radius: 18px; padding: 16px; box-shadow: 0 16px 48px rgba(0,0,0,.35); display: grid; gap: 8px; }
+.tour p { margin: 0; color: #cfd6e0; font-size: 14px; line-height: 1.45; }
+.tour .btn { color: #0f1720; }
+.tour-dots { display: flex; gap: 5px; }
+.tour-dots i { width: 7px; height: 7px; border-radius: 50%; background: #3a4656; }
+.tour-dots i.on { background: var(--brand); }
+@media (min-width: 900px) { .tour { left: auto; right: 24px; bottom: 24px; margin: 0; width: 380px; } }

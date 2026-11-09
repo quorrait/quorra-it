@@ -43,7 +43,14 @@ handler(async (req) => {
   });
   const plan = s.metadata?.plan ?? "essentials";
   const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${s.metadata?.interval === "year" ? "_ANNUAL" : ""}`);
-  const params = { customer, items: [{ price: priceId, quantity: 1 }], trial_period_days: 14, default_payment_method: pm.id, metadata: { owner_id: ownerId } };
+  // Launch offer: 50% off the first 3 monthly payments (the coupon runs 3 months from sign-up, and the trial is the first 14 days). Monthly plans only.
+  let discounts: { coupon: string }[] | undefined;
+  if (s.metadata?.interval !== "year") {
+    const CID = "WELCOME50_3MO";
+    try { await stripe.coupons.retrieve(CID); } catch { await stripe.coupons.create({ id: CID, name: "50% off your first 3 months", percent_off: 50, duration: "repeating", duration_in_months: 3 }).catch(() => {}); }
+    discounts = [{ coupon: CID }];
+  }
+  const params = { customer, items: [{ price: priceId, quantity: 1 }], trial_period_days: 14, default_payment_method: pm.id, metadata: { owner_id: ownerId }, ...(discounts ? { discounts } : {}) };
   let sub: Stripe.Subscription;
   try {
     sub = await stripe.subscriptions.create(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { ...params, automatic_tax: { enabled: true } } : params);

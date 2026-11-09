@@ -74,6 +74,7 @@ export default function Start() {
           <div className="card stack" style={{ gap: 8 }}>
             <div className="row between"><span className="muted">Plan</span><b>{plan.name}</b></div>
             <div className="row between"><span className="muted">Free trial</span><b>{TRIAL_DAYS} days</b></div>
+            {interval !== "year" && <div className="row between"><span className="muted">Launch offer</span><b>50% off your first 3 months</b></div>}
             <div className="row between"><span className="muted">First charge</span><b>{new Date(Date.now() + TRIAL_DAYS * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</b></div>
             <div className="row between"><span className="muted">Then</span><b>{money(interval === "year" ? annualCents(plan) : plan.price_cents)} per {interval === "year" ? "year" : "month"}</b></div>
             <div className="row between" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 8 }}><b>Due today</b><b style={{ color: "#16a34a" }}>$0.00</b></div>

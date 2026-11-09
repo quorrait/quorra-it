@@ -139,19 +139,21 @@ section { padding: 104px 0; }
 .fl div:last-child { border-bottom: 1px solid var(--line); }
 .fl h3 { font-size: 26px; }
 .fl p { color: var(--mute); }
-.phone { position: sticky; top: 96px; width: 300px; margin-inline: auto; background: var(--navy); border-radius: 40px; padding: 12px; box-shadow: 0 30px 70px rgba(11,37,69,.35); }
-.screen { background: var(--paper); border-radius: 30px; padding: 22px 16px 20px; }
+.phone { position: sticky; top: 96px; width: 290px; margin-inline: auto; background: #0b1424; border-radius: 48px; padding: 10px; box-shadow: 0 30px 70px rgba(11,37,69,.4), inset 0 0 0 2px #26354d; position: sticky; }
+.phone::before { content: ""; position: absolute; top: 18px; left: 50%; transform: translateX(-50%); width: 82px; height: 24px; border-radius: 14px; background: #0b1424; z-index: 2; }
+.screen { background: #fff; border-radius: 40px; padding: 52px 18px 26px; min-height: 560px; display: flex; flex-direction: column; }
+.screen .bar { margin: 20px auto 0; width: 96px; height: 5px; border-radius: 3px; background: #0b1424; opacity: .85; }
 .screen b.h { font: 800 22px var(--display); font-stretch: 78%; display: block; }
 .screen small { color: var(--mute); font-size: 12px; }
 .cal { margin-top: 12px; display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; font-size: 12px; font-weight: 700; }
 .cal i { font-style: normal; color: var(--mute); font-size: 10px; }
-.cal span { padding: 7px 0; border-radius: 8px; color: #B3BECE; font-weight: 600; }
+.cal span { padding: 0; aspect-ratio: 1; display: flex; align-items: center; justify-content: center; border-radius: 50%; color: #B3BECE; font-weight: 600; }
 .cal .a { background: #FFF1E7; color: var(--ink); }
 .cal .s { background: var(--navy); color: #fff; }
-.times { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 12px; }
-.times span { border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 9px 0; text-align: center; font-size: 12px; font-weight: 700; }
+.times { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px; }
+.times span { border: 1px solid var(--line); background: #fff; border-radius: 999px; padding: 11px 0; text-align: center; font-size: 12px; font-weight: 700; }
 .times .s { background: var(--navy); color: #fff; border-color: var(--navy); }
-.screen .ok { margin-top: 12px; background: var(--green); color: #fff; text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 13px; }
+.screen .ok { margin-top: 24px; border-radius: 16px !important; background: var(--green); color: #fff; text-align: center; padding: 11px; border-radius: 10px; font-weight: 700; font-size: 13px; }
 @media (max-width: 960px) { .feat-grid { grid-template-columns: 1fr; gap: 48px; } .phone { position: static; } }
 @media (max-width: 640px) { .fl div { grid-template-columns: 1fr; gap: 6px; } }
 
@@ -228,7 +230,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
           <a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a>
           <a class="btn ghost" href="/field/?demo=1">Try the demo</a>
         </div>
-        <p class="fine">No charge until the trial ends. Cancel any time in the app.</p>
+        <p class="fine">14 days free, then 50% off your first 3 months. Cancel any time in the app.</p>
       </div>
       <div class="reel">
         <video id="reel" muted playsinline loop autoplay preload="auto" poster="reel-poster.jpg" aria-label="A 45 second tour of Quorra Dispatch: leads, quotes, booking, crew, invoices and integrations.">
@@ -278,8 +280,9 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
           <span>8</span><span class="a">9</span><span class="a">10</span><span class="a">11</span><span class="s">12</span><span class="a">13</span><span>14</span>
           <span>15</span><span class="a">16</span><span class="a">17</span><span class="a">18</span><span class="a">19</span><span class="a">20</span><span>21</span>
         </div>
-        <div class="times"><span>8:00</span><span class="s">10:00</span><span>12:30</span></div>
+        <div class="times"><span>8:00</span><span class="s">10:00</span><span>12:30</span><span>2:00</span></div>
         <div class="ok">Confirm time</div>
+        <div class="bar"></div>
       </div>
     </div>
   </div>
@@ -288,7 +291,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
 <section id="pricing">
   <div class="wrap">
     <h2 class="title">Pick the size of your crew.</h2>
-    <p class="sub">Every plan starts with 14 days free. Pay yearly and save 10%.</p>
+    <p class="sub">Every plan starts with 14 days free. Pay monthly and get 50% off your first 3 months, or pay yearly and save 10%.</p>
     <div class="toggle" role="group" aria-label="Billing period">
       <button type="button" id="m" aria-pressed="true">Monthly</button>
       <button type="button" id="y" aria-pressed="false">Yearly, save 10%</button>

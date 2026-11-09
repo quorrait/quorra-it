@@ -1,3 +1,4 @@
+import Tour from "./Tour";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Icon, useConfirm } from "./ui";
@@ -109,6 +110,7 @@ export default function Layout() {
       <main className="main">
         {error && <div className="error-banner">{error}</div>}
         <Outlet />
+        <Tour />
         <div className="appfoot"><PublicFooter /></div>
       </main>
 
