@@ -96,6 +96,7 @@ export default function Layout() {
           </div>
         ))}
         {hubAdmin && <NavLink to="/hub" className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>{Icon.gear}Hub</NavLink>}
+        {store.mode === "demo" && <a className="side-link" href="/dispatch/">‹ Back to website</a>}
         <div className="side-foot">
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
           <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>

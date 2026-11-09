@@ -26,6 +26,7 @@ export function More() {
   return (
     <div className="stack">
       <h1 className="page-title">More</h1>
+      {store.mode === "demo" && <a className="btn block" href="/dispatch/">‹ Back to website</a>}
       <div className="card flush">
         <div className="list">
           {can("leads") && <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>}
