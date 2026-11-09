@@ -478,3 +478,10 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .switch i::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
 .switch input:checked + i { background: #ea580c; }
 .switch input:checked + i::after { transform: translateX(18px); }
+
+/* Desktop: the notification bell sits in the sidebar, to the right of the app name */
+@media (min-width: 900px) {
+  .bell-wrap { top: 10px; right: auto; left: 190px; }
+  .bell { width: 36px; height: 36px; box-shadow: none; }
+  .bell-panel { right: auto; left: 0; top: 44px; }
+}

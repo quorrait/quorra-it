@@ -69,9 +69,16 @@ export default function Start() {
         <div className="auth-card stack" style={{ maxWidth: 520 }}>
           <div className="auth-head">
             <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
-            <h1>Add your card</h1>
-            <p className="muted">{plan.name} plan after a {TRIAL_DAYS}-day free trial. Nothing is charged until the trial ends, and your account is created as soon as your card is verified.</p>
+            <h1>Start your {TRIAL_DAYS}-day free trial</h1>
           </div>
+          <div className="card stack" style={{ gap: 8 }}>
+            <div className="row between"><span className="muted">Plan</span><b>{plan.name}</b></div>
+            <div className="row between"><span className="muted">Free trial</span><b>{TRIAL_DAYS} days</b></div>
+            <div className="row between"><span className="muted">First charge</span><b>{new Date(Date.now() + TRIAL_DAYS * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</b></div>
+            <div className="row between"><span className="muted">Then</span><b>{money(interval === "year" ? annualCents(plan) : plan.price_cents)} per {interval === "year" ? "year" : "month"}</b></div>
+            <div className="row between" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 8 }}><b>Due today</b><b style={{ color: "#16a34a" }}>$0.00</b></div>
+          </div>
+          <p className="small muted" style={{ margin: 0 }}>Your card is verified now, but nothing is charged until the trial ends. Cancel any time before then. Your account is created once the card is verified.</p>
           {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
           {finishing ? <div className="notice">Card verified. Setting up your account...</div> : <EmbeddedStripe publishableKey={card.publishable_key} clientSecret={card.client_secret} onComplete={() => void cardDone()} />}
           {!finishing && <button type="button" className="btn block" onClick={() => setCard(null)}>Back</button>}

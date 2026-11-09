@@ -26,11 +26,19 @@ export function buildReceiptPdf(o: { id: string; date: string; description: stri
   pdf.text("DESCRIPTION", M + 12, y + 18); pdf.text("AMOUNT", W - M - 12, y + 18, { align: "right" });
   y += 54;
   value(`${o.description} plan`, M + 12, y); value(money(o.amount_cents), W - M - 12, y); pdf.setLineWidth(0.5); pdf.setDrawColor(229, 231, 235); pdf.line(M, y + 14, W - M, y + 14);
-  y += 44;
-  pdf.setFont("helvetica", "bold"); pdf.setFontSize(12); pdf.setTextColor(...NAVY); pdf.text("Total paid", W - M - 130, y, { align: "right" });
-  pdf.setFontSize(18); pdf.setTextColor(...ORANGE); pdf.text(money(o.amount_cents), W - M - 12, y + 1, { align: "right" });
+  y += 40;
+  // Summary rows share one right edge with the AMOUNT column above.
+  const R = W - M - 12;
+  const row = (lab: string, val: string, yy: number, big = false) => {
+    pdf.setFont("helvetica", big ? "bold" : "normal"); pdf.setFontSize(big ? 13 : 11); pdf.setTextColor(...(big ? NAVY : GRAY));
+    pdf.text(lab, R - 150, yy);
+    pdf.setTextColor(...(big ? ORANGE : NAVY)); pdf.setFont("helvetica", "bold"); pdf.text(val, R, yy, { align: "right" });
+  };
+  row("Subtotal", money(o.amount_cents), y);
+  pdf.setDrawColor(...NAVY); pdf.setLineWidth(1); pdf.line(R - 150, y + 12, R, y + 12);
+  row("Total paid", money(o.amount_cents), y + 34, true);
   pdf.setFont("helvetica", "normal"); pdf.setFontSize(10); pdf.setTextColor(...GRAY);
-  pdf.text(`Status: ${o.status === "paid" ? "Paid" : o.status}`, W - M - 12, y + 22, { align: "right" });
+  pdf.text(`Status: ${o.status === "paid" ? "Paid in full" : o.status}`, R, y + 56, { align: "right" });
 
   pdf.setFontSize(9); pdf.text("Thank you for choosing Quorra Dispatch. Questions about this receipt? Reply to your billing email or contact quorrait@gmail.com.", M, 720);
   pdf.setTextColor(...ORANGE); pdf.text("quorrait.com/dispatch", M, 736);

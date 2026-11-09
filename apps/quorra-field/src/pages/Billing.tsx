@@ -7,7 +7,6 @@ import { useAuth, useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
 import { buildReceiptPdf } from "../lib/receipt";
-import { savePdf } from "../lib/pdf";
 import { money } from "../lib/money";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
@@ -178,7 +177,7 @@ export default function Billing() {
                 <div key={c.id} className="list-item">
                   <div className="grow"><div className="title">{c.description}</div><div className="small muted">{fmtDate(c.date)}</div></div>
                   <div className="right"><b className="num">{money(c.amount_cents)}</b><br /><span className={`badge ${c.status === "paid" ? "good" : "bad"}`}>{c.status === "paid" ? "Paid" : c.status === "unpaid" ? "Unpaid" : c.status}</span></div>
-                  {c.status === "paid" && <button className="btn sm" onClick={() => void savePdf(buildReceiptPdf({ ...c, billedTo: business.name, email: email ?? "" }), `Quorra-Dispatch-receipt-${c.date.slice(0, 10)}.pdf`)}>Receipt</button>}
+                  {c.status === "paid" && <button className="btn sm" onClick={() => { const url = buildReceiptPdf({ ...c, billedTo: business.name, email: email ?? "" }).output("bloburl").toString(); window.open(url, "_blank") || (location.href = url); }}>Receipt</button>}
                 </div>
               ))}
             </div>
