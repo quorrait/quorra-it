@@ -55,6 +55,19 @@ function LockedOwner({ children }: { children: JSX.Element }) {
   return children;
 }
 
+/** Someone already signed in opens the "Start free trial" link: say so, and let them sign out to start a new account. */
+function AlreadySignedIn() {
+  const { email, signOut } = useAuth();
+  return (
+    <div className="auth"><div className="auth-card stack">
+      <h1>You are already signed in</h1>
+      <p className="muted" style={{ margin: 0 }}>You are signed in as {email}. To start a new free trial with a different account, sign out first.</p>
+      <a className="btn primary block" href="#/">Go to my dashboard</a>
+      <button className="btn block" onClick={() => void signOut().then(() => { location.hash = "#/start"; })}>Sign out and start a new trial</button>
+    </div></div>
+  );
+}
+
 function Gate() {
   const { ready, email } = useAuth();
   if (!ready) return <Spinner />;
@@ -75,6 +88,7 @@ function Gate() {
       <Locked>
       <Routes>
         <Route path="contact" element={<Contact />} />
+        <Route path="start" element={<AlreadySignedIn />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<Calendar />} />

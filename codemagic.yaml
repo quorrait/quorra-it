@@ -77,3 +77,30 @@ workflows:
             -Pandroid.injected.signing.key.password="$CM_KEY_PASSWORD"
     artifacts:
       - apps/quorra-field/android/app/build/outputs/bundle/release/*.aab
+
+  android-test:
+    name: Quorra Dispatch Android test APK
+    instance_type: linux_x2
+    max_build_duration: 30
+    working_directory: apps/quorra-field
+    environment:
+      groups: [quorra_app]
+      node: 20
+      java: 17
+    scripts:
+      - name: Install packages
+        script: npm ci
+      - name: Build the web app
+        script: npm run build:app
+      - name: Add the Android project and sync
+        script: |
+          [ -d android ] || npx cap add android
+          npx @capacitor/assets generate --android || true
+          npx cap sync android
+      - name: Build test APK
+        script: |
+          cd android
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          ./gradlew assembleDebug
+    artifacts:
+      - apps/quorra-field/android/app/build/outputs/apk/debug/*.apk
