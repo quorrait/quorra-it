@@ -17,11 +17,13 @@ export default function InvoiceNumberCard() {
     catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); }
   }
   return (
-    <div className="card stack">
-      <div className="card-title" style={{ margin: 0 }}>Invoice numbering</div>
+    <details className="card fold">
+      <summary><span className="card-title">Invoice numbering</span><span className="small muted">Where numbers start</span></summary>
+      <div className="stack">
       <div className="small muted">New invoices count up from the highest number you have. To start higher, for example to continue from your old system or QuickBooks, enter the number you want next. You can also change the number on any invoice when you edit it.</div>
       <Field label="Start the next invoice at"><input className="input" inputMode="numeric" placeholder={`Automatic (#${auto})`} value={v} onChange={(e) => setV(e.target.value.replace(/\D/g, ""))} /></Field>
       <button className="btn primary block" disabled={busy} onClick={() => void save()}>Save</button>
-    </div>
+      </div>
+    </details>
   );
 }

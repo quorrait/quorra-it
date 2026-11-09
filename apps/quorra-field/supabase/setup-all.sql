@@ -856,3 +856,16 @@ delete from public.payments a using public.payments b
     and (a.created_at, a.id) > (b.created_at, b.id);
 create unique index if not exists invoices_owner_qbo_uniq on public.invoices (owner_id, qbo_id) where qbo_id is not null;
 create unique index if not exists payments_owner_qbo_uniq on public.payments (owner_id, qbo_id) where qbo_id is not null;
+-- Support requests sent from inside the app. Written by the support-request function (service role); read by the Hub.
+create table if not exists public.support_tickets (
+  id uuid primary key default gen_random_uuid(),
+  owner_id uuid not null,
+  user_email text,
+  business_name text,
+  category text not null default 'question',
+  subject text not null,
+  message text not null,
+  status text not null default 'open',
+  created_at timestamptz not null default now()
+);
+alter table public.support_tickets enable row level security;

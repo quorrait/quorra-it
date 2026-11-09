@@ -3,11 +3,14 @@ import { useData } from "../lib/app";
 import { Field, useToast } from "./ui";
 import { useRegisterSave } from "../lib/saveAll";
 import { errMsg } from "../lib/errors";
+/** Compares settings ignoring key order (the database reorders JSON keys, which made saves look unsaved). */
+export const stable = (v: unknown): string => JSON.stringify(v, (_k, x) => (x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort(([a], [b]) => (a < b ? -1 : 1))) : x));
 import type { BusinessHours, DayHours, Vendor } from "../lib/types";
 
 export const DEFAULT_DAYS: DayHours[] = [0, 1, 2, 3, 4, 5, 6].map((d) => ({ open: d >= 1 && d <= 5, start: "08:00", end: "17:00" }));
 export const DEFAULT_HOURS: Required<BusinessHours> = { days: DEFAULT_DAYS, job_minutes: 120, buffer_minutes: 30, notice_hours: 24, max_days: 30, tz: (() => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Los_Angeles"; } catch { return "America/Los_Angeles"; } })() };
 export const hoursOf = (h?: BusinessHours): Required<BusinessHours> => ({ ...DEFAULT_HOURS, ...(h ?? {}), days: (h?.days?.length === 7 ? h.days : DEFAULT_DAYS) });
+const is24 = (d: DayHours) => d.start === "00:00" && d.end === "23:59";
 const DAY = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 /** Preset vendors, picked from a list when writing a purchase order. */
@@ -49,7 +52,7 @@ export function HoursCard() {
   const { store, business, refresh } = useData();
   const toast = useToast();
   const [h, setH] = useState(() => hoursOf(business.hours));
-  const dirty = JSON.stringify(h) !== JSON.stringify(hoursOf(business.hours));
+  const dirty = stable(h) !== stable(hoursOf(business.hours));
   useRegisterSave("hours", dirty, async () => {
     try { await store.saveBusiness({ hours: h }); await refresh(); toast("Open hours saved"); }
     catch (e) { toast(errMsg(e, "Could not save hours. Run the latest database update first.")); }
@@ -63,10 +66,15 @@ export function HoursCard() {
         <p className="small muted" style={{ margin: 0 }}>After a customer accepts an estimate they pick a time. They only see times inside these hours that do not overlap a job already on your calendar.</p>
         <div className="opt-group">
           <h4>Open hours</h4>
+          <div className="row wrap" style={{ gap: 8 }}>
+            <button type="button" className="btn sm" onClick={() => setH({ ...h, days: h.days.map(() => ({ open: true, start: "00:00", end: "23:59" })) })}>Open 24/7</button>
+            <button type="button" className="btn sm" onClick={() => setH({ ...h, days: DEFAULT_DAYS })}>Weekdays 8 to 5</button>
+          </div>
           {h.days.map((d, i) => (
             <div key={i} className="row wrap" style={{ gap: 10 }}>
               <label className="row" style={{ width: 120 }}><input type="checkbox" checked={d.open} onChange={(e) => day(i, { open: e.target.checked })} /> <b>{DAY[i]}</b></label>
-              {d.open ? (<><input className="input" style={{ width: 150 }} type="time" value={d.start} onChange={(e) => day(i, { start: e.target.value })} /><span className="muted">to</span><input className="input" style={{ width: 150 }} type="time" value={d.end} onChange={(e) => day(i, { end: e.target.value })} /></>) : <span className="muted small">Closed</span>}
+              {d.open && is24(d) ? <span className="small">Open 24 hours</span> : d.open ? (<><input className="input" style={{ width: 150 }} type="time" value={d.start} onChange={(e) => day(i, { start: e.target.value })} /><span className="muted">to</span><input className="input" style={{ width: 150 }} type="time" value={d.end} onChange={(e) => day(i, { end: e.target.value })} /></>) : <span className="muted small">Closed</span>}
+              {d.open && <label className="row small" style={{ gap: 6 }}><input type="checkbox" checked={is24(d)} onChange={(e) => day(i, e.target.checked ? { start: "00:00", end: "23:59" } : { start: "08:00", end: "17:00" })} /> 24 hours</label>}
             </div>
           ))}
         </div>

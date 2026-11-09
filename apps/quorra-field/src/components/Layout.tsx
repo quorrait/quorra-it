@@ -40,6 +40,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "settings", to: "/integrations", label: "Integrations", icon: Icon.plug, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
     { f: "billing", to: "/billing", label: "Billing", icon: Icon.card, end: false },
+    { to: "/support", label: "Support", icon: Icon.send, end: false },
   ] },
 ];
 

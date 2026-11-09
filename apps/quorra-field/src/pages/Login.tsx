@@ -28,6 +28,13 @@ export default function Login() {
     void inviteInfo(code).then((i) => { setInvite(i); if (i) setEmail(i.email); });
   }, [code]);
 
+  // Links from the website (?demo=1) open the demo already signed in.
+  useEffect(() => {
+    if (auth.mode !== "demo") return;
+    try { if (new URLSearchParams(window.location.search).get("demo")) void auth.signIn("demo@quorrait.com", "demo"); } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);

@@ -65,7 +65,7 @@ export function buildPdf(o: DocInput): jsPDF {
       }
     } catch { /* ignore bad logo */ }
   }
-  pdf.setFont("helvetica", "bold").setFontSize(17).setTextColor(ink[0], ink[1], ink[2]).text(biz.name, textX, nameY, { align: tAlign });
+  if (ds.show_name !== false) pdf.setFont("helvetica", "bold").setFontSize(17).setTextColor(ink[0], ink[1], ink[2]).text(biz.name, textX, nameY, { align: tAlign });
   pdf.setFont("helvetica", "normal").setFontSize(9.5).setTextColor(soft[0], soft[1], soft[2]);
   const hdrLines = [
     ...(ds.show_address && biz.address ? biz.address.split(/\n|, (?=[A-Z]{2}\b)/) : []),

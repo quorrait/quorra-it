@@ -232,6 +232,7 @@ export interface DocSettings {
   accent?: string; // hex color of the header band
   header?: "band" | "plain";
   show_logo?: boolean;
+  show_name?: boolean;
   show_address?: boolean;
   show_service?: boolean;
   show_phone?: boolean;

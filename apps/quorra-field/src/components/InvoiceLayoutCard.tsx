@@ -147,6 +147,7 @@ export default function InvoiceLayoutCard() {
           <div className="opt-group">
             <h4>What to show</h4>
             {check("show_logo", "My logo")}
+            <label className="row"><input type="checkbox" checked={d.show_name !== false} onChange={(e) => set("show_name", e.target.checked)} /> My business name (turn off to show only the logo)</label>
             {check("show_address", "My address")}
             {check("show_phone", "My phone number")}
             {check("show_email", "My email")}

@@ -49,7 +49,7 @@ export async function availableSlots(db: SupabaseClient, ownerId: string, hoursR
     const y = day.getUTCFullYear(), m = day.getUTCMonth() + 1, d = day.getUTCDate();
     const dh = h.days[day.getUTCDay()];
     if (!dh?.open) continue;
-    const open = mins(dh.start), close = mins(dh.end);
+    const open = mins(dh.start), close = dh.end === "23:59" ? 1440 : mins(dh.end);
     for (let t = open; t + h.job_minutes <= close; t += 30) {
       const s = zonedToUtc(y, m, d, Math.floor(t / 60), t % 60, h.tz);
       const e = s + h.job_minutes * 60000;

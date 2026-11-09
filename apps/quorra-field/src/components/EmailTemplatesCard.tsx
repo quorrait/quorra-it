@@ -4,6 +4,7 @@ import { Field, useToast } from "./ui";
 import { TPL_DEFAULTS, TPL_LABEL, TPL_VARS, THEME_LABEL, LOOK_DEFAULT, fill, getStyle, getTpl, type EmailLook, type TplKey } from "../lib/emailTemplates";
 import { emailHtml } from "../lib/emailHtml";
 import { errMsg } from "../lib/errors";
+import { useRegisterSave } from "../lib/saveAll";
 
 const KEYS: TplKey[] = ["reminder", "quote", "invoice", "nudge"];
 type Saved = Record<string, unknown>;
@@ -37,14 +38,18 @@ export default function EmailTemplatesCard() {
     setBusy(true);
     try { await store.saveBusiness({ email_templates: next }); await refresh(); toast(done); } catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); } finally { setBusy(false); }
   }
-  const saveThis = () => save({ ...saved, [key]: draft }, "Email saved");
   const reset = async () => { const { [key]: _x, ...rest } = saved; void _x; setDraft(TPL_DEFAULTS[key]); await save(rest, "Back to the default wording"); };
-  const saveLook = () => save({ ...saved, _style: look }, "Email look saved");
+  useRegisterSave("emails", dirty || lookDirty, async () => {
+    const next: Saved = { ...saved };
+    if (dirty) next[key] = draft;
+    if (lookDirty) next._style = look;
+    await save(next, "Emails saved");
+  });
 
   return (
     <div className="card stack">
       <div className="card-title" style={{ margin: 0 }}>Customer emails</div>
-      <div className="small muted">Customers see these from your business name, and replies go to your business email. Pick a style and colors, then edit each email. The preview updates as you type.</div>
+      <div className="small muted">Customers see these from your business name, and replies go to your business email. Pick a style and colors, then edit each email. The preview updates as you type. Use Save changes at the top or bottom of the page.</div>
 
       <div className="em-grid">
         <div className="stack">
@@ -55,7 +60,6 @@ export default function EmailTemplatesCard() {
             <label className="row" style={{ gap: 8, alignItems: "center" }}><input type="color" value={look.accent} onChange={(e) => setLook({ ...look, accent: e.target.value })} style={{ width: 44, height: 36, padding: 0, border: "none", background: "none" }} /><span className="small">Button/accent color</span></label>
             <button className="btn sm" onClick={() => setLook({ ...LOOK_DEFAULT, theme: look.theme })}>Reset colors</button>
           </div>
-          <button className="btn primary block" disabled={busy || !lookDirty} onClick={() => void saveLook()}>Save style and colors</button>
 
           <div className="bold" style={{ marginTop: 10 }}>Edit emails</div>
           <div className="chips" style={{ flexWrap: "wrap" }}>{KEYS.map((k) => <button key={k} className={`chip${key === k ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => pick(k)}>{TPL_LABEL[k].name}</button>)}</div>
@@ -65,7 +69,6 @@ export default function EmailTemplatesCard() {
           <Field label="Message"><textarea className="textarea" rows={9} value={draft.message} onChange={(e) => setDraft({ ...draft, message: e.target.value })} /></Field>
           <div className="small muted">Placeholders: {TPL_VARS.map((v) => <code key={v} style={{ marginRight: 8 }}>{`{${v}}`}</code>)}</div>
           <div className="row wrap">
-            <button className="btn primary grow" disabled={busy || !dirty} onClick={() => void saveThis()}>Save email</button>
             {saved[key] != null && <button className="btn grow" disabled={busy} onClick={() => void reset()}>Use default wording</button>}
           </div>
         </div>

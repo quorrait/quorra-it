@@ -29,6 +29,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   const [customerId, setCustomerId] = useState(job?.customer_id ?? defaultCustomer ?? NEW);
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
+  const [newEmail, setNewEmail] = useState("");
   const [title, setTitle] = useState(job?.title ?? defaultTitle ?? "");
   const [description, setDescription] = useState(job?.description ?? "");
   const [address, setAddress] = useState(job?.address ?? customers.find((c) => c.id === defaultCustomer)?.address ?? "");
@@ -68,12 +69,12 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
     try {
       let cid = customerId;
       if (cid === NEW) {
-        const c = await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: "", address, notes: "" });
+        const c = await store.saveCustomer({ name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(), address, notes: "" });
         cid = c.id;
       }
       if (later && !job && !fromLead) {
         // Not scheduled yet: keep it as an open lead. Scheduling it from Leads turns it into a work order.
-        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
+        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(), address };
         await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "new", notes: description, customer_id: cid, estimate_id: null, job_id: null, created_at: new Date().toISOString() });
         await refresh(); toast("Saved as an open lead. Schedule it from Leads when ready."); onClose();
         return;
@@ -93,7 +94,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
       });
       if (!job && !fromLead) {
         // A new job starts as an open lead and moves down the line. If the customer already has a quote, it picks up from there.
-        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
+        const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: newEmail.trim(), address };
         const mine = estimates.filter((e) => e.customer_id === cid && !e.job_id && e.status !== "declined").sort((a, b) => (b.issued_at ?? "").localeCompare(a.issued_at ?? ""));
         const est = mine.find((e) => e.status === "approved") ?? mine.find((e) => e.status === "sent");
         const stage = est?.status === "approved" ? "work_order" : est ? "quote_sent" : "new";
@@ -127,6 +128,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
           <div className="grid2 stack-sm">
             <Field label="Customer name"><input className="input" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Jane Smith" /></Field>
             <Field label="Phone"><input className="input" type="tel" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} placeholder="(916) 555-0100" /></Field>
+            <Field label="Email (optional)"><input className="input" type="email" value={newEmail} onChange={(e) => setNewEmail(e.target.value)} placeholder="name@email.com" /></Field>
           </div>
         )}
         <Field label="Job title">

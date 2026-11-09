@@ -66,7 +66,7 @@ export function renderTemplate(tpl: string, d: DocData): string {
   const defTitle = (d.kind === "Invoice" ? ds.title_invoice : ds.title_estimate)?.trim() || d.kind.toUpperCase();
   const v: Record<string, string> = {
     title: esc(d.title ?? defTitle), number: esc(d.number), issued: esc(fmtDate(d.issued)), date_label: esc(d.dateLabel), date_value: esc(fmtDate(d.dateValue)),
-    business_name: esc(d.business.name), business_phone: ds.show_phone === false ? "" : esc(d.business.phone), business_email: ds.show_email === false ? "" : esc(d.business.email), business_address: ds.show_address === false ? "" : esc(d.business.address ?? ""), logo: ds.show_logo === false ? "" : logo,
+    business_name: ds.show_name === false ? "" : esc(d.business.name), business_phone: ds.show_phone === false ? "" : esc(d.business.phone), business_email: ds.show_email === false ? "" : esc(d.business.email), business_address: ds.show_address === false ? "" : esc(d.business.address ?? ""), logo: ds.show_logo === false ? "" : logo,
     footer: esc(ds.footer ?? ""),
     biz_style: al === "left" ? "" : `flex:1;text-align:${al}`,
     customer_name: esc(d.customer?.name ?? ""), customer_address: esc(d.customer?.address ?? ""), customer_phone: esc(d.customer?.phone ?? ""), customer_email: esc(d.customer?.email ?? ""),

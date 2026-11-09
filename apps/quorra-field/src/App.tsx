@@ -31,6 +31,7 @@ import Billing from "./pages/Billing";
 import Join from "./pages/Join";
 import Settings, { More } from "./pages/Settings";
 import Integrations from "./pages/Integrations";
+import Support from "./pages/Support";
 
 function Guard({ path, children }: { path: string; children: JSX.Element }) {
   const { can, loading } = useData();
@@ -93,6 +94,7 @@ function Gate() {
           <Route path="timesheets" element={<Guard path="/timesheets"><Timesheets /></Guard>} />
           <Route path="reports" element={<Guard path="/reports"><Reports /></Guard>} />
           <Route path="settings" element={<Guard path="/settings"><Settings /></Guard>} />
+          <Route path="support" element={<Support />} />
           <Route path="integrations" element={<Guard path="/integrations"><Integrations /></Guard>} />
           <Route path="billing" element={<Guard path="/billing"><Billing /></Guard>} />
           <Route path="join" element={<Join />} />

@@ -66,6 +66,7 @@ nav .btn { padding: 11px 18px; font-size: 14px; color: #fff; }
 .hero { background: var(--navy); color: #fff; padding: 72px 0 0; overflow: hidden; }
 .hero h1 { font-size: clamp(52px, 7vw, 108px); max-width: 9ch; }
 .hero h1 em { font-style: normal; color: var(--orange); }
+.hero { padding-bottom: 72px; }
 .hero-row { display: grid; grid-template-columns: .82fr 1.18fr; gap: 56px; align-items: center; margin-top: 8px; }
 .reel { position: relative; border-radius: 20px; overflow: hidden; background: #08182f; box-shadow: 0 30px 80px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.1); aspect-ratio: 16 / 9; }
 .reel video { display: block; width: 100%; height: 100%; object-fit: cover; }
@@ -209,7 +210,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
       <a href="#how">How it works</a>
       <a href="#features">Features</a>
       <a href="#pricing">Pricing</a>
-      <a href="/field/">Demo</a>
+      <a href="/field/?demo=1">Demo</a>
       <a href="/field-test/#/login">Sign in</a>
       <a class="btn go" href="/field-test/#/start?plan=essentials">Start free trial</a>
     </nav>
@@ -225,7 +226,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
         <p class="lead" style="margin-top:26px">Quorra Dispatch is field service software for HVAC, plumbing and electrical crews. Quote, schedule, send the crew and collect payment from one app on your phone.</p>
         <div class="cta">
           <a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a>
-          <a class="btn ghost" href="/field/">Try the demo</a>
+          <a class="btn ghost" href="/field/?demo=1">Try the demo</a>
         </div>
         <p class="fine">No charge until the trial ends. Cancel any time in the app.</p>
       </div>
@@ -238,33 +239,6 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
       </div>
     </div>
 
-    <div class="board" role="img" aria-label="Example dispatch board showing three technicians with jobs across a day, including a job booked online by a customer.">
-      <div class="board-top"><span>Today's board</span><small>3 techs · 8 jobs</small></div>
-      <div class="grid" aria-hidden="true">
-        <div></div>
-        <div class="hrs"><b>7a</b><b>9a</b><b>11a</b><b>1p</b><b style="grid-column: span 2">3p</b></div>
-
-        <div class="who" style="grid-row:2">Marcus<small>HVAC</small></div>
-        <div class="lane" style="grid-row:2"></div>
-        <div class="job paid" style="grid-row:2; grid-column: 3 / 8; --d:.1s">AC tune-up<small>Lopez · paid</small></div>
-        <div class="job live" style="grid-row:2; grid-column: 9 / 14; --d:.25s">Furnace install<small>Patel · on the job</small></div>
-        <div class="job sched" style="grid-row:2; grid-column: 15 / 19; --d:.4s">Duct inspection<small>Reyes</small></div>
-
-        <div class="who" style="grid-row:3">Dana<small>Plumbing</small></div>
-        <div class="lane" style="grid-row:3"></div>
-        <div class="job paid" style="grid-row:3; grid-column: 2 / 6; --d:.2s">Water heater<small>Kim · paid</small></div>
-        <div class="job live" style="grid-row:3; grid-column: 7 / 12; --d:.35s">Repipe<small>Okafor · on the job</small></div>
-        <div class="job sched" style="grid-row:3; grid-column: 13 / 19; --d:.5s">Slab leak<small>Brandt</small></div>
-
-        <div class="who" style="grid-row:4">Luis<small>Electrical</small></div>
-        <div class="lane" style="grid-row:4"></div>
-        <div class="job paid" style="grid-row:4; grid-column: 4 / 10; --d:.3s">Panel upgrade<small>Nguyen · paid</small></div>
-        <div class="job sched" style="grid-row:4; grid-column: 11 / 15; --d:.45s">EV charger<small>Hall</small></div>
-        <div class="job new" style="grid-row:4; grid-column: 15 / 19">Outlet repair<small>Webb · booked online</small></div>
-        <div class="now" style="grid-row:1 / 5"></div>
-      </div>
-      <div class="toast"><i></i>Webb accepted the quote and booked Thursday 2:30 PM. You were texted.</div>
-    </div>
   </div>
 </div>
 
@@ -352,7 +326,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
     <h2 class="title">Questions, answered.</h2>
     <div class="faq">
       <details><summary>Do I need a card to start?</summary><p>Yes, you add a card when you sign up, but nothing is charged until your 14-day trial ends. Cancel before then and you pay nothing.</p></details>
-      <details><summary>Does it work on my phone?</summary><p>Yes. Quorra Dispatch runs in your phone's browser and installs to your home screen on iPhone and Android. Your crew uses the same app.</p></details>
+      <details><summary>Is there an app for my phone?</summary><p>Yes. Quorra Dispatch is an app built for your phone, on iPhone and Android. You run the whole business from it, and your crew installs the same app and signs in with their own login.</p></details>
       <details><summary>Where do card payments go?</summary><p>Straight into your own Stripe account. We don't hold your money.</p></details>
       <details><summary>Can I cancel any time?</summary><p>Yes, from the Billing page in the app. You keep access until the end of the period you already paid for.</p></details>
       <details><summary>Can I switch plans later?</summary><p>Yes. Upgrade or downgrade in the app and the change is prorated.</p></details>
@@ -363,7 +337,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
 <section class="close">
   <div class="wrap">
     <h2>Send the crew. Get paid.</h2>
-    <div class="cta"><a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a><a class="btn ghost" href="/field/">Try the demo</a></div>
+    <div class="cta"><a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a><a class="btn ghost" href="/field/?demo=1">Try the demo</a></div>
     <p class="fine">No charge until the trial ends.</p>
   </div>
 </section>
