@@ -67,7 +67,7 @@ function LeadForm({ lead, onClose, onBuildQuote }: { lead?: Lead; onClose(): voi
         {lead && !lead.estimate_id && lead.stage !== "work_order" && onBuildQuote && (
           <button className="btn block" onClick={async () => { const s = await save(); if (s) { onClose(); onBuildQuote(s); } }}>Build quote</button>
         )}
-        {lead && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this lead?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("leads", lead.id); await refresh(); onClose(); } }}>Delete</button>}
+        {lead && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this lead?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { if (lead.job_id) await store.deleteJob(lead.job_id).catch(() => undefined); await store.deleteRow("leads", lead.id); await refresh(); onClose(); } }}>Delete</button>}
       </div>
     </Sheet>
   );
@@ -129,7 +129,7 @@ export default function Leads() {
   const jobDone = (l: Lead) => Boolean(l.job_id && jobs.find((j) => j.id === l.job_id)?.status === "completed");
   const work = leads.filter((l) => l.stage === "work_order" && !jobDone(l) && hit(l));
   const completed = leads.filter((l) => (l.stage === "completed" || (l.stage === "work_order" && jobDone(l))) && hit(l));
-  const del = async (l: Lead) => { if (await askDel({ title: "Delete this work order?", message: "It is removed from this list. The job on your calendar is not deleted.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("leads", l.id); await refresh(); toast("Deleted"); } };
+  const del = async (l: Lead) => { if (await askDel({ title: "Delete this work order?", message: "This removes it from Leads and deletes its job from your calendar.", confirmLabel: "Delete", danger: true })) { if (l.job_id) await store.deleteJob(l.job_id).catch(() => undefined); await store.deleteRow("leads", l.id); await refresh(); toast("Deleted"); } };
   const declined = leads.filter((l) => l.stage === "declined" && hit(l));
   const sum = (a: Lead[]) => a.reduce((s, l) => s + l.value_cents, 0);
   const won = work.length + completed.length;

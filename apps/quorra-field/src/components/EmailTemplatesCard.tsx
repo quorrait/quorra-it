@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useData } from "../lib/app";
 import { Field, useToast } from "./ui";
-import { TPL_DEFAULTS, TPL_LABEL, TPL_PRESETS, TPL_VARS, THEME_LABEL, LOOK_DEFAULT, fill, getStyle, getTpl, type EmailLook, type TplKey } from "../lib/emailTemplates";
+import { TPL_DEFAULTS, TPL_LABEL, TPL_VARS, THEME_LABEL, LOOK_DEFAULT, fill, getStyle, getTpl, type EmailLook, type TplKey } from "../lib/emailTemplates";
 import { emailHtml } from "../lib/emailHtml";
 import { errMsg } from "../lib/errors";
 
@@ -44,33 +44,35 @@ export default function EmailTemplatesCard() {
   return (
     <div className="card stack">
       <div className="card-title" style={{ margin: 0 }}>Customer emails</div>
-      <div className="small muted">Customers see these from your business name, and replies go to your business email. Pick a look, set your colors, then choose or edit the wording for each email.</div>
+      <div className="small muted">Customers see these from your business name, and replies go to your business email. Pick a style and colors, then edit each email. The preview updates as you type.</div>
 
-      <div className="bold">Look</div>
-      <div className="chips" style={{ flexWrap: "wrap" }}>{(Object.keys(THEME_LABEL) as EmailLook["theme"][]).map((t) => <button key={t} className={`chip${look.theme === t ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => setLook({ ...look, theme: t })}>{THEME_LABEL[t]}</button>)}</div>
-      <div className="row wrap" style={{ gap: 16, alignItems: "center" }}>
-        <label className="row" style={{ gap: 8, alignItems: "center" }}><input type="color" value={look.header} onChange={(e) => setLook({ ...look, header: e.target.value })} style={{ width: 44, height: 36, padding: 0, border: "none", background: "none" }} /><span className="small">Header color</span></label>
-        <label className="row" style={{ gap: 8, alignItems: "center" }}><input type="color" value={look.accent} onChange={(e) => setLook({ ...look, accent: e.target.value })} style={{ width: 44, height: 36, padding: 0, border: "none", background: "none" }} /><span className="small">Button color</span></label>
-        <button className="btn sm" onClick={() => setLook({ ...LOOK_DEFAULT, theme: look.theme })}>Reset colors</button>
-      </div>
+      <div className="em-grid">
+        <div className="stack">
+          <div className="bold">Email style</div>
+          <div className="chips" style={{ flexWrap: "wrap" }}>{(Object.keys(THEME_LABEL) as EmailLook["theme"][]).map((t) => <button key={t} className={`chip${look.theme === t ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => setLook({ ...look, theme: t })}>{THEME_LABEL[t]}</button>)}</div>
+          <div className="row wrap" style={{ gap: 16, alignItems: "center" }}>
+            <label className="row" style={{ gap: 8, alignItems: "center" }}><input type="color" value={look.header} onChange={(e) => setLook({ ...look, header: e.target.value })} style={{ width: 44, height: 36, padding: 0, border: "none", background: "none" }} /><span className="small">Header color</span></label>
+            <label className="row" style={{ gap: 8, alignItems: "center" }}><input type="color" value={look.accent} onChange={(e) => setLook({ ...look, accent: e.target.value })} style={{ width: 44, height: 36, padding: 0, border: "none", background: "none" }} /><span className="small">Button/accent color</span></label>
+            <button className="btn sm" onClick={() => setLook({ ...LOOK_DEFAULT, theme: look.theme })}>Reset colors</button>
+          </div>
+          <button className="btn primary block" disabled={busy || !lookDirty} onClick={() => void saveLook()}>Save style and colors</button>
 
-      <div className="bold" style={{ marginTop: 6 }}>Wording</div>
-      <div className="chips" style={{ flexWrap: "wrap" }}>{KEYS.map((k) => <button key={k} className={`chip${key === k ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => pick(k)}>{TPL_LABEL[k].name}</button>)}</div>
-      <div className="small muted">{TPL_LABEL[key].when}</div>
-      <div className="small muted">Start from a template:</div>
-      <div className="chips" style={{ flexWrap: "wrap" }}>{TPL_PRESETS[key].map((p) => <button key={p.name} className="chip" onClick={() => setDraft({ subject: p.subject, heading: p.heading, message: p.message })}>{p.name}</button>)}</div>
-      <Field label="Subject line"><input className="input" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} /></Field>
-      <Field label="Heading"><input className="input" value={draft.heading} onChange={(e) => setDraft({ ...draft, heading: e.target.value })} /></Field>
-      <Field label="Message"><textarea className="textarea" rows={9} value={draft.message} onChange={(e) => setDraft({ ...draft, message: e.target.value })} /></Field>
-      <div className="small muted">Placeholders: {TPL_VARS.map((v) => <code key={v} style={{ marginRight: 8 }}>{`{${v}}`}</code>)}</div>
-
-      <div className="small muted">Preview. Subject: <span className="bold">{fill(draft.subject, sample)}</span></div>
-      <iframe title="Email preview" srcDoc={html} sandbox="" style={{ width: "100%", height: 620, border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, background: "#fff" }} />
-
-      <div className="row wrap">
-        <button className="btn primary grow" disabled={busy || !dirty} onClick={() => void saveThis()}>Save wording</button>
-        <button className="btn primary grow" disabled={busy || !lookDirty} onClick={() => void saveLook()}>Save look and colors</button>
-        {saved[key] != null && <button className="btn grow" disabled={busy} onClick={() => void reset()}>Use default wording</button>}
+          <div className="bold" style={{ marginTop: 10 }}>Edit emails</div>
+          <div className="chips" style={{ flexWrap: "wrap" }}>{KEYS.map((k) => <button key={k} className={`chip${key === k ? " on" : ""}`} style={{ minHeight: 40 }} onClick={() => pick(k)}>{TPL_LABEL[k].name}</button>)}</div>
+          <div className="small muted">{TPL_LABEL[key].when}</div>
+          <Field label="Subject line"><input className="input" value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} /></Field>
+          <Field label="Heading"><input className="input" value={draft.heading} onChange={(e) => setDraft({ ...draft, heading: e.target.value })} /></Field>
+          <Field label="Message"><textarea className="textarea" rows={9} value={draft.message} onChange={(e) => setDraft({ ...draft, message: e.target.value })} /></Field>
+          <div className="small muted">Placeholders: {TPL_VARS.map((v) => <code key={v} style={{ marginRight: 8 }}>{`{${v}}`}</code>)}</div>
+          <div className="row wrap">
+            <button className="btn primary grow" disabled={busy || !dirty} onClick={() => void saveThis()}>Save email</button>
+            {saved[key] != null && <button className="btn grow" disabled={busy} onClick={() => void reset()}>Use default wording</button>}
+          </div>
+        </div>
+        <div className="em-prev stack">
+          <div className="small muted">Preview. Subject: <span className="bold">{fill(draft.subject, sample)}</span></div>
+          <iframe title="Email preview" srcDoc={html} sandbox="" style={{ width: "100%", height: 640, border: "1px solid var(--line, #e2e8f0)", borderRadius: 12, background: "#fff" }} />
+        </div>
       </div>
     </div>
   );

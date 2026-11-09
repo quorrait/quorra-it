@@ -9,7 +9,7 @@ import JobForm from "../components/JobForm";
 type Filter = "today" | "upcoming" | "active" | "done" | "all";
 
 export default function Jobs() {
-  const { loading, jobs, customerById } = useData();
+  const { loading, jobs, leads, customerById } = useData();
   const nav = useNavigate();
   const [params, setParams] = useSearchParams();
   const [filter, setFilter] = useState<Filter>("upcoming");
@@ -66,7 +66,7 @@ export default function Jobs() {
                 <div className="title">{j.title}</div>
                 <div className="small muted">{customerById(j.customer_id)?.name} · {j.address}</div>
               </div>
-              <JobBadge status={j.status} />
+              {(() => { const ld = leads.find((l) => l.job_id === j.id); return ld && ["new", "contacted", "send_quote", "quote_sent"].includes(ld.stage) && j.status === "scheduled" ? <span className="badge gray">Open lead</span> : <JobBadge status={j.status} />; })()}
             </div>
           ))}
         </div>

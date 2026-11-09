@@ -485,3 +485,6 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
   .bell { width: 36px; height: 36px; box-shadow: none; }
   .bell-panel { right: auto; left: 0; top: 44px; }
 }
+
+.em-grid{display:grid;gap:18px}
+@media(min-width:900px){.em-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.em-prev{position:sticky;top:12px}}
