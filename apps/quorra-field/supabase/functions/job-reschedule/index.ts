@@ -3,6 +3,8 @@ import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 import { normHours } from "../_shared/schedule.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
+import { getStyle } from "../_shared/templates.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -17,7 +19,7 @@ handler(async (req) => {
   const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString(), reminder_sent_at: null, customer_reminded_at: null, team_reminded_at: null }).eq("id", job.id);
   if (error) throw error;
   const [{ data: biz }, { data: cust }, { data: me }] = await Promise.all([
-    db.from("business").select("name,phone,hours").eq("owner_id", owner).maybeSingle(),
+    db.from("business").select("name,phone,email,hours,email_templates").eq("owner_id", owner).maybeSingle(),
     db.from("customers").select("name,phone,email").eq("id", job.customer_id).maybeSingle(),
     db.from("team_members").select("name").eq("owner_id", owner).eq("email", user.email ?? "").maybeSingle(),
   ]);
@@ -29,7 +31,8 @@ handler(async (req) => {
   let texted = false;
   if (b.notify_customer !== false) {
     if (cust?.phone) texted = (await sendSms({ to: cust.phone, body: msg })).sent;
-    if (cust?.email) await sendEmail({ to: cust.email, subject: `Your visit was rescheduled: ${f(start)}`, text: msg });
+    if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, fromName: biz?.name, subject: `Your visit was rescheduled: ${f(start)}`, text: msg,
+      html: emailHtml({ brand: biz?.name || "Your contractor", style: getStyle(biz?.email_templates), heading: "Your visit was rescheduled", paragraphs: [`Hi ${first}, your ${job.title} has been moved.`], rows: [{ label: "New time", value: f(start) }, ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])] }) });
   }
   await notifyAccount(db, owner, { title: `Rescheduled: ${job.title}`, body: `${who} moved ${cust?.name ?? "a customer"}'s job from ${f(new Date(job.start_at))} to ${f(start)}.`, link: `/jobs/${job.id}` });
   return json({ ok: true, texted });
