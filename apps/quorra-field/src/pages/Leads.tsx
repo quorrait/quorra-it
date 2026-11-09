@@ -4,6 +4,7 @@ import { FlagBanner } from "../components/FlagBanner";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useData } from "../lib/app";
+import { supabase, hasSupabase } from "../lib/supabase";
 import { moneyShort } from "../lib/money";
 import { fmtDate, fmtTime } from "../lib/dates";
 import { Field, Icon, JobBadge, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
@@ -99,6 +100,13 @@ export default function Leads() {
     return c.id;
   }
 
+  async function nudge(estId: string) {
+    const { data, error } = await supabase!.functions.invoke("send-nudge", { body: { estimate_id: estId } });
+    if (error) { let m = ""; try { m = (await (error as { context?: Response }).context?.json())?.error ?? ""; } catch { /* ignore */ } return toast(m || "Could not send. Deploy the send-nudge function."); }
+    const r = (data?.email ?? {}) as { sent?: boolean; reason?: string };
+    if (r.sent) { await refresh(); toast("Reminder sent to pick a time"); } else toast(r.reason || "Could not send");
+  }
+
   async function move(l: Lead, stage: LeadStage) {
     if (l.stage === stage) return;
     if (stage === "send_quote") {
@@ -110,6 +118,7 @@ export default function Leads() {
       if (est && est.status === "draft") await store.saveRow("estimates", { ...est, status: "sent" });
       return patch(l, { stage });
     }
+    if (stage === "work_order" && l.job_id && jobs.some((j) => j.id === l.job_id)) return patch(l, { stage });
     if (stage === "work_order") return setSchedule({ lead: l, customerId: await customerFor(l) });
     if (stage === "declined") return setDecline(l);
     return patch(l, { stage });
@@ -135,7 +144,7 @@ export default function Leads() {
       case "new": return <>{btn("Mark contacted", () => void move(l, "contacted"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "contacted": return <>{btn("Send quote →", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move({ ...l, stage: "contacted" }, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
-      case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good" style={{ whiteSpace: "normal", textAlign: "left", display: "block", lineHeight: 1.3 }}>Accepted, waiting for them to pick a time</span>}{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
+      case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good" style={{ whiteSpace: "normal", textAlign: "left", display: "block", lineHeight: 1.3 }}>Accepted, waiting for them to pick a time</span>}{est?.status === "approved" && !est.job_id && hasSupabase && btn(est.schedule_nudges ? `Nudge again (${est.schedule_nudges} sent)` : "Nudge to schedule", () => void nudge(est.id))}{btn("Accepted → schedule", () => void move(l, "work_order"), true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
       default: return null;
     }
   };

@@ -5,6 +5,7 @@ import { availableSlots, normHours } from "../_shared/schedule.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { getStyle } from "../_shared/templates.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
@@ -48,7 +49,7 @@ handler(async (req) => {
   const startMs = new Date(String(b.start)).getTime();
   if (Number.isNaN(startMs)) throw new HttpError(400, "Please choose a time");
   const [{ data: biz }, { data: cust }, { data: oldJob }] = await Promise.all([
-    db.from("business").select("name,phone,email,hours").eq("owner_id", est.owner_id).maybeSingle(),
+    db.from("business").select("name,phone,email,hours,email_templates").eq("owner_id", est.owner_id).maybeSingle(),
     db.from("customers").select("name,phone,email,address").eq("id", est.customer_id).maybeSingle(),
     est.job_id ? db.from("jobs").select("id,status,start_at").eq("id", est.job_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
@@ -81,8 +82,8 @@ handler(async (req) => {
   const first = (cust?.name ?? "").split(" ")[0] || "there";
   const msg = `Hi ${first}, your ${est.title} with ${biz?.name ?? "us"} is scheduled for ${when}.${link ? ` Need to change it? Reschedule here: ${link}` : ""}`;
   const texted = cust?.phone ? await sendSms({ to: cust.phone, body: msg }) : { sent: false, reason: "No phone number" };
-  if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, subject: `Your visit is scheduled: ${when}`, text: msg,
-    html: emailHtml({ brand: biz?.name || "Your contractor", heading: oldJob ? "Your visit was rescheduled" : "You're on the schedule", paragraphs: [`Hi ${first}, your ${est.title} is booked.`],
+  if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, fromName: biz?.name, subject: `Your visit is scheduled: ${when}`, text: msg,
+    html: emailHtml({ brand: biz?.name || "Your contractor", style: getStyle(biz?.email_templates), heading: oldJob ? "Your visit was rescheduled" : "You're on the schedule", paragraphs: [`Hi ${first}, your ${est.title} is booked.`],
       rows: [{ label: "When", value: when }, ...(cust?.address ? [{ label: "Where", value: cust.address }] : []), ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])],
       button: link ? { label: "Change my time", url: link } : undefined, fine: "You will get a reminder before your visit." }) });
   await notifyAccount(db, est.owner_id, { title: `${oldJob ? "Rescheduled" : "Booked"}: ${est.title} for ${cust?.name ?? "customer"}`, body: `${cust?.name ?? "A customer"} ${oldJob ? "moved their visit to" : "booked"} ${when}.`, link: `/jobs/${jobId}` });

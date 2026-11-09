@@ -20,7 +20,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
   onClose(): void;
   onSaved?(j: Job): void;
 }) {
-  const { store, customers, team, refresh } = useData();
+  const { store, customers, team, estimates, refresh } = useData();
   const toast = useToast();
 
   const start0 = job ? new Date(job.start_at) : defaultStart ?? (() => { const d = new Date(); d.setHours(d.getHours() + 1, 0, 0, 0); return d; })();
@@ -74,7 +74,7 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
       if (later && !job && !fromLead) {
         // Not scheduled yet: keep it as an open lead. Scheduling it from Leads turns it into a work order.
         const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
-        await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "contacted", notes: description, customer_id: cid, estimate_id: null, job_id: null, created_at: new Date().toISOString() });
+        await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "new", notes: description, customer_id: cid, estimate_id: null, job_id: null, created_at: new Date().toISOString() });
         await refresh(); toast("Saved as an open lead. Schedule it from Leads when ready."); onClose();
         return;
       }
@@ -92,10 +92,13 @@ export default function JobForm({ job, defaultStart, defaultCustomer, defaultTit
         assigned_to: assigned.trim(),
       });
       if (!job && !fromLead) {
-        // Every new job also appears in Leads as a work order, so everything is tracked in one place.
+        // A new job starts as an open lead and moves down the line. If the customer already has a quote, it picks up from there.
         const c = customers.find((x) => x.id === cid) ?? { name: newName.trim(), phone: newPhone.trim(), email: "", address };
+        const mine = estimates.filter((e) => e.customer_id === cid && !e.job_id && e.status !== "declined").sort((a, b) => (b.issued_at ?? "").localeCompare(a.issued_at ?? ""));
+        const est = mine.find((e) => e.status === "approved") ?? mine.find((e) => e.status === "sent");
+        const stage = est?.status === "approved" ? "work_order" : est ? "quote_sent" : "new";
         try {
-          await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage: "work_order", notes: "", customer_id: cid, estimate_id: null, job_id: saved.id, created_at: new Date().toISOString() });
+          await store.saveRow("leads", { name: c.name, phone: c.phone, email: c.email, address: address || c.address, source: "Added job", service: title.trim(), value_cents: 0, stage, notes: "", customer_id: cid, estimate_id: est?.id ?? null, job_id: saved.id, created_at: new Date().toISOString() });
         } catch (e) { toast(errMsg(e, "The job is saved, but it could not be added to Leads")); }
       }
       await refresh();

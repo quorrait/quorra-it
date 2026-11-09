@@ -3,7 +3,7 @@
 import { accountOwner, admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
-import { fill, getTpl } from "../_shared/templates.ts";
+import { fill, getTpl, getStyle } from "../_shared/templates.ts";
 
 const clip = (v: unknown, n: number) => String(v ?? "").trim().slice(0, n);
 
@@ -37,11 +37,11 @@ handler(async (req) => {
     const t = getTpl(biz?.email_templates, kind === "invoice" ? "invoice" : "quote");
     const vars = { customer: first, business: bizName, service: title, date: valid, time: "", address: "", phone: biz?.phone ?? "", total: amount };
     out.email = await sendEmail({
-      to, replyTo: biz?.email || undefined, attachments: att,
+      to, replyTo: biz?.email || undefined, fromName: bizName, attachments: att,
       subject: fill(t.subject, vars),
       text: `${fill(t.message, vars)}${link ? `\n\n${link}` : ""}\n\n${bizName}${biz?.phone ? `\n${biz.phone}` : ""}`,
       html: emailHtml({
-        brand: bizName, preheader: `${kind === "invoice" ? "Invoice" : "Quote"} for ${title}`,
+        brand: bizName, style: getStyle(biz?.email_templates), preheader: `${kind === "invoice" ? "Invoice" : "Quote"} for ${title}`,
         heading: fill(t.heading, vars),
         paragraphs: fill(t.message, vars).split(/\n{2,}/),
         rows: [{ label: kind === "invoice" ? "Invoice for" : "Quote for", value: title }, ...(amount ? [{ label: kind === "invoice" ? "Balance due" : "Total", value: amount }] : []), ...(valid ? [{ label: kind === "invoice" ? "Due" : "Valid until", value: valid }] : [])],

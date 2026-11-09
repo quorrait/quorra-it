@@ -4,14 +4,18 @@
 
 export interface SendResult { sent: boolean; reason?: string }
 
-export async function sendEmail(o: { to: string; subject: string; text: string; html?: string; replyTo?: string; attachments?: { filename: string; content: string }[] }): Promise<SendResult> {
+export async function sendEmail(o: { to: string; subject: string; text: string; html?: string; replyTo?: string; fromName?: string; attachments?: { filename: string; content: string }[] }): Promise<SendResult> {
   const key = Deno.env.get("RESEND_API_KEY"), from = Deno.env.get("FROM_EMAIL");
   if (!key || !from) return { sent: false, reason: "Email is not set up (RESEND_API_KEY / FROM_EMAIL)" };
   if (!o.to) return { sent: false, reason: "No email address" };
+  // Customers see the business name as the sender. The address stays on our verified domain; replies go to the business email.
+  const addr = (from.match(/<([^>]+)>/)?.[1] ?? from).trim();
+  const name = (o.fromName ?? "").replace(/["<>\r\n]/g, "").trim();
+  const sender = name ? `${name} <${addr}>` : from;
   const r = await fetch("https://api.resend.com/emails", {
     method: "POST",
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [o.to], subject: o.subject, text: o.text, html: o.html, reply_to: o.replyTo, attachments: o.attachments }),
+    body: JSON.stringify({ from: sender, to: [o.to], subject: o.subject, text: o.text, html: o.html, reply_to: o.replyTo, attachments: o.attachments }),
   });
   if (!r.ok) return { sent: false, reason: `Email provider said: ${(await r.text()).slice(0, 200)}` };
   return { sent: true };

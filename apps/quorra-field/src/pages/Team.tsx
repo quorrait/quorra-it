@@ -104,14 +104,14 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
           <Field label="Commission %"><input className="input" inputMode="decimal" value={f.comm} onChange={set("comm")} /></Field>
         </div>
         <Field label="Color"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} swatches={COLORS} label="Team color" /></Field>
-        {m && f.role !== "Owner" && (
+        {(
           <div className="stack" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 12 }}>
             <div className="bold">What {f.name || "this person"} can see</div>
-            <div className="chips">
+            {f.role === "Owner" ? <div className="small muted">Owners can see and do everything. Change their role to set limits for them.</div> : <><div className="chips">
               <button type="button" className={`chip${custom ? "" : " on"}`} onClick={() => setCustom(null)}>Same as {f.role}</button>
               <button type="button" className={`chip${custom ? " on" : ""}`} onClick={() => setCustom(custom ?? [...(((business.role_access ?? {}) as RoleAccess)[f.role] ?? ACCESS[f.role])])}>Custom for {f.name.split(" ")[0] || "them"}</button>
             </div>
-            {custom && <AccessEditor list={custom} onChange={setCustom} />}
+            {custom && <AccessEditor list={custom} onChange={setCustom} />}</>}
           </div>
         )}
         {m && <InvitePanel m={{ ...m, email: f.email, name: f.name || m.name, phone: f.phone, role: f.role }} invites={invites} reload={reload} />}
@@ -125,7 +125,7 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
           <button className="btn block" onClick={async () => {
             if (!f.name.trim()) return toast("Add a name");
             if (!f.email.trim()) return toast("Add an email address to invite them");
-            const saved = await store.saveRow("team_members", { name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active });
+            const saved = await store.saveRow("team_members", { name: f.name.trim(), role: f.role, phone: f.phone, email: f.email, hourly_cents: strToCents(f.rate), commission_pct: parseFloat(f.comm) || 0, color: f.color, active: f.active, ...(custom && f.role !== "Owner" ? { access: custom } : {}) });
             onClose();
             try {
               const inv = await createInvite({ id: saved.id, email: f.email, role: f.role });

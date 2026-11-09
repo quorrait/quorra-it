@@ -207,8 +207,8 @@ body{margin:0;background:#e9e4e0;font-family:'IBM Plex Sans',system-ui,-apple-sy
 .page{width:816px;min-height:1056px;margin:0 auto;background:#fff;display:flex;flex-direction:column}
 .top{height:12px;background:var(--acc)}
 .head{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:40px 56px 0}
-.brand{display:flex;align-items:center;gap:14px}
-.brand img{max-height:56px;max-width:120px;object-fit:contain}
+.brand{display:block}
+.brand .ct{font-size:12.5px;line-height:1.5;color:var(--mute);margin-top:6px}
 .brand .n{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:26px;line-height:1.1;color:var(--dark)}
 .inv{text-align:right}
 .inv .t{font-family:Sora,"Segoe UI",Arial,sans-serif;font-weight:700;font-size:40px;line-height:1;color:var(--dark);text-transform:capitalize}
@@ -244,7 +244,7 @@ td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:top;colo
 <div class="page">
 <div class="top"></div>
 <div class="head">
-  <div class="brand" style="{{biz_style}}">{{logo}}<div class="n">{{business_name}}</div></div>
+  <div class="brand" style="{{biz_style}}">{{logo}}<div class="n">{{business_name}}</div><div class="ct">{{business_address}}<br>{{business_phone}} &nbsp; {{business_email}}</div></div>
   <div class="inv"><div class="t">{{title}}</div><div class="no">No. {{number}}</div></div>
 </div>
 <div class="wave"></div>

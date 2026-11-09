@@ -21,7 +21,7 @@ export interface Business {
   yelp_url?: string; // Yelp review link, also used by "Ask for a review"
   review_url?: string; // Google review link, used by "Ask for a review"
   lead_form?: LeadFormSettings; // website request form wording and fields
-  email_templates?: Record<string, { subject?: string; heading?: string; message?: string }> | null;
+  email_templates?: Record<string, unknown> | null; // wording per email, plus _style (look and colors)
   role_access?: Partial<Record<string, string[]>> | null; // owner-set screen access per role
   text_number?: string; // business number used for texting customers
   vendors?: Vendor[]; // preset vendors for purchase orders
@@ -111,6 +111,7 @@ export interface Estimate {
   job_id: string | null;
   invoice_id: string | null;
   duration_min?: number; // how long the job takes; 0 or empty = business default
+  schedule_nudges?: number; // how many times the business nudged an accepted quote to schedule
   public_token?: string; // lets the customer open and accept the quote from a link (live mode)
 }
 
