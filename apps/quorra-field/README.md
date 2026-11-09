@@ -110,3 +110,6 @@ Settings shows a preview, a share link, copy-paste embed code and platform steps
 ## Customer portal and review requests (migration 0011)
 - Each customer has a private portal link (Customers > open a customer > Customer portal). It shows their quotes (view/accept) and invoices (pay by card). Deploy `portal-view` and `portal-pay` with `--no-verify-jwt`.
 - Settings > Google review link powers "Ask for a review" on completed jobs (text or email).
+
+## Phone app (Capacitor + Codemagic)
+`npm run build:app` builds the web app for the native shell (`dist-app`). `codemagic.yaml` at the repo root has an iOS and an Android workflow. Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` in a Codemagic variable group named `quorra_app`.
