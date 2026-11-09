@@ -90,6 +90,7 @@ export interface Payment {
   amount_cents: number;
   method: PayMethod;
   paid_at: string; // ISO
+  qbo_id?: string | null; // set once the payment is in QuickBooks
 }
 
 export type New<T> = Omit<T, "id"> & { id?: string };

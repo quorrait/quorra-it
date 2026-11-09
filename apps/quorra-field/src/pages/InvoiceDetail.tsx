@@ -159,14 +159,14 @@ export default function InvoiceDetail() {
       <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>QuickBooks</div>
         {!business.qbo_connected ? (
-          <p className="small muted">Connect QuickBooks in <Link to="/settings" style={{ color: "var(--brand)", fontWeight: 700 }}>Settings</Link> to send invoices and payments over automatically.</p>
+          <p className="small muted">Connect QuickBooks in <Link to="/integrations" style={{ color: "var(--brand)", fontWeight: 700 }}>Settings</Link> to send invoices and payments over automatically.</p>
         ) : inv.qbo_id ? (
           <div className="row between wrap">
             <span className="badge good">{Icon.check} Synced · QuickBooks #{inv.qbo_id}</span>
             {paid > 0 && <button className="btn sm" disabled={busy} onClick={sync}>Sync new payments</button>}
           </div>
         ) : (
-          <button className="btn" disabled={busy || inv.status === "draft"} onClick={sync}>Sync to QuickBooks</button>
+          <><button className="btn" disabled={busy || inv.status === "draft"} onClick={sync}>Sync to QuickBooks</button>{inv.status === "draft" && <p className="small muted" style={{ margin: 0 }}>This invoice syncs automatically once it is sent.</p>}</>
         )}
       </div>
 
