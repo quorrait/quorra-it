@@ -23,7 +23,7 @@ const ITEMS: Item[] = [
 
 /** Every app Quorra Dispatch connects to, as a grid. Tap a card to connect it. */
 export default function Integrations() {
-  const { business, store, refresh } = useData();
+  const { business, invoices, payments, store, refresh } = useData();
   const toast = useToast();
   const [open, setOpen] = useState<Item | null>(null);
   const [ask, setAsk] = useState(false);
@@ -44,7 +44,18 @@ export default function Integrations() {
   );
   if (open?.id === "qbo") body = business.qbo_connected ? (
     <div className="stack">
-      <p className="small muted">Linked to <b>{business.qbo_company ?? "your company"}</b>. Open any sent invoice and tap "Sync to QuickBooks" to send it and its payments over.</p>
+      <p className="small muted">Linked to <b>{business.qbo_company ?? "your company"}</b>. Sent and paid invoices, their customers and their payments go over automatically.</p>
+      <div className="card stack" style={{ background: "#f8fafc" }}>
+        <div className="bold">Sync everything now</div>
+        <p className="small muted" style={{ margin: 0 }}>A backup. Sends every sent or paid invoice and any payments that have not reached QuickBooks yet.</p>
+        <button className="btn" disabled={busy === "qbo-sync"} onClick={() => run("qbo-sync", async () => {
+          const todo = invoices.filter((i) => (i.status === "sent" || i.status === "paid") && (!i.qbo_id || payments.some((p) => p.invoice_id === i.id && !p.qbo_id)));
+          if (!todo.length) { toast("Everything is already in QuickBooks"); return; }
+          let ok = 0, bad = 0, why = "";
+          for (const i of todo) { try { await store.qboSyncInvoice(i.id); ok++; } catch (e) { bad++; why = errMsg(e, ""); } }
+          toast(bad ? `Synced ${ok}, ${bad} failed${why ? `: ${why}` : ""}` : `Synced ${ok} invoice${ok === 1 ? "" : "s"} to QuickBooks`);
+        })}>{busy === "qbo-sync" ? "Syncing…" : "Sync everything"}</button>
+      </div>
       <button className="btn danger" disabled={busy === "qbo"} onClick={() => run("qbo", () => store.qboDisconnect(), "QuickBooks disconnected")}>Disconnect</button>
     </div>
   ) : (

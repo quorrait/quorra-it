@@ -63,19 +63,6 @@ export default function InvoiceDetail() {
     }
   }
 
-  async function sync() {
-    setBusy(true);
-    try {
-      const r = await store.qboSyncInvoice(inv!.id);
-      await refresh();
-      toast(`Synced to QuickBooks (#${r.qbo_id})`);
-    } catch (e) {
-      toast(errMsg(e, "QuickBooks sync failed"));
-    } finally {
-      setBusy(false);
-    }
-  }
-
   const first = customer?.name.split(" ")[0] ?? "there";
   const subject = `Invoice #${inv.number} from ${business.name}`;
   const body = `Hi ${first},\n\nYour invoice #${inv.number} is attached. Balance due: ${money(balance)}, due ${fmtDate(inv.due_at)}.\n\nThank you,\n${business.name}${business.phone ? `\n${business.phone}` : ""}`;
@@ -163,10 +150,10 @@ export default function InvoiceDetail() {
         ) : inv.qbo_id ? (
           <div className="row between wrap">
             <span className="badge good">{Icon.check} Synced · QuickBooks #{inv.qbo_id}</span>
-            {paid > 0 && <button className="btn sm" disabled={busy} onClick={sync}>Sync new payments</button>}
+            
           </div>
         ) : (
-          <><button className="btn" disabled={busy || inv.status === "draft"} onClick={sync}>Sync to QuickBooks</button>{inv.status === "draft" && <p className="small muted" style={{ margin: 0 }}>This invoice syncs automatically once it is sent.</p>}</>
+          <p className="small muted" style={{ margin: 0 }}>{inv.status === "draft" ? "Syncs to QuickBooks automatically once it is sent." : "Syncing to QuickBooks automatically. If it does not appear, use Sync everything in Integrations."}</p>
         )}
       </div>
 
