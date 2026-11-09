@@ -488,3 +488,4 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 
 .em-grid{display:grid;gap:18px}
 @media(min-width:900px){.em-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}.em-prev{position:sticky;top:12px}}
+.home-cal .btn.sm{white-space:nowrap}

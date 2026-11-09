@@ -86,7 +86,10 @@ function SettingsInner() {
 
   useEffect(() => {
     setF({ name: business.name, phone: business.phone, email: business.email, tax_rate: String(business.tax_rate), text_number: business.text_number ?? "", state: business.state ?? "", address: business.address ?? "", review_url: business.review_url ?? "", yelp_url: business.yelp_url ?? "" });
-  }, [business]);
+    // Only when the saved values really change. The background refresh hands over a fresh object every few seconds,
+    // and resetting on that would wipe what is being typed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [business.name, business.phone, business.email, business.tax_rate, business.text_number, business.state, business.address, business.review_url, business.yelp_url]);
 
   useEffect(() => {
     const q = params.get("qbo");

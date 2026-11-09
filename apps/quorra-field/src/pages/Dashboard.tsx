@@ -96,9 +96,9 @@ export default function Dashboard() {
 
       <div className="home-cal">
         <div className="card flush">
-          <div className="row between" style={{ padding: "14px 16px" }}>
+          <div className="row between wrap" style={{ padding: "14px 16px", gap: 10 }}>
             <div className="bold" style={{ fontSize: 18 }}>{fmtMonth(month)}</div>
-            <div className="row">
+            <div className="row" style={{ flexWrap: "wrap" }}>
               <button className="btn sm" onClick={() => setMonth(addMonths(month, -1))} aria-label="Previous month">‹</button>
               <button className="btn sm" onClick={() => { setMonth(startOfDay(new Date())); setPicked(null); }}>Today</button>
               <button className="btn sm" onClick={() => setMonth(addMonths(month, 1))} aria-label="Next month">›</button>

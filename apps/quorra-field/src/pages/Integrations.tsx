@@ -101,6 +101,8 @@ export default function Integrations() {
 
 function Logo({ item }: { item: Item }) {
   const [bad, setBad] = useState(!item.slug);
+  // Plaid's mark is not in the icon library we load from, so it is drawn here.
+  if (item.id === "plaid") return <svg width="36" height="36" viewBox="0 0 36 36" aria-label="Plaid" role="img" fill="#111"><g transform="rotate(45 18 18)"><rect x="4" y="4" width="8" height="8" /><rect x="14" y="4" width="8" height="8" /><rect x="24" y="4" width="8" height="8" /><rect x="4" y="14" width="8" height="8" /><rect x="24" y="14" width="8" height="8" /><rect x="4" y="24" width="8" height="8" /><rect x="14" y="24" width="8" height="8" /><rect x="24" y="24" width="8" height="8" /></g></svg>;
   if (bad) return <span style={{ color: item.color, fontWeight: 800, fontSize: 24 }}>{item.mark}</span>;
   return <img src={`https://cdn.simpleicons.org/${item.slug}`} alt={item.name} width={36} height={36} onError={() => setBad(true)} />;
 }
