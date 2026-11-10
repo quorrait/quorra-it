@@ -5,13 +5,15 @@ const config: CapacitorConfig = {
   // Home-screen name. The App Store listing name stays "Quorra Dispatch".
   appName: "Dispatch",
   webDir: "dist-app",
-  backgroundColor: "#0f1720",
+  backgroundColor: "#ffffff",
   ios: {
     contentInset: "never",
-    backgroundColor: "#0f1720",
+    // The web view itself must not scroll, or iOS rubber-bands the whole page (header included).
+    scrollEnabled: false,
+    backgroundColor: "#ffffff",
   },
   android: {
-    backgroundColor: "#0f1720",
+    backgroundColor: "#ffffff",
   },
   plugins: {
     SplashScreen: {
@@ -25,7 +27,7 @@ const config: CapacitorConfig = {
     StatusBar: {
       overlaysWebView: true,
       style: "LIGHT",
-      backgroundColor: "#0f1720",
+      backgroundColor: "#ffffff",
     },
   },
 };

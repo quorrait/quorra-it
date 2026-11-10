@@ -2,6 +2,7 @@ import { useHubAdmin } from "../lib/hub";
 import Tour from "./Tour";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { applyStatusBar } from "../lib/native";
 import { Icon, useConfirm } from "./ui";
 import NotificationBell from "./NotificationBell";
 import PublicFooter from "./PublicFooter";
@@ -51,6 +52,7 @@ export default function Layout() {
   const { signOut } = useAuth();
   const nav = useNavigate();
   const ask = useConfirm();
+  useEffect(() => { void applyStatusBar("app"); }, []);
   useEffect(() => {
     // Leaving a screen with unsaved changes (tab bar, side menu or any in-app link) asks first.
     const onClick = async (e: MouseEvent) => {
@@ -114,7 +116,7 @@ export default function Layout() {
         <header className="appbar">
           <div className="appbar-brand">
             <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
-            <span>Dispatch</span>
+            <span>{APP_NAME}</span>
           </div>
           <NotificationBell />
         </header>

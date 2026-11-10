@@ -182,7 +182,18 @@ export default function Leads() {
                 onDrop={(e) => { e.preventDefault(); setOver(null); const l = leads.find((x) => x.id === e.dataTransfer.getData("text/plain")); if (l) void move(l, stage); }}>
                 <div className="pipe-head"><b>{STAGE_LABEL[stage]}</b><span className="small muted">{col.length} · {moneyShort(sum(col))}</span></div>
                 {col.map((l) => (
-                  <div key={l.id} className="lead" draggable onDragStart={(e) => e.dataTransfer.setData("text/plain", l.id)} onClick={() => setEdit(l)}>
+                  <div key={l.id} className="lead" draggable={window.matchMedia("(pointer: fine)").matches}
+                    onPointerDown={(e) => {
+                      if (e.pointerType === "mouse") return;
+                      const el = e.currentTarget;
+                      const timer = window.setTimeout(() => { el.draggable = true; el.style.touchAction = "none"; }, 450);
+                      const stop = () => { window.clearTimeout(timer); el.removeEventListener("pointerup", stop); el.removeEventListener("pointercancel", stop); };
+                      el.addEventListener("pointerup", stop);
+                      el.addEventListener("pointercancel", stop);
+                    }}
+                    onDragStart={(e) => e.dataTransfer.setData("text/plain", l.id)}
+                    onDragEnd={(e) => { e.currentTarget.draggable = window.matchMedia("(pointer: fine)").matches; e.currentTarget.style.touchAction = ""; }}
+                    onClick={() => setEdit(l)}>
                     <div className="row between"><div className="bold">{l.name}</div>{l.source === "Website form" && <span className="badge blue">Web</span>}</div>
                     <div className="small muted">{l.service || "No details"}</div>
                     <div className="row between" style={{ marginTop: 6 }}><span className="small muted">{fmtDate(l.created_at)}</span><span className="bold num">{l.value_cents ? moneyShort(l.value_cents) : ""}</span></div>
