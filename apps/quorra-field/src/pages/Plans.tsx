@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import PlanCards from "../components/PlanCards";
 import BuyService from "../components/BuyService";
 import { isIosApp } from "../lib/iosPlan";
@@ -7,6 +7,9 @@ import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 /** Public page: what each plan includes. Picking one starts account creation. */
 export default function Plans() {
   const nav = useNavigate();
+  const [params] = useSearchParams();
+  const focus = params.get("plan") ?? undefined;
+  const initialInterval = params.get("interval") === "year" ? "year" as const : "month" as const;
   if (isIosApp()) {
     return (
       <div className="pub">
@@ -23,7 +26,7 @@ export default function Plans() {
     );
   }
   return (
-    <div className="pub">
+    <div className="plans-screen">
       <div className="pub-wrap">
         {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="pub-head">
@@ -32,7 +35,7 @@ export default function Plans() {
         </div>
         <h1>Pick your plan</h1>
         <p className="sub">Try any plan free for 14 days. Create your account, add a card, and start dispatching. Nothing is charged until the trial ends. Cancel any time.</p>
-        <PlanCards onChoose={(p, iv) => nav(`/start?plan=${p.id}&interval=${iv}`)} cta="Start" />
+        <PlanCards focus={focus} initialInterval={initialInterval} onChoose={(p, iv) => nav(`/start?plan=${p.id}&interval=${iv}`)} cta="Start" />
       </div>
     </div>
   );

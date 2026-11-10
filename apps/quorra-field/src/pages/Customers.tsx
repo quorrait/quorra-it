@@ -132,7 +132,7 @@ export default function Customers() {
       {open && (
         <Sheet title={open.name} onClose={() => setOpen(null)}>
           <div className="stack">
-            <div className="small muted">{open.address}<br />{open.phone} {open.email && `· ${open.email}`}</div>
+            <div className="small muted copy">{open.address}<br />{open.phone} {open.email && `· ${open.email}`}</div>
             {open.flag && (
               <div className={`notice ${open.flag === "blocked" ? "bad" : "warn"}`}>
                 <b>{open.flag === "blocked" ? "Do not serve" : "Caution"}</b>

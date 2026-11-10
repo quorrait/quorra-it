@@ -11,7 +11,8 @@
   :root { --brand:#e8590c; --brand-dark:#c24a0a; --ink:#0f172a; --muted:#64748b; --line:#dbe1ea; --soft:#f6f8fb; --bad:#b42318; --good:#137a3c; }
   * { box-sizing: border-box; }
   html, body { margin:0; }
-  body { font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:transparent; padding:12px; }
+  body { font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:transparent; padding:12px; -webkit-user-select:none; user-select:none; }
+  input, textarea, [contenteditable="true"] { -webkit-user-select:text; user-select:text; caret-color:auto; }
   .card { max-width:560px; margin:0 auto; background:#fff; border:1px solid var(--line); border-radius:16px; box-shadow:0 6px 24px rgba(15,23,42,.07); overflow:hidden; }
   .head { padding:20px 22px 16px; background:linear-gradient(135deg,#0f2742,#17395f); color:#fff; }
   .head h1 { font-size:21px; margin:0 0 4px; letter-spacing:-.01em; }

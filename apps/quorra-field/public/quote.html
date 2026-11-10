@@ -10,7 +10,8 @@
 <style>
   :root { --brand:#e8590c; --ink:#111827; --muted:#6b7280; --line:#e3e7ee; --bad:#b42318; --good:#137a3c; }
   * { box-sizing: border-box; }
-  body { margin:0; font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:#f3f4f6; }
+  body { margin:0; font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:#f3f4f6; -webkit-user-select:none; user-select:none; }
+  input, textarea, [contenteditable="true"], .copy { -webkit-user-select:text; user-select:text; caret-color:auto; }
   main { max-width:620px; margin:0 auto; padding:16px; display:grid; gap:14px; }
   .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px; }
   header { display:flex; align-items:center; gap:12px; }

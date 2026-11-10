@@ -4,17 +4,17 @@ import { BrowserRouter, HashRouter } from "react-router-dom";
 import { keepInputsVisible, prepareNativeShell } from "./lib/native";
 import { listenForPush } from "./lib/push";
 
-const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
 import App from "./App";
 import "./styles.css";
 
 function Root() {
   useEffect(() => { void prepareNativeShell(); }, []);
-  return (
-    <Router>
-      <App />
-    </Router>
-  );
+  // The site is served from /app/. Without a basename, /app/plans never matches the plans route and falls through to sign-in.
+  if (import.meta.env.VITE_HASH_ROUTER) {
+    return <HashRouter><App /></HashRouter>;
+  }
+  const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  return <BrowserRouter basename={base || undefined}><App /></BrowserRouter>;
 }
 
 keepInputsVisible();

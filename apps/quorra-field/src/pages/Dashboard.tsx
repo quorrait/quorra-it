@@ -119,7 +119,7 @@ export default function Dashboard() {
               <div className="lbl">{nextJob.status === "in_progress" ? "In progress now" : "Next job"}</div>
               <div className="when">{dayWord(new Date(nextJob.start_at))} · {fmtTime(nextJob.start_at)}</div>
               <div className="what">{nextJob.title}</div>
-              <div className="where">{customerById(nextJob.customer_id)?.name} · {nextJob.address}</div>
+              <div className="where copy">{customerById(nextJob.customer_id)?.name} · {nextJob.address}</div>
             </div>
           )}
 

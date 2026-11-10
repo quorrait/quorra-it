@@ -3,7 +3,7 @@
 
 export const SITE = "https://www.quorrait.com";
 export const OUT_DIR = "dispatch";
-export const SIGNUP = "https://quorradispatch.com/app/start";
+export const SIGNUP = "https://quorradispatch.com/app/plans";
 export const BRAND = "Quorra Dispatch";
 
 export const PRICING = [

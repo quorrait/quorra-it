@@ -156,7 +156,7 @@ export default function JobDetail() {
         <div className="card-title" style={{ margin: 0 }}>Customer</div>
         <div>
           <div className="bold" style={{ fontSize: 18 }}>{customer?.name}</div>
-          <div className="small muted">{job.address}</div>
+          <div className="small muted copy">{job.address}</div>
         </div>
         <div className="grid2">
           <a className="btn" href={`tel:${customer?.phone ?? ""}`}>{Icon.phone} Call</a>

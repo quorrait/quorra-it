@@ -329,10 +329,22 @@ h1, h2, h3, p { margin: 0; }
 .progress > i { display: block; height: 100%; background: var(--brand); border-radius: 99px; }
 .list-item > svg { width: 22px; height: 22px; flex-shrink: 0; color: var(--ink-2); }
 
-/* No blinking text cursor / focus box on plain text and tappable rows */
-body { caret-color: transparent; -webkit-tap-highlight-color: transparent; }
-input, textarea, select { caret-color: auto; }
-.list-item, .card, .lead, .chip, .btn, .tab, .side-link, .cal-day, .date-chip, .kpi, .pipe-col { user-select: none; -webkit-user-select: none; }
+/* iOS WKWebView draws a blinking caret on any selectable text, even when it is not an editor.
+   caret-color on body does not stop that native caret. Selection stays off except real fields
+   and .copy (addresses, phones, emails) so those can still be highlighted and copied. */
+html, body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  caret-color: transparent;
+  -webkit-tap-highlight-color: transparent;
+}
+input, textarea, select, [contenteditable="true"], .copy {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+input, textarea, select, [contenteditable="true"] { caret-color: auto; }
 :focus:not(:focus-visible) { outline: none; }
 div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: none; }
 @media (min-width: 1100px) { .pipe.pipe4 { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -354,11 +366,46 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .plan-list.cols { grid-template-columns: 1fr; }
 @media (min-width: 700px) { .plan-list.cols { grid-template-columns: 1fr 1fr; } }
 .pub { min-height: 100%; background: var(--nav); padding: calc(24px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) calc(48px + env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); }
+@media (max-width: 1099px) { .pub { height: 100%; overflow-y: auto; overscroll-behavior: none; -webkit-overflow-scrolling: touch; } }
 .pub-wrap { max-width: 980px; margin: 0 auto; }
 .pub-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 22px; flex-wrap: wrap; }
 .pub-head img { height: 44px; width: auto; filter: brightness(0) invert(1); }
 .pub h1 { color: #fff; font-size: 30px; font-weight: 800; letter-spacing: -.02em; margin: 0 0 6px; }
 .pub .sub { color: #aab6c6; margin: 0 0 26px; }
+.plan-focus { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Public plan picker: three plans and the monthly/annual toggle on one laptop screen. */
+@media (min-width: 1100px) and (min-height: 700px) {
+  .pub:has(.plans-screen) {
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 20px 6px;
+  }
+  .plans-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0; background: transparent; }
+  .plans-screen .pub-wrap { flex: 1; min-height: 0; display: flex; flex-direction: column; max-width: 1180px; }
+  .plans-screen .pub-head { margin-bottom: 6px; }
+  .plans-screen .pub-head img { height: 28px; }
+  .plans-screen h1 { font-size: 22px; margin: 0; }
+  .plans-screen .sub { font-size: 13px; line-height: 1.3; margin: 2px 0 8px; }
+  .plans-screen .chips { margin-bottom: 8px; }
+  .plans-screen .plan-grid { gap: 10px; align-items: stretch; }
+  .plans-screen .plan { padding: 10px 12px 8px; gap: 2px; border-radius: 12px; }
+  .plans-screen .plan-flag { top: -9px; font-size: 10px; padding: 2px 8px; }
+  .plans-screen .plan-name { font-size: 16px; }
+  .plans-screen .plan .small.muted { font-size: 12px; line-height: 1.2; }
+  .plans-screen .plan-price { font-size: 22px; margin: 0; }
+  .plans-screen .plan-price .muted { font-size: 12px; }
+  .plans-screen .plan-list { font-size: 11px; line-height: 1.2; gap: 1px; margin: 2px 0 6px; }
+  .plans-screen .plan-list li { padding-left: 14px; }
+  .plans-screen .plan-list li::before { top: 3px; width: 9px; height: 5px; }
+  .plans-screen .btn.block { min-height: 32px; font-size: 13px; border-radius: 8px; }
+  .plans-screen .plan-custom { display: flex; flex-direction: row; align-items: center; gap: 12px; padding: 8px 12px; margin-top: 8px; }
+  .plans-screen .plan-custom .plan-list { display: none; }
+  .plans-screen .plan-custom .plan-price { font-size: 14px; }
+  .pub:has(.plans-screen) .pubfoot { padding: 4px 8px 6px; flex: none; }
+}
 
 /* Cards that open and close (Settings) */
 .fold > summary { list-style: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
