@@ -1,5 +1,6 @@
 import { qboPending } from "./qboSync";
 import { claimSession, watchSession } from "./session";
+import { disablePush, enablePush } from "./push";
 import { errMsg } from "./errors";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { Business, Customer, Estimate, Invoice, Job, Lead, Payment, PriceItem, DocTemplate, PurchaseOrder, Role, ServicePlan, Subscription, TeamMember, TimeEntry } from "./types";
@@ -54,9 +55,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
     }).catch(() => { setEmail(null); setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { setEmail(session?.user.email ?? null); setAuthName(String(session?.user.user_metadata?.name ?? "")); });
+    // Native only: register this phone once a session exists. The browser build never reaches enablePush.
     const stop = watchSession(() => { void supabase!.auth.signOut({ scope: "local" }); });
     return () => { sub.subscription.unsubscribe(); stop(); };
   }, []);
+
+  useEffect(() => {
+    if (email) void enablePush().catch((e) => console.error("push", e));
+  }, [email]);
 
   const value = useMemo<AuthCtx>(
     () => ({
@@ -98,6 +104,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmail(null);
           return;
         }
+        await disablePush().catch(() => undefined);
         await supabase.auth.signOut();
       },
     }),

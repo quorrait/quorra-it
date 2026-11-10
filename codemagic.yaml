@@ -81,6 +81,13 @@ workflows:
           npx @capacitor/assets generate --android || true
           npx cap sync android
           node scripts/prepare-native.mjs android
+      - name: Firebase config if provided
+        script: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "GOOGLE_SERVICES_JSON is not set; building without Firebase"
+          fi
       - name: Build signed app bundle
         script: |
           cd android
@@ -113,6 +120,13 @@ workflows:
           npx @capacitor/assets generate --android || true
           npx cap sync android
           node scripts/prepare-native.mjs android
+      - name: Firebase config if provided
+        script: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "GOOGLE_SERVICES_JSON is not set; building without Firebase"
+          fi
       - name: Build test APK
         script: |
           cd android

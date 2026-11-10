@@ -1,7 +1,7 @@
 // After `cap add` / asset generation, force the phone shell we actually want.
 // iOS is created on the build machine; Android is in the repo and can be overwritten by @capacitor/assets.
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
-import { join } from "node:path";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname;
 const which = process.argv[2] ?? "all";
@@ -52,14 +52,43 @@ if (runIos) {
     console.log("no ios project yet");
   } else {
     patch(join(ios, "App/App/Info.plist"), (xml) => {
-      if (xml.includes("<key>CFBundleDisplayName</key>")) {
-        return xml.replace(/(<key>CFBundleDisplayName<\/key>\s*<string>)[^<]*(<\/string>)/, "$1Dispatch$2");
+      let next = xml;
+      if (next.includes("<key>CFBundleDisplayName</key>")) {
+        next = next.replace(/(<key>CFBundleDisplayName<\/key>\s*<string>)[^<]*(<\/string>)/, "$1Dispatch$2");
+      } else {
+        next = next.replace("</dict>\n</plist>", "\t<key>CFBundleDisplayName</key>\n\t<string>Dispatch</string>\n</dict>\n</plist>");
       }
-      return xml.replace("</dict>\n</plist>", "\t<key>CFBundleDisplayName</key>\n\t<string>Dispatch</string>\n</dict>\n</plist>");
+      if (!next.includes("<string>remote-notification</string>")) {
+        if (next.includes("<key>UIBackgroundModes</key>")) {
+          next = next.replace(/(<key>UIBackgroundModes<\/key>\s*<array>)/, "$1\n\t\t<string>remote-notification</string>");
+        } else {
+          next = next.replace("</dict>\n</plist>", "\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>remote-notification</string>\n\t</array>\n</dict>\n</plist>");
+        }
+      }
+      return next;
     });
-    patch(join(ios, "App/App.xcodeproj/project.pbxproj"), (text) =>
-      text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;"),
-    );
+    const entitlements = join(ios, "App/App/App.entitlements");
+    mkdirSync(dirname(entitlements), { recursive: true });
+    writeFileSync(entitlements, `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>
+`);
+    console.log(`updated ${entitlements}`);
+    patch(join(ios, "App/App.xcodeproj/project.pbxproj"), (text) => {
+      let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;");
+      if (!next.includes("CODE_SIGN_ENTITLEMENTS")) {
+        next = next.replace(
+          /PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;/g,
+          "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;",
+        );
+      }
+      return next;
+    });
     patch(join(ios, "App/Podfile"), (text) => text.replace(/platform :ios, '[0-9.]+'/, "platform :ios, '15.0'"));
     const storyboard = join(ios, "App/App/Base.lproj/LaunchScreen.storyboard");
     if (existsSync(storyboard)) {
