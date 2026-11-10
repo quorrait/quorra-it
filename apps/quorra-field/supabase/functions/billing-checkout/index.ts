@@ -15,7 +15,17 @@ handler(async (req) => {
 
   const db = admin();
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
-  const { data: sub } = await db.from("subscriptions").select("stripe_customer_id").eq("owner_id", user.id).maybeSingle();
+  const { data: sub } = await db.from("subscriptions").select("stripe_customer_id, stripe_subscription_id").eq("owner_id", user.id).maybeSingle();
+  if (sub?.stripe_subscription_id) {
+    try {
+      const existing = await stripe.subscriptions.retrieve(sub.stripe_subscription_id as string);
+      if (existing.status === "active" || existing.status === "trialing" || existing.status === "past_due") {
+        throw new HttpError(409, "You already have a subscription. Change your plan on the Billing page, or open the billing portal.");
+      }
+    } catch (e) {
+      if (e instanceof HttpError) throw e;
+    }
+  }
   let customer = sub?.stripe_customer_id as string | undefined;
   if (!customer) {
     const c = await stripe.customers.create({ email: user.email ?? undefined, metadata: { owner_id: user.id } });

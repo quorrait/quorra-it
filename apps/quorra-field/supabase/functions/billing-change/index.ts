@@ -38,8 +38,19 @@ handler(async (req) => {
     const yearly = (p: Stripe.Price) => (p.unit_amount ?? 0) * (p.recurring?.interval === "year" ? 1 : 12);
     const next = await stripe.prices.retrieve(priceId);
     if (next.id === item.price.id) return json({ ok: true, mode: "same" });
+    const trialEnd = cur.trial_end;
+    if (cur.status === "trialing" && typeof trialEnd === "number" && trialEnd * 1000 > Date.now()) {
+      // Nothing has been paid yet. Switch the price now, keep the same trial end, and do not invoice.
+      await stripe.subscriptions.update(id, {
+        items: [{ id: item.id, price: priceId }],
+        proration_behavior: "none",
+        trial_end: trialEnd,
+        cancel_at_period_end: false,
+      });
+      return json({ ok: true, mode: "trial_plan_change", trial_end: trialEnd });
+    }
     if (yearly(next) > yearly(item.price)) {
-      // Upgrade: switch now and charge the prorated difference for the rest of the period.
+      // Paid upgrade: switch now and charge the prorated difference for the rest of the period.
       await stripe.subscriptions.update(id, { items: [{ id: item.id, price: priceId }], proration_behavior: "always_invoice", cancel_at_period_end: false });
       return json({ ok: true, mode: "upgrade" });
     }
