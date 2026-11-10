@@ -77,7 +77,7 @@ export default function Billing() {
       const r = data as { mode?: string; effective?: number; trial_end?: number } | null;
       const trialWhen = r?.trial_end ? fmtDate(new Date(r.trial_end * 1000)) : sub?.current_period_end ? fmtDate(sub.current_period_end) : "";
       toast(r?.mode === "trial_plan_change"
-        ? `Plan changed. You won't be charged until your free trial ends${trialWhen ? ` on ${trialWhen}` : ""}.`
+        ? `Plan changed. You won't be charged until your free trial ends${trialWhen ? ` on ${trialWhen}` : ""}. Your launch offer still applies.`
         : r?.mode === "upgrade" ? "Upgraded. You were charged the prorated difference for this period."
         : r?.mode === "downgrade" ? `Downgrade scheduled for ${r.effective ? new Date(r.effective * 1000).toLocaleDateString() : "your next billing date"}. No change until then.`
         : done);
@@ -255,7 +255,7 @@ export default function Billing() {
       {changeOpen && !isIosApp() && (
         <Sheet title="Change your plan" onClose={() => setChangeOpen(false)}>
           <div className="stack">
-            <p className="small muted" style={{ margin: 0 }}>{sub?.trialing ? `Your plan changes right away. You won't be charged until your free trial ends${sub.current_period_end ? ` on ${fmtDate(sub.current_period_end)}` : ""}.` : "Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference."}</p>
+            <p className="small muted" style={{ margin: 0 }}>{sub?.trialing ? `Your plan changes right away and your trial end stays the same. You won't be charged until${sub.current_period_end ? ` ${fmtDate(sub.current_period_end)}` : " the trial ends"}, and your launch offer stays on the subscription.` : "Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference."}</p>
             <PlanCards backTo="/billing" busy={busy} current={sub?.plan ?? undefined} cta="Switch to" onChoose={(p, iv) => void change({ action: "change", plan: p.id, interval: iv }, `You are now on ${p.name}.`)} />
           </div>
         </Sheet>
