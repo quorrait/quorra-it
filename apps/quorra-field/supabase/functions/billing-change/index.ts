@@ -5,7 +5,7 @@ import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requi
 
 /** Launch coupons that apply to monthly prices only. Annual prices already include 10% off. */
 function promoCouponIds(): Set<string> {
-  const ids = new Set<string>(["DISPATCH_LAUNCH_50_3MO", "WELCOME50_3MO"]);
+  const ids = new Set<string>(["DISPATCH_LAUNCH_50_3MO"]);
   const fromEnv = Deno.env.get("STRIPE_PROMO_COUPON")?.trim();
   if (fromEnv) ids.add(fromEnv);
   return ids;
