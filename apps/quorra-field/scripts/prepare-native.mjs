@@ -61,6 +61,27 @@ if (runIos) {
       if (!next.includes("<key>NSLocationWhenInUseUsageDescription</key>")) {
         next = next.replace("</dict>\n</plist>", "\t<key>NSLocationWhenInUseUsageDescription</key>\n\t<string>Dispatch uses your location to check you in at job sites.</string>\n</dict>\n</plist>");
       }
+      const iphoneOrient = `\t<key>UISupportedInterfaceOrientations</key>
+\t<array>
+\t\t<string>UIInterfaceOrientationPortrait</string>
+\t\t<string>UIInterfaceOrientationLandscapeLeft</string>
+\t\t<string>UIInterfaceOrientationLandscapeRight</string>
+\t</array>`;
+      const ipadOrient = `\t<key>UISupportedInterfaceOrientations~ipad</key>
+\t<array>
+\t\t<string>UIInterfaceOrientationPortrait</string>
+\t\t<string>UIInterfaceOrientationPortraitUpsideDown</string>
+\t\t<string>UIInterfaceOrientationLandscapeLeft</string>
+\t\t<string>UIInterfaceOrientationLandscapeRight</string>
+\t</array>`;
+      if (next.includes("<key>UISupportedInterfaceOrientations</key>")) {
+        next = next.replace(/<key>UISupportedInterfaceOrientations<\/key>\s*<array>[\s\S]*?<\/array>/, iphoneOrient.trim());
+      }
+      if (next.includes("<key>UISupportedInterfaceOrientations~ipad</key>")) {
+        next = next.replace(/<key>UISupportedInterfaceOrientations~ipad<\/key>\s*<array>[\s\S]*?<\/array>/, ipadOrient.trim());
+      } else {
+        next = next.replace("</dict>\n</plist>", `${ipadOrient}\n</dict>\n</plist>`);
+      }
       if (!next.includes("<string>remote-notification</string>")) {
         if (next.includes("<key>UIBackgroundModes</key>")) {
           next = next.replace(/(<key>UIBackgroundModes<\/key>\s*<array>)/, "$1\n\t\t<string>remote-notification</string>");
@@ -92,9 +113,9 @@ if (runIos) {
       }
       next = next.replace(/PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;[\s\S]*?\n\t\t\t\};/g, (block) => {
         if (block.includes("TARGETED_DEVICE_FAMILY")) {
-          return block.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, "TARGETED_DEVICE_FAMILY = 1;");
+          return block.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, 'TARGETED_DEVICE_FAMILY = "1,2";');
         }
-        return block.replace(/\n\t\t\t\};$/, "\n\t\t\t\tTARGETED_DEVICE_FAMILY = 1;\n\t\t\t};");
+        return block.replace(/\n\t\t\t\};$/, '\n\t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";\n\t\t\t};');
       });
       return next;
     });
