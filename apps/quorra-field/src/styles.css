@@ -24,7 +24,9 @@
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-html, body, #root { height: 100%; }
+html, body, #root, .app-root { height: 100%; }
+.app-root { display: flex; flex-direction: column; min-height: 0; }
+.app-fill { flex: 1; min-height: 0; overflow: hidden; }
 html, body { max-width: 100%; overflow: hidden; overscroll-behavior: none; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 button, a, .btn, .tab, .chip { touch-action: manipulation; }
 @media (max-width: 899px) { input, select, textarea, .input, .select, .textarea { font-size: 16px; } }
@@ -262,7 +264,23 @@ h1, h2, h3, p { margin: 0; }
 .auth-card { width: 100%; max-width: 400px; background: #fff; border-radius: 22px; padding: 28px 22px; }
 .auth-card h1 { font-size: 26px; font-weight: 800; letter-spacing: -.02em; margin: 14px 0 4px; }
 
-.toast { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); text-align: center; z-index: 90; background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.28); animation: up .2s; max-width: 90vw; }
+.toast {
+  position: fixed; left: 50%; top: calc(env(safe-area-inset-top) + 12px); transform: translateX(-50%);
+  text-align: center; z-index: 40; pointer-events: none;
+  background: var(--nav); color: #fff; padding: 11px 18px; border-radius: 999px; font-weight: 700; font-size: 14px;
+  box-shadow: 0 8px 28px rgba(0,0,0,.28); max-width: min(420px, calc(100vw - 24px));
+}
+.toast button, .toast a { pointer-events: auto; }
+.demo-banner {
+  flex: none; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px 12px;
+  padding: calc(env(safe-area-inset-top) + 8px) 12px 8px;
+  background: #9a3412; color: #fff; font-weight: 800; font-size: 14px; text-align: center;
+}
+.demo-banner button {
+  border: 0; border-radius: 999px; font: inherit; font-weight: 800; font-size: 13px; padding: 6px 12px; cursor: pointer;
+  background: #fff; color: #9a3412;
+}
+.demo-banner .demo-exit { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.75); }
 
 .spinner { width: 28px; height: 28px; border: 3px solid var(--line); border-top-color: var(--brand); border-radius: 50%; animation: spin .7s linear infinite; margin: 40px auto; }
 @keyframes spin { to { transform: rotate(360deg); } }

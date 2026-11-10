@@ -9,7 +9,7 @@ import type { Store } from "./store";
 import { canAccess, type Feature, type RoleAccess } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
 import { createSupabaseStore } from "./supabaseStore";
-import { hasSupabase, supabase } from "./supabase";
+import { demoMode, hasSupabase, supabase } from "./supabase";
 
 /* ---------------- Auth ---------------- */
 
@@ -33,10 +33,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!supabase) {
-      try {
-        setEmail(localStorage.getItem(DEMO_SESSION));
-      } catch {
-        /* ignore */
+      let saved: string | null = null;
+      try { saved = localStorage.getItem(DEMO_SESSION); } catch { /* ignore */ }
+      // ?demo=1 should open the sample company immediately, not the sign-in form.
+      if (demoMode) {
+        const who = saved || "demo@quorrait.com";
+        try { localStorage.setItem(DEMO_SESSION, who); } catch { /* ignore */ }
+        setEmail(who);
+      } else {
+        setEmail(saved);
       }
       setReady(true);
       return;
