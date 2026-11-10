@@ -39,15 +39,20 @@ workflows:
       - name: Build number and archive
         script: |
           cd ios/App
-          BUILD=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          agvtool new-version -all $((BUILD + 1))
+          if LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID"); then
+            agvtool new-version -all $((LATEST + 1))
+          else
+            agvtool new-version -all "$BUILD_NUMBER"
+          fi
           xcode-project build-ipa \
             --workspace App.xcworkspace \
             --scheme App \
             --disable-xcpretty \
             --verbose
     artifacts:
+      - ios/App/build/ios/ipa/*.ipa
       - apps/quorra-field/ios/App/build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/apps/quorra-field/ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
