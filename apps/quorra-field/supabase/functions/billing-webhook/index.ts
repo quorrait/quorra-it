@@ -47,6 +47,30 @@ async function save(sub: Stripe.Subscription) {
   if (error) throw error;
 }
 
+/** A second Stripe subscription must not replace the one the customer is still on. */
+async function isStaleSecondSub(live: Stripe.Subscription): Promise<boolean> {
+  const db = admin();
+  let ownerId = live.metadata?.owner_id;
+  if (!ownerId) {
+    const { data } = await db.from("subscriptions").select("owner_id").eq("stripe_customer_id", String(live.customer)).maybeSingle();
+    ownerId = data?.owner_id as string | undefined;
+  }
+  if (!ownerId) return false;
+  const { data: row } = await db.from("subscriptions").select("stripe_subscription_id").eq("owner_id", ownerId).maybeSingle();
+  const storedId = row?.stripe_subscription_id as string | undefined;
+  if (!storedId || storedId === live.id) return false;
+  try {
+    const stored = await stripe.subscriptions.retrieve(storedId);
+    if (stored.status === "active" || stored.status === "trialing") {
+      console.log(`skip ${live.id}: stored ${storedId} is ${stored.status}`);
+      return true;
+    }
+  } catch (e) {
+    console.log(`stored subscription ${storedId} could not be retrieved`, e);
+  }
+  return false;
+}
+
 Deno.serve(async (req) => {
   const sig = req.headers.get("stripe-signature");
   if (!sig) return new Response("missing signature", { status: 400 });
@@ -58,11 +82,15 @@ Deno.serve(async (req) => {
     return new Response("invalid signature", { status: 400 });
   }
   try {
+    console.log(event.type);
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
       if (s.mode === "subscription" && s.subscription) await save(await stripe.subscriptions.retrieve(String(s.subscription)));
     } else if (event.type.startsWith("customer.subscription.")) {
-      await save(event.data.object as Stripe.Subscription);
+      const incoming = event.data.object as Stripe.Subscription;
+      const live = await stripe.subscriptions.retrieve(incoming.id);
+      console.log(`${event.type} sub=${live.id} event_status=${incoming.status} live_status=${live.status}`);
+      if (!(await isStaleSecondSub(live))) await save(live);
     } else if (event.type === "invoice.paid") {
       // Our own branded receipt. In Stripe, turn off "Successful payments" customer emails so they do not get two.
       const inv = event.data.object as Stripe.Invoice;

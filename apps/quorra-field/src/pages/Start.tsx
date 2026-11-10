@@ -8,6 +8,9 @@ import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
 import { Field, PasswordInput } from "../components/ui";
 import EmbeddedStripe from "../components/EmbeddedStripe";
+import BuyService from "../components/BuyService";
+import { isIosApp } from "../lib/iosPlan";
+import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 
 /** Buy service: create the account, then go straight to Stripe to pay for the plan. */
 export default function Start() {
@@ -63,11 +66,27 @@ export default function Start() {
     }
   }
 
+  if (isIosApp()) {
+    return (
+      <div className="auth">
+        <div className="auth-card stack">
+          <div className="auth-head">
+            <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
+            <h1>Buy service</h1>
+            <p className="muted">Plans are sold on the website, not in the iOS app.</p>
+          </div>
+          <BuyService />
+          <button type="button" className="btn block" onClick={() => nav("/")}>Back to sign in</button>
+        </div>
+      </div>
+    );
+  }
+
   if (card) {
     return (
       <div className="auth">
         <div className="auth-card stack" style={{ maxWidth: 520 }}>
-          {import.meta.env.BASE_URL !== "./" && <a className="small muted" href="/dispatch/">‹ Back to website</a>}
+          {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
           <div className="auth-head">
             <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
             <h1>Start your {TRIAL_DAYS}-day free trial</h1>
@@ -92,7 +111,7 @@ export default function Start() {
   return (
     <div className="auth">
       <form className="auth-card stack" onSubmit={submit}>
-        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href="/dispatch/">‹ Back to website</a>}
+        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="auth-head">
           <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
           <h1>Create your account</h1>

@@ -1,8 +1,10 @@
 // One look for every email we send. Five looks to choose from; customer emails use the business's saved look and colors.
-// Keep this file identical to src/lib/emailHtml.ts.
+// Keep this file identical to src/lib/emailHtml.ts (that copy imports the Vite URL module).
+import { PUBLIC_SITE_URL } from "./publicUrl.ts";
+
 export const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 
-const LOGO = "https://www.quorrait.com/field/logo-mark-v2.png";
+const LOGO = `${PUBLIC_SITE_URL}/logo-mark-v2.png`;
 
 export interface Row { label: string; value: string }
 export type EmailTheme = "classic" | "modern" | "minimal" | "bold" | "soft";
@@ -30,7 +32,7 @@ export function emailHtml(o: { heading: string; paragraphs?: string[]; rows?: Ro
     : "";
   const fine = o.fine ? `<p style="margin:0;font-size:13px;line-height:1.5;color:#64748B">${esc(o.fine).replace(/\n/g, "<br>")}</p>` : "";
   const h1 = (color: string, size = 26, align = "left") => `<h1 style="margin:0 0 18px;font-size:${size}px;line-height:1.2;color:${color};text-align:${align}">${esc(o.heading)}</h1>`;
-  const foot = `<tr><td align="center" style="padding:20px 10px;font-size:12px;color:#94A3B8">Sent with <a href="https://www.quorrait.com/dispatch/" style="color:#64748B;text-decoration:underline">Quorra Dispatch</a></td></tr>`;
+  const foot = `<tr><td align="center" style="padding:20px 10px;font-size:12px;color:#94A3B8">Sent with <a href="${PUBLIC_SITE_URL}/" style="color:#64748B;text-decoration:underline">Quorra Dispatch</a></td></tr>`;
   const pre = `<span style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(o.preheader ?? o.heading)}</span>`;
   const wrap = (bg: string, inner: string) => `<!doctype html><html><body style="margin:0;padding:0;background:${bg}">${pre}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${bg}"><tr><td align="center" style="padding:32px 14px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;font-family:Arial,Helvetica,sans-serif">${inner}${foot}</table></td></tr></table></body></html>`;
   const brandCell = (color: string, size = 20) => `<table role="presentation" cellpadding="0" cellspacing="0"><tr>${mark}<td style="font-size:${size}px;font-weight:700;color:${color};letter-spacing:.2px">${esc(brand)}</td></tr></table>`;

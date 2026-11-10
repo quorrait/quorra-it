@@ -1,5 +1,6 @@
 // Shared helpers for the Edge Functions (Deno runtime).
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { PUBLIC_APP_URL } from "./publicUrl.ts";
 
 export const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -70,8 +71,12 @@ export const invoiceTotalCents = (items: LineItem[], taxRate: number) => {
   return subtotal + Math.round((subtotal * taxRate) / 100);
 };
 
-/** Where the app lives (for redirects). Set once as a secret: APP_URL=https://app.example.com */
-export const appUrl = () => env("APP_URL").replace(/\/$/, "");
+/**
+ * Where the signed-in app lives (Stripe and QuickBooks return here).
+ * Set the secret PUBLIC_APP_URL, or the older APP_URL, to https://quorradispatch.com/app
+ * (no trailing slash, no hash). If neither secret is set, that address is used.
+ */
+export const appUrl = () => (Deno.env.get("PUBLIC_APP_URL") || Deno.env.get("APP_URL") || PUBLIC_APP_URL).replace(/\/$/, "");
 
 /** The account owner's id for billing. The real owner, or a team member whose role is set to Owner, may manage billing. */
 export async function billingOwner(userId: string): Promise<string> {

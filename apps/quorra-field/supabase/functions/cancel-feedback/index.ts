@@ -2,6 +2,7 @@
 import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { supportEmail } from "../_shared/publicUrl.ts";
 
 const clean = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -18,7 +19,7 @@ handler(async (req) => {
   const r = { owner_id: owner, email: user.email ?? "", business: biz?.name ?? "", reason, details: clean(b.details, 2000), contact_me: Boolean(b.contact_me), phone: clean(b.phone, 40) };
   await db.from("cancel_requests").insert(r);
   await sendEmail({
-    to: Deno.env.get("CONTACT_TO") ?? "quorrait@gmail.com",
+    to: supportEmail(),
     subject: `${r.contact_me ? "[CONTACT ME] " : ""}Cancellation: ${r.business || r.email}`,
     replyTo: r.email || undefined,
     text: `Business: ${r.business}\nEmail: ${r.email}\nPhone: ${r.phone}\nWants a call back: ${r.contact_me ? "YES" : "no"}\nReason: ${r.reason}\n\n${r.details}`,

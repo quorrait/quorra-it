@@ -10,7 +10,7 @@ Verify JWT **on**: send-invite, billing-checkout, billing-portal, create-checkou
 ## 3. Secrets (Edge Functions, Secrets)
 - Email: `RESEND_API_KEY`, `FROM_EMAIL` (resend.com; verify your domain). Needed for invites, contact form, reminders, booking emails.
 - Text: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_FROM` (twilio.com; US numbers need A2P 10DLC registration before texts deliver).
-- `APP_URL`, `CONTACT_TO` (where Contact us goes), `CRON_SECRET` (any long random string).
+- `APP_URL`, `SUPPORT_EMAIL` (optional; support mail defaults to support@quorrait.com), `CRON_SECRET` (any long random string).
 - Cards: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, plus plan prices `STRIPE_PRICE_BASIC`, `STRIPE_PRICE_ESSENTIALS`, `STRIPE_PRICE_ENTERPRISE`.
 
 ## 4. Hourly reminders (SQL Editor)

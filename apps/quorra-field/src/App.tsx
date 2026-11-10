@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { applyStatusBar } from "./lib/native";
 import { AuthProvider, DataProvider, useAuth } from "./lib/app";
 import { ConfirmProvider, Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
@@ -58,6 +60,7 @@ function LockedOwner({ children }: { children: JSX.Element }) {
 /** Someone already signed in opens the "Start free trial" link: say so, and let them sign out to start a new account. */
 function AlreadySignedIn() {
   const { email, signOut } = useAuth();
+  useEffect(() => { void applyStatusBar("login"); }, []);
   return (
     <div className="auth"><div className="auth-card stack">
       <h1>You are already signed in</h1>
@@ -70,7 +73,8 @@ function AlreadySignedIn() {
 
 function Gate() {
   const { ready, email } = useAuth();
-  if (!ready) return <Spinner />;
+  useEffect(() => { if (!email) void applyStatusBar("login"); }, [email]);
+  if (!ready) return <div className="auth"><Spinner /></div>;
   if (!email) return (
     <div className="pub">
     <Routes>

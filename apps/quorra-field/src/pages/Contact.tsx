@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
+import { applyStatusBar } from "../lib/native";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { APP_NAME } from "../lib/config";
 import { hasSupabase } from "../lib/supabase";
@@ -13,6 +14,7 @@ export default function Contact() {
   const [err, setErr] = useState("");
   const [done, setDone] = useState(false);
   const nav = useNavigate();
+  useEffect(() => { void applyStatusBar("login"); }, []);
   const back = (useLocation().state as { back?: string } | null)?.back ?? "/plans";
   const backName = back === "/billing" ? "Billing" : "plans";
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });

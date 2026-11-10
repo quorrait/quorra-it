@@ -56,18 +56,18 @@ export default function PriceBook() {
       <div className="chips">
         {(["all", ...CATS] as const).map((c) => <button key={c} className={`chip${cat === c ? " on" : ""}`} onClick={() => setCat(c)}>{c === "all" ? "All" : c}</button>)}
       </div>
-      <div className="card flush scroll-x">
+      <div className="card flush">
         {rows.length === 0 ? <div className="empty">No items</div> : (
-          <table className="tbl">
+          <table className="tbl tbl-cards">
             <thead><tr><th>Item</th><th>Category</th><th className="r">Price</th><th className="r">Cost</th><th className="r">Margin</th></tr></thead>
             <tbody>
               {rows.map((p) => (
                 <tr key={p.id} style={{ cursor: "pointer" }} onClick={() => setEdit(p)}>
-                  <td><div className="bold">{p.name}</div><div className="small muted">{p.description}</div></td>
-                  <td>{p.category}</td>
-                  <td className="r num">{money(p.unit_cents)}</td>
-                  <td className="r num">{money(p.cost_cents)}</td>
-                  <td className="r num">{p.unit_cents ? `${Math.round(((p.unit_cents - p.cost_cents) / p.unit_cents) * 100)}%` : "-"}</td>
+                  <td data-label="Item"><div className="bold">{p.name}</div><div className="small muted">{p.description}</div></td>
+                  <td data-label="Category">{p.category}</td>
+                  <td className="r num" data-label="Price">{money(p.unit_cents)}</td>
+                  <td className="r num" data-label="Cost">{money(p.cost_cents)}</td>
+                  <td className="r num" data-label="Margin">{p.unit_cents ? `${Math.round(((p.unit_cents - p.cost_cents) / p.unit_cents) * 100)}%` : "-"}</td>
                 </tr>
               ))}
             </tbody>

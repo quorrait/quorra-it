@@ -22,7 +22,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
             <div className="plan-name">{p.name}</div>
             <div className="small muted">{p.tagline}</div>
             {iv === "month"
-              ? <div className="plan-price"><span className="num">{money(p.price_cents).replace(".00", "")}</span><span className="muted"> / month</span></div>
+              ? <div className="plan-price"><span className="num">{money(p.price_cents).replace(".00", "")}</span><span className="muted"> / month</span><div className="small muted" style={{ fontWeight: 400 }}>50% off your first 3 months</div></div>
               : <div className="plan-price"><span className="num">{money(annualCents(p)).replace(".00", "")}</span><span className="muted"> / year</span><div className="small muted" style={{ fontWeight: 400 }}>{money(Math.round(annualCents(p) / 12)).replace(".00", "")} / month, {ANNUAL_DISCOUNT}% off</div></div>}
             {cta === "Start" && <div className="small bold" style={{ color: "var(--brand-dark, #c2410c)" }}>{TRIAL_DAYS}-day free trial</div>}
             <ul className="plan-list">{p.extras.map((x) => <li key={x} className={x.endsWith(":") ? "plan-sub" : undefined}>{x}</li>)}</ul>

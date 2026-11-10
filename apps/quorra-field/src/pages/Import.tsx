@@ -107,11 +107,11 @@ export default function Import() {
             </div>
           )}
 
-          <div className="scroll-x">
-            <table className="tbl">
+          <div>
+            <table className="tbl tbl-cards">
               <thead><tr>{entity.fields.filter((f) => map[f.key] !== undefined).map((f) => <th key={f.key}>{f.label.split(" (")[0]}</th>)}</tr></thead>
               <tbody>
-                {data.slice(0, 5).map((cells, i) => <tr key={i}>{entity.fields.filter((f) => map[f.key] !== undefined).map((f) => <td key={f.key}>{cells[map[f.key]]}</td>)}</tr>)}
+                {data.slice(0, 5).map((cells, i) => <tr key={i}>{entity.fields.filter((f) => map[f.key] !== undefined).map((f) => <td key={f.key} data-label={f.label.split(" (")[0]}>{cells[map[f.key]]}</td>)}</tr>)}
               </tbody>
             </table>
           </div>

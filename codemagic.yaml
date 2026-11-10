@@ -10,17 +10,20 @@ workflows:
     max_build_duration: 60
     working_directory: apps/quorra-field
     integrations:
-      app_store_connect: Quorra
+      app_store_connect: Quorra IT
     environment:
       groups: [quorra_app]
       node: 20
       xcode: latest
       cocoapods: default
       ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.quorrait.dispatch
+        provisioning_profiles:
+          - quorra_dispatch_app_store
+        certificates:
+          - quorra_dispatch_dist
       vars:
         BUNDLE_ID: com.quorrait.dispatch
+        APP_STORE_APPLE_ID: 6832824662
     scripts:
       - name: Install packages
         script: npm ci
@@ -31,16 +34,27 @@ workflows:
           [ -d ios ] || npx cap add ios
           npx @capacitor/assets generate --ios || true
           npx cap sync ios
+          node scripts/prepare-native.mjs ios
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Build number and archive
         script: |
           cd ios/App
-          BUILD=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
-          agvtool new-version -all $((BUILD + 1))
-          xcode-project build-ipa --workspace App.xcworkspace --scheme App
+          if LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID"); then
+            agvtool new-version -all $((LATEST + 1))
+          else
+            agvtool new-version -all "$BUILD_NUMBER"
+          fi
+          xcode-project build-ipa \
+            --workspace App.xcworkspace \
+            --scheme App \
+            --disable-xcpretty \
+            --verbose
     artifacts:
+      - ios/App/build/ios/ipa/*.ipa
       - apps/quorra-field/ios/App/build/ios/ipa/*.ipa
+      - $CM_BUILD_DIR/apps/quorra-field/ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
@@ -66,6 +80,14 @@ workflows:
           [ -d android ] || npx cap add android
           npx @capacitor/assets generate --android || true
           npx cap sync android
+          node scripts/prepare-native.mjs android
+      - name: Firebase config if provided
+        script: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "GOOGLE_SERVICES_JSON is not set; building without Firebase"
+          fi
       - name: Build signed app bundle
         script: |
           cd android
@@ -97,6 +119,14 @@ workflows:
           [ -d android ] || npx cap add android
           npx @capacitor/assets generate --android || true
           npx cap sync android
+          node scripts/prepare-native.mjs android
+      - name: Firebase config if provided
+        script: |
+          if [ -n "${GOOGLE_SERVICES_JSON:-}" ]; then
+            printf '%s\n' "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+          else
+            echo "GOOGLE_SERVICES_JSON is not set; building without Firebase"
+          fi
       - name: Build test APK
         script: |
           cd android

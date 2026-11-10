@@ -122,14 +122,14 @@ export default function Reports() {
         </div>
       </div>
       <div className="grid2">
-        <div className="card flush scroll-x"><div className="card-title" style={{ padding: "14px 16px 0" }}>Revenue by technician</div>
-          <table className="tbl"><thead><tr><th>Name</th><th className="r">Collected</th><th className="r">Commission</th></tr></thead><tbody>
-            {top(r.byTech).map(([n, v]) => { const m = team.find((t) => t.name === n); return <tr key={n}><td>{n}</td><td className="r num">{money(v)}</td><td className="r num">{m ? money(Math.round((v * m.commission_pct) / 100)) : "-"}</td></tr>; })}
+        <div className="card flush"><div className="card-title" style={{ padding: "14px 16px 0" }}>Revenue by technician</div>
+          <table className="tbl tbl-cards"><thead><tr><th>Name</th><th className="r">Collected</th><th className="r">Commission</th></tr></thead><tbody>
+            {top(r.byTech).map(([n, v]) => { const m = team.find((t) => t.name === n); return <tr key={n}><td data-label="Name">{n}</td><td className="r num" data-label="Collected">{money(v)}</td><td className="r num" data-label="Commission">{m ? money(Math.round((v * m.commission_pct) / 100)) : "-"}</td></tr>; })}
             {!Object.keys(r.byTech).length && <tr><td colSpan={3} className="muted">No data</td></tr>}
           </tbody></table></div>
-        <div className="card flush scroll-x"><div className="card-title" style={{ padding: "14px 16px 0" }}>Top customers</div>
-          <table className="tbl"><thead><tr><th>Customer</th><th className="r">Paid</th></tr></thead><tbody>
-            {top(r.byCust).map(([n, v]) => <tr key={n}><td>{n}</td><td className="r num">{money(v)}</td></tr>)}
+        <div className="card flush"><div className="card-title" style={{ padding: "14px 16px 0" }}>Top customers</div>
+          <table className="tbl tbl-cards"><thead><tr><th>Customer</th><th className="r">Paid</th></tr></thead><tbody>
+            {top(r.byCust).map(([n, v]) => <tr key={n}><td data-label="Customer">{n}</td><td className="r num" data-label="Paid">{money(v)}</td></tr>)}
             {!Object.keys(r.byCust).length && <tr><td colSpan={2} className="muted">No data</td></tr>}
           </tbody></table></div>
       </div>

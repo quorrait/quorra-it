@@ -2,11 +2,13 @@ import { useHubAdmin } from "../lib/hub";
 import Tour from "./Tour";
 import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
+import { applyStatusBar } from "../lib/native";
 import { Icon, useConfirm } from "./ui";
 import NotificationBell from "./NotificationBell";
 import PublicFooter from "./PublicFooter";
 import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
+import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
 import type { ReactNode } from "react";
@@ -51,6 +53,7 @@ export default function Layout() {
   const { signOut } = useAuth();
   const nav = useNavigate();
   const ask = useConfirm();
+  useEffect(() => { void applyStatusBar("app"); }, []);
   useEffect(() => {
     // Leaving a screen with unsaved changes (tab bar, side menu or any in-app link) asks first.
     const onClick = async (e: MouseEvent) => {
@@ -96,7 +99,7 @@ export default function Layout() {
           </div>
         ))}
         {hubAdmin && <NavLink to="/hub" className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>{Icon.gear}Hub</NavLink>}
-        {store.mode === "demo" && <a className="side-link" href="/dispatch/">‹ Back to website</a>}
+        {store.mode === "demo" && <a className="side-link" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="side-foot">
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
           <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>
@@ -110,13 +113,21 @@ export default function Layout() {
         </div>
       </aside>
 
-      <NotificationBell />
-      <main className="main">
-        {error && <div className="error-banner">{error}</div>}
-        <Outlet />
-        <Tour />
-        <div className="appfoot"><PublicFooter /></div>
-      </main>
+      <div className="stage">
+        <header className="appbar">
+          <div className="appbar-brand">
+            <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
+            <span>{APP_NAME}</span>
+          </div>
+          <NotificationBell />
+        </header>
+        <main className="main">
+          {error && <div className="error-banner">{error}</div>}
+          <Outlet />
+          <Tour />
+          <div className="appfoot"><PublicFooter /></div>
+        </main>
+      </div>
 
       <nav className="tabbar" aria-label="Main">
         {LINKS.filter(mine).map((l) => (

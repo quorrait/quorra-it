@@ -75,7 +75,19 @@ export function createSupabaseStore(): Store {
     saveCustomer: (c: New<Customer>) => upsert<Customer>("customers", c),
 
     listJobs: () => list<Job>("jobs", "start_at", true),
-    saveJob: (j: New<Job>) => upsert<Job>("jobs", j),
+    async saveJob(j: New<Job>) {
+      let prev = "";
+      if (j.id) {
+        const { data } = await sb().from("jobs").select("assigned_to").eq("id", j.id).maybeSingle();
+        prev = String(data?.assigned_to ?? "").trim();
+      }
+      const saved = await upsert<Job>("jobs", j);
+      const next = String(saved.assigned_to ?? "").trim();
+      if (next && next !== prev) {
+        try { await invoke("job-assigned", { job_id: saved.id }); } catch (e) { console.error("job assigned notice", e); }
+      }
+      return saved;
+    },
     async deleteJob(id) {
       const { error } = await sb().from("jobs").delete().eq("id", id);
       if (error) throw error;

@@ -1,8 +1,10 @@
+import { Capacitor } from "@capacitor/core";
 import { Link } from "react-router-dom";
 import { APP_NAME } from "../lib/config";
 
-/** Footer on the pages anyone can open (plans, contact, sign in). */
+/** Footer on the pages anyone can open (plans, contact, sign in). Hidden in the installed phone app. */
 export default function PublicFooter() {
+  if (Capacitor.isNativePlatform()) return null;
   return (
     <footer className="pubfoot" style={{ textAlign: "center", padding: "24px 16px 32px", fontSize: 13, color: "var(--muted, #64748b)" }}>
       <div className="pf-name" style={{ fontWeight: 700 }}>{APP_NAME} by Quorra IT</div>
