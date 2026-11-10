@@ -35,8 +35,19 @@ footer{border-top:1px solid var(--rule);margin-top:64px;padding:28px 0 48px;colo
 .crumbs{font-size:14px;color:var(--ink3);margin-top:20px}
 `;
 
+const DISPATCH_ORIGIN = "https://quorradispatch.com";
+/** Public URL on quorradispatch.com. Files stay under /dispatch in this repo. */
+function dispatchUrl(path) {
+  let p = path;
+  if (p === `/${OUT_DIR}` || p === `/${OUT_DIR}/`) p = "/";
+  else if (p.startsWith(`/${OUT_DIR}/`)) p = p.slice(OUT_DIR.length + 1);
+  if (!p.startsWith("/")) p = `/${p}`;
+  if (!p.endsWith("/")) p = `${p}/`;
+  return DISPATCH_ORIGIN + p;
+}
+
 function layout({ path, title, desc, body, jsonld = [] }) {
-  const url = SITE + path;
+  const url = dispatchUrl(path);
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -85,7 +96,7 @@ const appLd = (path, desc) => ({
   name: BRAND,
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web, iOS, Android (installable web app)",
-  url: SITE + path,
+  url: dispatchUrl(path),
   description: desc,
   offers: PRICING.map((p) => ({ "@type": "Offer", name: p.name, price: p.price.replace("$", ""), priceCurrency: "USD" })),
 });
@@ -176,7 +187,12 @@ for (const p of pages) {
   writeFileSync(file, p.html);
 }
 const today = new Date().toISOString().slice(0, 10);
-const urls = [{ path: "/" }, ...pages].map((p) => `  <url><loc>${SITE}${p.path}</loc><lastmod>${today}</lastmod></url>`).join("\n");
+const urls = [
+  `  <url><loc>${SITE}/</loc><lastmod>${today}</lastmod></url>`,
+  `  <url><loc>${DISPATCH_ORIGIN}/</loc><lastmod>${today}</lastmod></url>`,
+  `  <url><loc>${DISPATCH_ORIGIN}/privacy/</loc><lastmod>${today}</lastmod></url>`,
+  ...pages.map((p) => `  <url><loc>${dispatchUrl(p.path)}</loc><lastmod>${today}</lastmod></url>`),
+].join("\n");
 writeFileSync(join(ROOT, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${urls}\n</urlset>\n`);
 writeFileSync(join(ROOT, "robots.txt"), `User-agent: *\nAllow: /\nDisallow: /field-test/\n\nSitemap: ${SITE}/sitemap.xml\n`);
 console.log(`Wrote ${pages.length} pages, sitemap.xml, robots.txt`);

@@ -3,7 +3,7 @@
 // /app/ is the production web app (what /field is today), and
 // /test/ is a second copy of the same app (what /field-test is today).
 import { spawnSync } from "node:child_process";
-import { cpSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,38 +29,43 @@ function vite(base, dir) {
 vite("/app/", join(out, "app"));
 vite("/test/", join(out, "test"));
 
-let landing = readFileSync(join(root, "dispatch/index.html"), "utf8");
-landing = landing
-  .replaceAll("https://www.quorrait.com/dispatch/", "https://quorradispatch.com/")
-  .replaceAll('href="/field-test/#/login"', 'href="/app/"')
-  .replaceAll('href="/field-test/#/start?plan=', 'href="/app/start?plan=')
-  .replaceAll('"/field-test/#/start?plan="', '"/app/start?plan="')
-  .replaceAll('href="/field/?demo=1"', 'href="/app/?demo=1"')
-  .replaceAll('src="/field/', 'src="/')
-  .replaceAll('href="/field/', 'href="/')
-  .replaceAll('href="/dispatch/privacy/"', 'href="/privacy/"')
-  .replaceAll('href="/dispatch/"', 'href="/"')
-  .replaceAll('href="/terms.html"', 'href="https://www.quorrait.com/terms.html"')
-  .replaceAll('href="/privacy-policy.html"', 'href="https://www.quorrait.com/privacy-policy.html"')
-  .replace(
-    '<span>Quorra Dispatch by <a href="/">Quorra IT</a></span>',
-    '<span>Quorra Dispatch by <a href="https://www.quorrait.com/">Quorra IT</a></span>',
-  )
-  .replaceAll('href="/dispatch/', 'href="https://www.quorrait.com/dispatch/');
-writeFileSync(join(out, "index.html"), landing);
+// Pages live in this repo under dispatch/<slug>/ and are published at quorradispatch.com/<slug>/.
+function rewriteMarketing(html) {
+  return html
+    .replaceAll("https://www.quorrait.com/dispatch/", "https://quorradispatch.com/")
+    .replaceAll('href="/field-test/#/login"', 'href="/app/"')
+    .replaceAll('href="/field-test/#/start?plan=', 'href="/app/start?plan=')
+    .replaceAll('"/field-test/#/start?plan="', '"/app/start?plan="')
+    .replaceAll('href="/field/?demo=1"', 'href="/app/?demo=1"')
+    .replaceAll('src="/field/', 'src="/')
+    .replaceAll('href="/field/', 'href="/')
+    .replace(/href="\/dispatch\//g, "href=\"/")
+    .replaceAll('href="/terms.html"', 'href="https://www.quorrait.com/terms.html"')
+    .replaceAll('href="/privacy-policy.html"', 'href="https://www.quorrait.com/privacy-policy.html"')
+    .replace(
+      '<span>Quorra Dispatch by <a href="/">Quorra IT</a></span>',
+      '<span>Quorra Dispatch by <a href="https://www.quorrait.com/">Quorra IT</a></span>',
+    )
+    .replaceAll('<a href="/">Quorra IT LLC</a>', '<a href="https://www.quorrait.com/">Quorra IT LLC</a>');
+}
 
-let privacy = readFileSync(join(root, "dispatch/privacy/index.html"), "utf8");
-privacy = privacy
-  .replaceAll("https://www.quorrait.com/dispatch/privacy", "https://quorradispatch.com/privacy")
-  .replaceAll("https://www.quorrait.com/dispatch", "https://quorradispatch.com")
-  .replaceAll('href="/field/', 'href="/')
-  .replaceAll('href="/dispatch/privacy/"', 'href="/privacy/"')
-  .replaceAll('href="/dispatch/"', 'href="/"')
-  .replaceAll('href="/privacy-policy.html"', 'href="https://www.quorrait.com/privacy-policy.html"')
-  .replaceAll('href="/terms.html"', 'href="https://www.quorrait.com/terms.html"')
-  .replace('<a href="/">Quorra IT LLC</a>', '<a href="https://www.quorrait.com/">Quorra IT LLC</a>');
-mkdirSync(join(out, "privacy"), { recursive: true });
-writeFileSync(join(out, "privacy/index.html"), privacy);
+writeFileSync(join(out, "index.html"), rewriteMarketing(readFileSync(join(root, "dispatch/index.html"), "utf8")));
+
+const slugs = [];
+for (const name of readdirSync(join(root, "dispatch"))) {
+  const dir = join(root, "dispatch", name);
+  if (!statSync(dir).isDirectory()) continue;
+  const page = join(dir, "index.html");
+  if (!existsSync(page)) continue;
+  mkdirSync(join(out, name), { recursive: true });
+  writeFileSync(join(out, name, "index.html"), rewriteMarketing(readFileSync(page, "utf8")));
+  slugs.push(name);
+}
+
+const today = new Date().toISOString().slice(0, 10);
+const locs = ["https://quorradispatch.com/", ...slugs.sort().map((slug) => `https://quorradispatch.com/${slug}/`)];
+writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${locs.map((loc) => `  <url><loc>${loc}</loc><lastmod>${today}</lastmod></url>`).join("\n")}\n</urlset>\n`);
+writeFileSync(join(out, "robots.txt"), "User-agent: *\nAllow: /\nDisallow: /test/\n\nSitemap: https://quorradispatch.com/sitemap.xml\n");
 
 for (const file of ["reel.mp4", "reel.webm", "reel-poster.jpg"]) {
   cpSync(join(root, "dispatch", file), join(out, file));
@@ -88,6 +93,7 @@ writeFileSync(join(out, "_redirects"), [
   "/dispatch/privacy   /privacy/  301",
   "/dispatch/      /              301",
   "/dispatch       /              301",
+  "/dispatch/*     /:splat        301",
   "/app            /app/          301",
   "/test           /test/         301",
   "/privacy        /privacy/      301",
