@@ -2,6 +2,8 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { applyStatusBar } from "./lib/native";
 import { AuthProvider, DataProvider, useAuth } from "./lib/app";
+import { exitDemo, leaveDemoForTrial } from "./lib/demoMode";
+import { demoMode } from "./lib/supabase";
 import { ConfirmProvider, Spinner, ToastProvider } from "./components/ui";
 import Layout from "./components/Layout";
 import Login from "./pages/Login";
@@ -71,11 +73,21 @@ function AlreadySignedIn() {
   );
 }
 
+function DemoBanner() {
+  return (
+    <div className="demo-banner" role="status">
+      <button type="button" onClick={leaveDemoForTrial}>Demo — start free trial</button>
+      <button type="button" className="demo-exit" onClick={exitDemo}>Exit</button>
+    </div>
+  );
+}
+
 function Gate() {
   const { ready, email } = useAuth();
   useEffect(() => { if (!email) void applyStatusBar("login"); }, [email]);
-  if (!ready) return <div className="auth"><Spinner /></div>;
-  if (!email) return (
+  let body: JSX.Element;
+  if (!ready) body = <div className="auth"><Spinner /></div>;
+  else if (!email) body = (
     <div className="pub">
     <Routes>
       <Route path="plans" element={<Plans />} />
@@ -87,7 +99,7 @@ function Gate() {
     <PublicFooter />
     </div>
   );
-  return (
+  else body = (
     <DataProvider>
       <Locked>
       <Routes>
@@ -124,6 +136,12 @@ function Gate() {
       </Routes>
       </Locked>
     </DataProvider>
+  );
+  return (
+    <div className="app-root">
+      {demoMode && <DemoBanner />}
+      <div className="app-fill">{body}</div>
+    </div>
   );
 }
 

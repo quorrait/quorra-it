@@ -8,7 +8,10 @@ let listening = false;
 function openLink(link: unknown) {
   if (typeof link !== "string" || !link.startsWith("/")) return;
   if (import.meta.env.VITE_HASH_ROUTER) location.hash = `#${link}`;
-  else location.assign(link);
+  else {
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    location.assign(`${base}${link}`);
+  }
 }
 
 /** Listen before the first paint so a tap that launched the app is not missed. Native only. */
