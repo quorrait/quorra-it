@@ -1,5 +1,6 @@
 // Starts a Stripe Checkout subscription for the business owner (Quorra Dispatch plan).
 // Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE, PUBLIC_APP_URL (or APP_URL).
+// Optional: STRIPE_PROMO_COUPON (monthly only; leave unset to turn the launch offer off).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 
@@ -33,13 +34,20 @@ handler(async (req) => {
     await db.from("subscriptions").upsert({ owner_id: user.id, stripe_customer_id: customer }, { onConflict: "owner_id" });
   }
 
+  // Annual prices already include 10% off. The launch coupon is monthly only, and only while the secret is set.
+  // Do not also set allow_promotion_codes: Stripe rejects a session that has both.
+  const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
   const base = {
     mode: "subscription" as const,
     customer,
     client_reference_id: user.id,
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
-    subscription_data: { trial_period_days: 14, metadata: { owner_id: user.id } },
+    subscription_data: {
+      trial_period_days: 14,
+      metadata: { owner_id: user.id },
+      ...(promo ? { discounts: [{ coupon: promo }] } : {}),
+    },
     // Set the secret STRIPE_AUTOMATIC_TAX to "true" once Stripe Tax is set up (head office address, registrations, SaaS tax code on the products).
     ...(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { automatic_tax: { enabled: true }, billing_address_collection: "required" as const, customer_update: { address: "auto" as const } } : {}),
   };
