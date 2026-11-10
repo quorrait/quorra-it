@@ -11,6 +11,8 @@ import { money } from "../lib/money";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
 import { PLANS, planByName } from "../lib/plans";
+import { isIosApp } from "../lib/iosPlan";
+import BuyService from "../components/BuyService";
 
 interface Charge { id: string; date: string; description: string; amount_cents: number; status: string; receipt_url: string | null }
 const DEMO_CHARGES: Charge[] = [
@@ -45,7 +47,7 @@ export default function Billing() {
   useEffect(() => {
     let st = params.get("start");
     if (!st) { try { st = sessionStorage.getItem("qd_start"); } catch { st = null; } }
-    if (!st || loading || !isOwner || hasPlan) return;
+    if (!st || loading || !isOwner || hasPlan || isIosApp()) return;
     try { sessionStorage.removeItem("qd_start"); } catch { /* ignore */ }
     if (params.get("start")) setParams({}, { replace: true });
     const [pl, iv] = st.split(":");
@@ -85,6 +87,7 @@ export default function Billing() {
   }
 
   async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string, retried = false): Promise<void> {
+    if (kind === "checkout" && isIosApp()) return;
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? kind); setPayErr(null);
     try {
@@ -137,10 +140,10 @@ export default function Billing() {
       {payErr && (
         <div className="error-banner" style={{ margin: 0 }}>
           <b>We could not open the payment form.</b> {payErr.msg}
-          <div style={{ marginTop: 8 }}><button className="btn sm" onClick={() => void openEmbedded("checkout", payErr.plan, payErr.interval)}>Try again</button></div>
+          {!isIosApp() && <div style={{ marginTop: 8 }}><button className="btn sm" onClick={() => void openEmbedded("checkout", payErr.plan, payErr.interval)}>Try again</button></div>}
         </div>
       )}
-      {locked && <div className="error-banner" style={{ margin: 0 }}>Your plan is not active, so the rest of the app is locked. Start your free trial below to continue.</div>}
+      {locked && <div className="error-banner" style={{ margin: 0 }}>{isIosApp() ? "Your plan is not active, so the rest of the app is locked." : "Your plan is not active, so the rest of the app is locked. Start your free trial below to continue."}</div>}
 
       <div className="card stack">
         <div className="row between wrap">
@@ -186,10 +189,12 @@ export default function Billing() {
       )}
 
       {!active && !sub?.comped ? (
+        isIosApp() ? <BuyService /> : (
         <div className="stack">
           <div className="card-title" style={{ margin: 0 }}>Choose your plan</div>
           <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p, iv) => void openEmbedded("checkout", p.id, iv)} />
         </div>
+        )
       ) : !sub?.comped && (
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Manage your plan</div>
@@ -199,7 +204,7 @@ export default function Billing() {
               <button className="btn primary" disabled={busy !== null} onClick={() => void change({ action: "resume" }, "Plan resumed. It will keep renewing.")}>Resume plan</button>
             ) : (
               <>
-                <button className="btn" disabled={busy !== null} onClick={() => setChangeOpen(true)}>Upgrade or downgrade</button>
+                {isIosApp() ? <BuyService /> : <button className="btn" disabled={busy !== null} onClick={() => setChangeOpen(true)}>Upgrade or downgrade</button>}
                 <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
               </>
             )}
@@ -242,7 +247,7 @@ export default function Billing() {
           <EmbeddedStripe publishableKey={embed.pk} clientSecret={embed.secret} onComplete={() => void embedDone()} />
         </Sheet>
       )}
-      {changeOpen && (
+      {changeOpen && !isIosApp() && (
         <Sheet title="Change your plan" onClose={() => setChangeOpen(false)}>
           <div className="stack">
             <p className="small muted" style={{ margin: 0 }}>Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference.</p>

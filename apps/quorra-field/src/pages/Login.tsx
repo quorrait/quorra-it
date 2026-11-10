@@ -4,6 +4,8 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { APP_NAME } from "../lib/config";
+import { isIosApp } from "../lib/iosPlan";
+import BuyService from "../components/BuyService";
 import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
 
@@ -102,6 +104,8 @@ export default function Login() {
           <button type="button" className="btn block" onClick={() => setMode(mode === "in" ? "up" : "in")}>
             {mode === "in" ? "I need to create a login" : "I already have a login"}
           </button>
+        ) : isIosApp() ? (
+          <BuyService />
         ) : (
           <button type="button" className="btn block" onClick={() => nav("/plans")}>Buy service</button>
         )}

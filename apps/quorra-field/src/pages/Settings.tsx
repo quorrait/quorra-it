@@ -187,6 +187,7 @@ function SettingsInner() {
       {tab === "account" && <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
+        <a className="small" href="https://www.quorrait.com/dispatch/privacy" target="_blank" rel="noopener">Privacy policy</a>
         {hasSupabase && me.isOwner && <button className="btn block" onClick={async () => { const { data, error } = await supabase!.functions.invoke("send-test-email"); toast(error ? "Could not send. Deploy the send-test-email function." : data?.ok ? `Sample customer emails sent to ${data.to}` : data?.reason || "Could not send"); }}>Email me samples of customer emails</button>}
         <div className="row wrap">
           <button className="btn grow" onClick={signOut}>Sign out</button>
