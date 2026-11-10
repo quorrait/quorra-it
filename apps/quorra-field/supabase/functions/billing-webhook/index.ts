@@ -14,7 +14,9 @@ function planName(price?: Stripe.Price | null): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
     if (price?.id && (price.id === Deno.env.get(`STRIPE_PRICE_${key}`) || price.id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
   }
-  return price?.nickname || "Quorra Dispatch";
+  const nick = (price?.nickname ?? "").toLowerCase();
+  if (nick === "basic" || nick === "essentials" || nick === "enterprise") return nick.charAt(0).toUpperCase() + nick.slice(1);
+  return "Basic";
 }
 
 async function save(sub: Stripe.Subscription) {

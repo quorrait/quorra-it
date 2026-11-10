@@ -1,4 +1,5 @@
 const FLAG = "qd-demo";
+const PREVIEW = "qd-plan-preview";
 
 /**
  * Sample-data demo for this browser tab. `?demo=1` turns it on and remembers it
@@ -20,6 +21,16 @@ export function demoRequested(): boolean {
   } catch {
     return false;
   }
+}
+
+/** Demo-only plan preview so the sample company can show a locked screen. Ignored on a real account. */
+export function demoPlanPreview(): "basic" | "essentials" | "enterprise" | null {
+  if (!demoRequested()) return null;
+  try {
+    const v = sessionStorage.getItem(PREVIEW);
+    if (v === "basic" || v === "essentials" || v === "enterprise") return v;
+  } catch { /* ignore */ }
+  return null;
 }
 
 function appPath(path: string): string {

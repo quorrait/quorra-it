@@ -2,6 +2,7 @@
 // and reminds customers whose service plan visit is due within 14 days.
 // Protect it: set secret CRON_SECRET and send header "x-cron-secret". Deploy with --no-verify-jwt.
 import { admin, handler, HttpError, json } from "../_shared/util.ts";
+import { featureOn } from "../_shared/plan.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { normHours } from "../_shared/schedule.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
@@ -19,7 +20,13 @@ handler(async (req) => {
     .eq("status", "scheduled").gt("start_at", new Date(now).toISOString()).lte("start_at", new Date(now + 8 * 86400_000).toISOString())
     .or("customer_reminded_at.is.null,team_reminded_at.is.null");
   const bizCache = new Map<string, Record<string, unknown> | null>();
+  const remindersOn = new Map<string, boolean>();
+  const allowsReminders = async (owner: string) => {
+    if (!remindersOn.has(owner)) remindersOn.set(owner, await featureOn(owner, "reminders"));
+    return remindersOn.get(owner) === true;
+  };
   for (const j of jobs ?? []) {
+    if (!(await allowsReminders(j.owner_id))) continue;
     if (!bizCache.has(j.owner_id)) {
       const { data } = await db.from("business").select("name,phone,email,hours,reminders,notify_email,notify_phone,email_templates").eq("owner_id", j.owner_id).maybeSingle();
       bizCache.set(j.owner_id, data);
@@ -61,6 +68,7 @@ handler(async (req) => {
   const { data: sp } = await db.from("service_plans").select("id,owner_id,customer_id,name,visit_title,next_visit")
     .eq("status", "active").lte("next_visit", in14).or(`reminder_sent_at.is.null,reminder_sent_at.lt.${new Date(now - 60 * 86400_000).toISOString()}`);
   for (const p of sp ?? []) {
+    if (!(await allowsReminders(p.owner_id))) continue;
     const [{ data: biz }, { data: cust }] = await Promise.all([
       db.from("business").select("name,phone,email").eq("owner_id", p.owner_id).maybeSingle(),
       db.from("customers").select("name,phone,email").eq("id", p.customer_id).maybeSingle(),

@@ -16,7 +16,7 @@ import { reviewRequest } from "../lib/review";
 
 export default function JobDetail() {
   const { id } = useParams();
-  const { loading, me, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can } = useData();
+  const { loading, me, business, store, jobs, invoices, payments, customerById, purchaseOrders, timeEntries, team, refresh, can, allows } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const ask = useConfirm();
@@ -137,17 +137,17 @@ export default function JobDetail() {
       {can("money") && (() => {
         const billed = jobInvoices.reduce((a, i) => a + invoiceTotals(i).total, 0);
         const paid = jobInvoices.reduce((a, i) => a + amountPaid(i.id, payments), 0);
-        const mats = purchaseOrders.filter((p) => p.job_id === job.id && p.status !== "canceled").reduce((a, p) => a + p.items.reduce((b, li) => b + Math.round(li.qty * li.unit_cents), 0), 0);
-        const labor = timeEntries.filter((t) => t.job_id === job.id && t.end_at).reduce((a, t) => a + Math.round(((new Date(t.end_at!).getTime() - new Date(t.start_at).getTime()) / 3600_000) * (team.find((m) => m.id === t.member_id)?.hourly_cents ?? 0)), 0);
+        const mats = allows("purchase_orders") ? purchaseOrders.filter((p) => p.job_id === job.id && p.status !== "canceled").reduce((a, p) => a + p.items.reduce((b, li) => b + Math.round(li.qty * li.unit_cents), 0), 0) : 0;
+        const labor = allows("reports") ? timeEntries.filter((t) => t.job_id === job.id && t.end_at).reduce((a, t) => a + Math.round(((new Date(t.end_at!).getTime() - new Date(t.start_at).getTime()) / 3600_000) * (team.find((m) => m.id === t.member_id)?.hourly_cents ?? 0)), 0) : 0;
         const profit = billed - mats - labor;
         return (
           <div className="card">
             <div className="card-title">Job profit</div>
             <div className="row between"><span className="muted">Billed</span><b className="num">{money(billed)}</b></div>
             <div className="row between"><span className="muted">Paid so far</span><b className="num">{money(paid)}</b></div>
-            <div className="row between"><span className="muted">Materials (POs)</span><b className="num">-{money(mats)}</b></div>
-            <div className="row between"><span className="muted">Labor (timesheets)</span><b className="num">-{money(labor)}</b></div>
-            <div className="row between" style={{ borderTop: "1px solid var(--line)", marginTop: 8, paddingTop: 8 }}><b>Profit</b>{billed > 0 ? <b className="num" style={{ color: profit >= 0 ? "var(--good)" : "var(--bad)" }}>{money(profit)} ({Math.round((profit / billed) * 100)}%)</b> : <span className="small muted">Not billed yet</span>}</div>
+            {allows("purchase_orders") && <div className="row between"><span className="muted">Materials (POs)</span><b className="num">-{money(mats)}</b></div>}
+            {allows("reports") && <div className="row between"><span className="muted">Labor (timesheets)</span><b className="num">-{money(labor)}</b></div>}
+            {allows("reports") && <div className="row between" style={{ borderTop: "1px solid var(--line)", marginTop: 8, paddingTop: 8 }}><b>Profit</b>{billed > 0 ? <b className="num" style={{ color: profit >= 0 ? "var(--good)" : "var(--bad)" }}>{money(profit)} ({Math.round((profit / billed) * 100)}%)</b> : <span className="small muted">Not billed yet</span>}</div>}
           </div>
         );
       })()}

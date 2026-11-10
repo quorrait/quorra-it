@@ -2,6 +2,7 @@
 // Secrets: STRIPE_SECRET_KEY (needs Subscriptions: write), STRIPE_PRICE_<PLAN> and STRIPE_PRICE_<PLAN>_ANNUAL.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { activeLogins, downgradeLoginMessage } from "../_shared/plan.ts";
 
 /** Launch coupons that apply to monthly prices only. Annual prices already include 10% off. */
 function promoCouponIds(): Set<string> {
@@ -80,6 +81,8 @@ handler(async (req) => {
   if (b.action === "change") {
     const plan = String(b.plan ?? "").toLowerCase();
     if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
+    const blocked = downgradeLoginMessage(await activeLogins(owner), plan);
+    if (blocked) throw new HttpError(409, blocked);
     const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${b.interval === "year" ? "_ANNUAL" : ""}`);
     let cur = await loadSub(stripe, id);
     // An earlier scheduled downgrade would block a direct change, so drop it first.

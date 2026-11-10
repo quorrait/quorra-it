@@ -1,5 +1,6 @@
 // Emails a team invite. Signed-in owners/managers only (leave Verify JWT ON). Secrets: RESEND_API_KEY, FROM_EMAIL.
 import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { assertInviteAllowed } from "../_shared/plan.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 
@@ -12,8 +13,9 @@ handler(async (req) => {
   if (!code || !link) throw new HttpError(400, "Missing invite");
   const db = admin();
   const owner = await accountOwner(user.id);
-  const { data: inv } = await db.from("invites").select("email,role,status").eq("code", code).eq("owner_id", owner).maybeSingle();
+  const { data: inv } = await db.from("invites").select("email,role,status,team_member_id").eq("code", code).eq("owner_id", owner).maybeSingle();
   if (!inv || inv.status !== "pending") throw new HttpError(404, "Invite not found");
+  if (inv.team_member_id) await assertInviteAllowed(owner, inv.team_member_id as string);
   const { data: biz } = await db.from("business").select("name,email").eq("owner_id", owner).maybeSingle();
   const name = biz?.name || "your team";
   const text = `You're invited to join ${name} on Quorra Dispatch as ${inv.role}.\n\nCreate your login with this email address (${inv.email}):\n${link}\n\nThe link works once.`;

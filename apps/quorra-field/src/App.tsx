@@ -27,6 +27,8 @@ import Timesheets from "./pages/Timesheets";
 import Reports from "./pages/Reports";
 import { useData } from "./lib/app";
 import { ROUTE_FEATURE } from "./lib/access";
+import type { GatedFeature } from "./lib/plans";
+import UpgradePrompt from "./components/UpgradePrompt";
 import Templates from "./pages/Templates";
 import Import from "./pages/Import";
 import Plans from "./pages/Plans";
@@ -43,6 +45,12 @@ function Guard({ path, children }: { path: string; children: JSX.Element }) {
   const f = ROUTE_FEATURE[path];
   if (loading || !f || can(f)) return children;
   return <Navigate to="/" replace />;
+}
+
+function PlanGate({ feature, children }: { feature: GatedFeature; children: JSX.Element }) {
+  const { allows, loading } = useData();
+  if (loading || allows(feature)) return children;
+  return <UpgradePrompt feature={feature} />;
 }
 
 function Locked({ children }: { children: JSX.Element }) {
@@ -119,11 +127,11 @@ function Gate() {
           <Route path="pricebook" element={<Guard path="/pricebook"><PriceBook /></Guard>} />
           <Route path="templates" element={<Guard path="/templates"><Templates /></Guard>} />
           <Route path="import" element={<Guard path="/import"><Import /></Guard>} />
-          <Route path="plans" element={<Guard path="/plans"><ServicePlans /></Guard>} />
-          <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PurchaseOrders /></Guard>} />
+          <Route path="plans" element={<Guard path="/plans"><PlanGate feature="service_plans"><ServicePlans /></PlanGate></Guard>} />
+          <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PlanGate feature="purchase_orders"><PurchaseOrders /></PlanGate></Guard>} />
           <Route path="team" element={<Guard path="/team"><Team /></Guard>} />
-          <Route path="timesheets" element={<Guard path="/timesheets"><Timesheets /></Guard>} />
-          <Route path="reports" element={<Guard path="/reports"><Reports /></Guard>} />
+          <Route path="timesheets" element={<Guard path="/timesheets"><PlanGate feature="timesheets"><Timesheets /></PlanGate></Guard>} />
+          <Route path="reports" element={<Guard path="/reports"><PlanGate feature="reports"><Reports /></PlanGate></Guard>} />
           <Route path="settings" element={<Guard path="/settings"><Settings /></Guard>} />
           <Route path="hub" element={<Hub />} />
           <Route path="support" element={<Support />} />

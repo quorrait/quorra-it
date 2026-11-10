@@ -13,10 +13,11 @@ import InvoiceForm from "../components/InvoiceForm";
 import SendSheet from "../components/SendSheet";
 import { isManager } from "../lib/access";
 import { CardPaySheet, ManualPaySheet, TakePaymentSheet } from "../components/PaySheet";
+import UpgradePrompt from "../components/UpgradePrompt";
 
 export default function InvoiceDetail() {
   const { id } = useParams();
-  const { loading, store, business, invoices, payments, customerById, refresh, me } = useData();
+  const { loading, store, business, invoices, payments, customerById, refresh, me, allows } = useData();
   const nav = useNavigate();
   const toast = useToast();
   const ask = useConfirm();
@@ -145,7 +146,7 @@ export default function InvoiceDetail() {
 
       <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>QuickBooks</div>
-        {!business.qbo_connected ? (
+        {!allows("qbo") ? <UpgradePrompt feature="qbo" title="QuickBooks Online" /> : !business.qbo_connected ? (
           <p className="small muted">Connect QuickBooks in <Link to="/integrations" style={{ color: "var(--brand)", fontWeight: 700 }}>Settings</Link> to send invoices and payments over automatically.</p>
         ) : inv.qbo_id ? (
           <div className="row between wrap">
@@ -169,7 +170,7 @@ export default function InvoiceDetail() {
             setBusy(true);
             try {
               let qboFail = false;
-              if (business.qbo_connected && inv.qbo_id) { try { await store.qboSyncInvoice(inv.id, { action: "delete" }); } catch { qboFail = true; } }
+              if (allows("qbo") && business.qbo_connected && inv.qbo_id) { try { await store.qboSyncInvoice(inv.id, { action: "delete" }); } catch { qboFail = true; } }
               await store.deleteInvoice(inv.id); await refresh(); toast(qboFail ? "Deleted here. It could not be removed from QuickBooks, so delete it there too." : "Invoice deleted"); nav("/invoices");
             }
             catch (e) { toast(errMsg(e, "Could not delete the invoice")); }

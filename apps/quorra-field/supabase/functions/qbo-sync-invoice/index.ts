@@ -1,6 +1,7 @@
 // Keeps one invoice in step with QuickBooks Online: creates it, updates it after edits, voids it, or deletes it. Safe to call repeatedly.
 // Body: { invoice_id, action?: "sync" | "void" | "delete", hash?: string }  (hash = the app's fingerprint of the invoice contents)
 import { admin, handler, HttpError, json, requireUser, type LineItem, accountOwner } from "../_shared/util.ts";
+import { assertFeature } from "../_shared/plan.ts";
 import { getConnection, q, qbo, qboQuery } from "../_shared/qbo.ts";
 
 const dateOnly = (iso: string) => iso.slice(0, 10);
@@ -48,6 +49,7 @@ async function buildLines(conn: Conn, inv: any) {
 handler(async (req) => {
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
+  await assertFeature(ownerId, "qbo");
   const { invoice_id, action = "sync", hash = null } = await req.json();
   const db = admin();
 

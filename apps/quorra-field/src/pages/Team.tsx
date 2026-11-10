@@ -8,7 +8,7 @@ import ColorPick from "../components/ColorPick";
 import { centsToStr, strToCents } from "../components/LineItems";
 import type { Invite, Role, TeamMember } from "../lib/types";
 import { createInvite, emailInvite, inviteUrl, listInvites, revokeAccess } from "../lib/team";
-import { planByName } from "../lib/plans";
+import { planLabel, seatLimit } from "../lib/plans";
 import { hasSupabase } from "../lib/supabase";
 
 const COLORS = ["#f26b21", "#2563eb", "#16a34a", "#9333ea", "#db2777", "#0891b2", "#ca8a04"];
@@ -19,7 +19,7 @@ export const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2)
 
 /** Invite a team member so they can sign in to this business with their own login. */
 function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[]; reload(): Promise<void> }) {
-  const { business, subscription } = useData();
+  const { business, planId, activeLogins, setLoginActive, loginDisabled } = useData();
   const toast = useToast();
   const ask = useConfirm();
   const [busy, setBusy] = useState(false);
@@ -29,9 +29,12 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
 
   async function send() {
     if (!m.email.trim()) return toast("Add an email address first");
-    const seats = subscription?.comped ? Infinity : planByName(subscription?.plan)?.seats ?? Infinity;
-    const used = 1 + invites.filter((i) => i.status !== "revoked" && i.team_member_id !== m.id).length; // the owner plus everyone else with a login or open invite
-    if (used >= seats) return toast(`Your ${subscription?.plan} plan includes ${seats} ${seats === 1 ? "login" : "logins"}. Upgrade under Billing to add more.`);
+    const seats = seatLimit(planId);
+    const pending = invites.filter((i) => i.status === "pending" && i.team_member_id !== m.id).length;
+    if (activeLogins + pending >= seats) {
+      const next = planId === "basic" ? "Essentials" : planId === "essentials" ? "Enterprise" : "Custom";
+      return toast(`Your ${planLabel(planId)} plan includes ${seats} ${seats === 1 ? "login" : "logins"}. Upgrade to ${next} under Billing to add more.`);
+    }
     setBusy(true);
     try {
       const inv = await createInvite({ id: m.id, email: m.email, role: m.role });
@@ -55,8 +58,16 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
       <div className="small bold">Sign-in access</div>
       {mine?.status === "accepted" && (
         <>
-          <div className="row between"><span className="badge good">{Icon.check} Has access</span><button className="btn sm danger" disabled={busy} onClick={remove}>Remove access</button></div>
-          <div className="small muted">{m.name} signs in with {mine.email} and sees the screens that fit the {m.role} role.</div>
+          <div className="row between wrap"><span className={`badge ${loginDisabled(m.id) ? "gray" : "good"}`}>{loginDisabled(m.id) ? "Login off" : <>{Icon.check} Has access</>}</span>
+            <button className="btn sm" disabled={busy} onClick={async () => {
+              setBusy(true);
+              const err = await setLoginActive(m.id, loginDisabled(m.id));
+              setBusy(false);
+              toast(err ?? (loginDisabled(m.id) ? "Login turned back on" : "Login deactivated. Their history stays, and they no longer count toward your plan."));
+            }}>{loginDisabled(m.id) ? "Reactivate login" : "Deactivate login"}</button>
+            <button className="btn sm danger" disabled={busy} onClick={remove}>Remove access</button>
+          </div>
+          <div className="small muted">{loginDisabled(m.id) ? `${m.name} cannot sign in. Jobs and history stay, and this login does not count toward your plan.` : `${m.name} signs in with ${mine.email} and sees the screens that fit the ${m.role} role.`}</div>
         </>
       )}
       {mine?.status === "pending" && (
@@ -73,6 +84,17 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
           <div><button className="btn sm danger" disabled={busy} onClick={remove}>Cancel invite</button></div>
         </>
       )}
+      {!hasSupabase && m.role !== "Owner" && !mine && (
+        <div className="row between wrap">
+          <span className="small muted">{loginDisabled(m.id) ? "Sample login is off. It does not count, and the history stays." : "Sample login counts toward the plan in this demo."}</span>
+          <button className="btn sm" disabled={busy} onClick={async () => {
+            setBusy(true);
+            const err = await setLoginActive(m.id, loginDisabled(m.id));
+            setBusy(false);
+            toast(err ?? (loginDisabled(m.id) ? "Login turned back on" : "Login deactivated."));
+          }}>{loginDisabled(m.id) ? "Reactivate login" : "Deactivate login"}</button>
+        </div>
+      )}
       {!mine && (
         <>
           <div className="small muted">Give {m.name || "this person"} their own login so they can see their jobs on their phone.{!hasSupabase && " (Demo: the invite link is a sample.)"}</div>
@@ -84,7 +106,7 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
 }
 
 function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: Invite[]; reload(): Promise<void>; onClose(): void }) {
-  const { store, refresh, team, business } = useData();
+  const { store, refresh, team, business, allows } = useData();
   const toast = useToast();
   const ask = useConfirm();
   const [custom, setCustom] = useState<Feature[] | null>((m?.access as Feature[] | null | undefined) ?? null);
@@ -101,7 +123,7 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
         <Field label="Email"><input className="input" type="email" value={f.email} onChange={set("email")} /></Field>
         <div className="grid2 stack-sm">
           <Field label="Hourly cost ($)"><input className="input" inputMode="decimal" value={f.rate} onChange={set("rate")} /></Field>
-          <Field label="Commission %"><input className="input" inputMode="decimal" value={f.comm} onChange={set("comm")} /></Field>
+          {allows("reports") && <Field label="Commission %"><input className="input" inputMode="decimal" value={f.comm} onChange={set("comm")} /></Field>}
         </div>
         <Field label="Color"><ColorPick value={f.color} onChange={(c) => setF({ ...f, color: c })} swatches={COLORS} label="Team color" /></Field>
         {(
@@ -143,7 +165,7 @@ function MemberForm({ m, invites, reload, onClose }: { m?: TeamMember; invites: 
 }
 
 export default function Team() {
-  const { loading, team, jobs } = useData();
+  const { loading, team, jobs, activeLogins, planId, allows } = useData();
   const [edit, setEdit] = useState<TeamMember | "new" | null>(null);
   const [invites, setInvites] = useState<Invite[]>([]);
   const reload = async () => setInvites(await listInvites());
@@ -152,7 +174,7 @@ export default function Team() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1 className="page-title">Team</h1><p className="page-sub">Everyone you can assign jobs to.</p></div>
+        <div><h1 className="page-title">Team</h1><p className="page-sub">Everyone you can assign jobs to. {activeLogins} of {seatLimit(planId)} logins in use.</p></div>
         <button className="btn primary" onClick={() => setEdit("new")}>{Icon.plus} Invite or add member</button>
       </div>
       <div className="card flush"><div className="list">
@@ -163,7 +185,7 @@ export default function Team() {
               <div className="title">{m.name} {!m.active && <span className="badge gray">inactive</span>} {invites.some((i) => i.team_member_id === m.id && i.status === "accepted") ? <span className="badge good">has login</span> : invites.some((i) => i.team_member_id === m.id && i.status === "pending") ? <span className="badge blue">invited</span> : null}</div>
               <div className="small muted">{m.role}{m.phone ? ` · ${m.phone}` : ""}</div>
             </div>
-            <div className="right small muted">{jobs.filter((j) => j.assigned_to === m.name && j.status !== "completed" && j.status !== "canceled").length} open jobs<br />{m.commission_pct}% commission</div>
+            <div className="right small muted">{jobs.filter((j) => j.assigned_to === m.name && j.status !== "completed" && j.status !== "canceled").length} open jobs{allows("reports") && <><br />{m.commission_pct}% commission</>}</div>
           </div>
         ))}
       </div></div>

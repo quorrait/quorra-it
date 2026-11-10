@@ -1,5 +1,6 @@
 // Moves a job. Signed-in team only (leave Verify JWT ON). Texts and emails the customer, and tells everyone on the account.
 import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { featureOn } from "../_shared/plan.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 import { normHours } from "../_shared/schedule.ts";
@@ -29,7 +30,9 @@ handler(async (req) => {
   const first = (cust?.name ?? "").split(" ")[0] || "there";
   const msg = `Hi ${first}, your ${job.title} with ${biz?.name ?? "us"} has been rescheduled to ${f(start)}.${biz?.phone ? ` Questions? Call ${biz.phone}.` : ""}`;
   let texted = false;
-  if (b.notify_customer !== false) {
+  // The job move itself is core scheduling. Texting and emailing the customer is Essentials.
+  const tellCustomer = b.notify_customer !== false && await featureOn(owner, "reschedule_texts");
+  if (tellCustomer) {
     if (cust?.phone) texted = (await sendSms({ to: cust.phone, body: msg })).sent;
     if (cust?.email) await sendEmail({ to: cust.email, replyTo: biz?.email || undefined, fromName: biz?.name, subject: `Your visit was rescheduled: ${f(start)}`, text: msg,
       html: emailHtml({ brand: biz?.name || "Your contractor", style: getStyle(biz?.email_templates), heading: "Your visit was rescheduled", paragraphs: [`Hi ${first}, your ${job.title} has been moved.`], rows: [{ label: "New time", value: f(start) }, ...(biz?.phone ? [{ label: "Questions?", value: biz.phone }] : [])] }) });

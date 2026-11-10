@@ -18,11 +18,12 @@ import { APP_NAME } from "../lib/config";
 import { PUBLIC_PRIVACY_URL, PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { hasSupabase, supabase } from "../lib/supabase";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
+import UpgradePrompt from "../components/UpgradePrompt";
 import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
 
 export function More() {
   const { email, signOut } = useAuth();
-  const { can, me, viewAs, team, store } = useData();
+  const { can, allows, me, viewAs, team, store } = useData();
   const hubAdmin = useHubAdmin();
   return (
     <div className="stack">
@@ -34,12 +35,12 @@ export function More() {
           {can("estimates") && <Link to="/estimates" className="list-item">{Icon.invoice}<div className="grow title">Estimates</div>›</Link>}
           {can("pricebook") && <Link to="/pricebook" className="list-item">{Icon.card}<div className="grow title">Price book</div>›</Link>}
           {can("templates") && <Link to="/templates" className="list-item">{Icon.invoice}<div className="grow title">Templates</div>›</Link>}
-          {can("plans") && <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>›</Link>}
-          {can("purchase_orders") && <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>›</Link>}
+          {can("plans") && <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>{!allows("service_plans") && Icon.lock}›</Link>}
+          {can("purchase_orders") && <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>{!allows("purchase_orders") && Icon.lock}›</Link>}
           {can("customers") && <Link to="/customers" className="list-item">{Icon.users}<div className="grow title">Customers</div>›</Link>}
           {can("team") && <Link to="/team" className="list-item">{Icon.users}<div className="grow title">Team</div>›</Link>}
-          {can("timesheets") && <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>›</Link>}
-          {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>›</Link>}
+          {can("timesheets") && <Link to="/timesheets" className="list-item">{Icon.cal}<div className="grow title">Timesheets</div>{!allows("timesheets") && Icon.lock}›</Link>}
+          {can("reports") && <Link to="/reports" className="list-item">{Icon.invoice}<div className="grow title">Reports</div>{!allows("reports") && Icon.lock}›</Link>}
           {can("import") && <Link to="/import" className="list-item">{Icon.send}<div className="grow title">Import</div>›</Link>}
           {can("settings") && <Link to="/settings" className="list-item">{Icon.gear}<div className="grow title">Settings</div>›</Link>}
           {can("settings") && <Link to="/integrations" className="list-item">{Icon.plug}<div className="grow title">Integrations</div>›</Link>}
@@ -66,7 +67,7 @@ export default function Settings() {
 }
 
 function SettingsInner() {
-  const { loading, store, business, refresh, resetDemo, me } = useData();
+  const { loading, store, business, refresh, resetDemo, me, allows } = useData();
   const { signOut, email } = useAuth();
   const [delOpen, setDelOpen] = useState(false);
   const toast = useToast();
@@ -109,7 +110,7 @@ function SettingsInner() {
     const s = params.get("stripe");
     if (q || s) {
       void refresh();
-      toast(q === "connected" ? "QuickBooks connected" : q ? "QuickBooks connection failed" : s === "done" ? "Back from Stripe. If it still says not connected, give it a minute." : "Stripe setup not finished");
+      toast(q === "connected" ? "QuickBooks connected" : q === "plan" ? "QuickBooks is on the Enterprise plan." : q ? "QuickBooks connection failed" : s === "done" ? "Back from Stripe. If it still says not connected, give it a minute." : "Stripe setup not finished");
       setParams({}, { replace: true });
       nav("/integrations", { replace: true });
     }
@@ -179,9 +180,9 @@ function SettingsInner() {
       </div>}
 
 
-      {tab === "schedule" && <><HoursCard /><NotifyCard /></>}
+      {tab === "schedule" && <>{allows("booking_rules") ? <HoursCard /> : <UpgradePrompt feature="booking_rules" title="Open hours and booking rules" />}<NotifyCard /></>}
       {tab === "emails" && <EmailTemplatesCard />}
-      {tab === "documents" && <><InvoiceLayoutCard /><InvoiceNumberCard /><VendorsCard /><LeadFormCard /></>}
+      {tab === "documents" && <>{allows("custom_layout") ? <InvoiceLayoutCard /> : <UpgradePrompt feature="custom_layout" title="Invoice layout" />}<InvoiceNumberCard />{allows("purchase_orders") ? <VendorsCard /> : <UpgradePrompt feature="purchase_orders" title="Vendors" />}{allows("custom_layout") ? <LeadFormCard /> : <UpgradePrompt feature="custom_layout" title="Lead form design" />}</>}
 
       {tab === "access" && hasSupabase && me.isOwner && <RoleAccessCard />}
 
