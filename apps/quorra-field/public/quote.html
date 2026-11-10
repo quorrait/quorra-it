@@ -124,7 +124,7 @@
       var st = new Date(d.scheduled_for), en = new Date(d.scheduled_end || (st.getTime() + 7200000));
       var z = function (x) { return x.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, ""); };
       var ttl = (d.title || "Service visit") + " - " + (b.name || "");
-      var ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Quorra Dispatch//EN\r\nBEGIN:VEVENT\r\nUID:" + z(st) + "-" + (d.number || "q") + "@quorrait.com\r\nDTSTAMP:" + z(new Date()) + "\r\nDTSTART:" + z(st) + "\r\nDTEND:" + z(en) + "\r\nSUMMARY:" + ttl.replace(/[,;]/g, " ") + "\r\nDESCRIPTION:" + (b.phone ? "Questions? Call " + b.phone : "") + "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+      var ics = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Quorra Dispatch//EN\r\nBEGIN:VEVENT\r\nUID:" + z(st) + "-" + (d.number || "q") + "@quorradispatch.com\r\nDTSTAMP:" + z(new Date()) + "\r\nDTSTART:" + z(st) + "\r\nDTEND:" + z(en) + "\r\nSUMMARY:" + ttl.replace(/[,;]/g, " ") + "\r\nDESCRIPTION:" + (b.phone ? "Questions? Call " + b.phone : "") + "\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
       icsBtn.onclick = function () {
         var blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
         var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = "visit.ics"; document.body.appendChild(a); a.click(); a.remove();

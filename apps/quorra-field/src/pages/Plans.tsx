@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import PlanCards from "../components/PlanCards";
 import BuyService from "../components/BuyService";
 import { isIosApp } from "../lib/iosPlan";
+import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 
 /** Public page: what each plan includes. Picking one starts account creation. */
 export default function Plans() {
@@ -24,7 +25,7 @@ export default function Plans() {
   return (
     <div className="pub">
       <div className="pub-wrap">
-        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href="/dispatch/">‹ Back to website</a>}
+        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="pub-head">
           <img src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt="Quorra Dispatch" />
           <button className="btn" onClick={() => nav("/")}>Sign in</button>

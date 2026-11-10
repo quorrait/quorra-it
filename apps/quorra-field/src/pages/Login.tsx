@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { APP_NAME } from "../lib/config";
+import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { isIosApp } from "../lib/iosPlan";
 import BuyService from "../components/BuyService";
 import { Field, PasswordInput } from "../components/ui";
@@ -65,7 +66,7 @@ export default function Login() {
   return (
     <div className="auth">
       <form className="auth-card stack" method="post" action="#" onSubmit={submit}>
-        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href="/dispatch/">‹ Back to website</a>}
+        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="auth-head">
           {mode === "in" ? (
             <img className="auth-wide" src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt={APP_NAME} />

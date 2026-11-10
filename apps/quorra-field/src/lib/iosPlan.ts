@@ -1,8 +1,9 @@
 import { Capacitor } from "@capacitor/core";
 import { Browser } from "@capacitor/browser";
+import { PUBLIC_PRICING_URL } from "./publicUrl";
 
 /** Public pricing page. Checkout stays on the website, not inside the iOS app. */
-export const BUY_URL = "https://www.quorrait.com/dispatch/#pricing";
+export const BUY_URL = PUBLIC_PRICING_URL;
 
 export function isIosApp(): boolean {
   return Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";

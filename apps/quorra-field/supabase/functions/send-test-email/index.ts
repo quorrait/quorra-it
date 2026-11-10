@@ -1,5 +1,5 @@
 // Emails the signed-in owner sample copies of the customer emails (reminder, quote, schedule nudge, payment receipt). Deploy with JWT ON.
-import { admin, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, appUrl, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { fill, getTpl, getStyle } from "../_shared/templates.ts";
@@ -10,7 +10,7 @@ handler(async (req) => {
   const { data: biz } = await admin().from("business").select("name,phone").eq("owner_id", owner).maybeSingle();
   const brand = biz?.name || "Your Company";
   const to = user.email as string;
-  const url = "https://www.quorrait.com/field-test/";
+  const url = `${appUrl()}/`;
   const { data: full } = await admin().from("business").select("email_templates").eq("owner_id", owner).maybeSingle();
   const vars = { customer: "Sam", business: brand, service: "AC tune-up", date: "Tuesday, November 10", time: "9:00 AM", address: "123 Main St", phone: biz?.phone ?? "(916) 555-0100", total: "$285.00" };
   const mk = (key: "reminder" | "quote" | "invoice" | "nudge", extra: Record<string, unknown>) => {

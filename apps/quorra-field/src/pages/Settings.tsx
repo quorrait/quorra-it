@@ -15,6 +15,7 @@ import { useAuth, useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
+import { PUBLIC_PRIVACY_URL, PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { hasSupabase, supabase } from "../lib/supabase";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import { SaveAllProvider, useRegisterSave } from "../lib/saveAll";
@@ -26,7 +27,7 @@ export function More() {
   return (
     <div className="stack">
       <h1 className="page-title">More</h1>
-      {store.mode === "demo" && <a className="btn block" href="/dispatch/">‹ Back to website</a>}
+      {store.mode === "demo" && <a className="btn block" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
       <div className="card flush">
         <div className="list">
           {can("leads") && <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>}
@@ -187,7 +188,7 @@ function SettingsInner() {
       {tab === "account" && <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
-        <a className="small" href="https://www.quorrait.com/dispatch/privacy" target="_blank" rel="noopener">Privacy policy</a>
+        <a className="small" href={PUBLIC_PRIVACY_URL} target="_blank" rel="noopener">Privacy policy</a>
         {hasSupabase && me.isOwner && <button className="btn block" onClick={async () => { const { data, error } = await supabase!.functions.invoke("send-test-email"); toast(error ? "Could not send. Deploy the send-test-email function." : data?.ok ? `Sample customer emails sent to ${data.to}` : data?.reason || "Could not send"); }}>Email me samples of customer emails</button>}
         <div className="row wrap">
           <button className="btn grow" onClick={signOut}>Sign out</button>

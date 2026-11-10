@@ -1,5 +1,5 @@
 // Starts a Stripe Checkout subscription for the business owner (Quorra Dispatch plan).
-// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE, APP_URL.
+// Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE, PUBLIC_APP_URL (or APP_URL).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 

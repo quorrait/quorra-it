@@ -8,6 +8,7 @@ import NotificationBell from "./NotificationBell";
 import PublicFooter from "./PublicFooter";
 import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/unsaved";
 import { APP_NAME } from "../lib/config";
+import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
 import type { ReactNode } from "react";
@@ -98,7 +99,7 @@ export default function Layout() {
           </div>
         ))}
         {hubAdmin && <NavLink to="/hub" className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>{Icon.gear}Hub</NavLink>}
-        {store.mode === "demo" && <a className="side-link" href="/dispatch/">‹ Back to website</a>}
+        {store.mode === "demo" && <a className="side-link" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="side-foot">
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
           <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>
