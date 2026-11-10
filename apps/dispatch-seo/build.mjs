@@ -13,7 +13,7 @@ const compPath = (c) => `/${OUT_DIR}/${c.slug}/`;
 
 const CSS = `
 :root{--bg:#15140F;--ink:#F4F1EA;--ink2:#C9C3B7;--ink3:#8A847A;--rule:rgba(244,241,234,.14);--card:#1D1B16;--accent:#1CAADE;--sans:"Inter",-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif}
-*{box-sizing:border-box}html,body{margin:0}body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}html,body{margin:0}body{font-family:var(--sans);background:var(--bg);color:var(--ink);font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased;-webkit-user-select:none;user-select:none}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 .wrap{max-width:960px;margin:0 auto;padding:0 20px}
 nav{border-bottom:1px solid var(--rule);padding:14px 0}nav .wrap{display:flex;justify-content:space-between;align-items:center;gap:12px}

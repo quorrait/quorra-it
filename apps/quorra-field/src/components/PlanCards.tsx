@@ -7,8 +7,8 @@ const ON = { background: "#ea580c", color: "#fff", borderColor: "#ea580c" } as c
 const OFF = { background: "#fff", color: "#0f172a" } as const;
 
 /** Plan comparison. Used on the public plans page and on the Billing screen. */
-export default function PlanCards({ onChoose, current, busy, cta = "Choose", backTo = "/plans" }: { onChoose(p: Plan, interval: Interval): void; current?: string; busy?: string | null; cta?: string; backTo?: string }) {
-  const [iv, setIv] = useState<Interval>("month");
+export default function PlanCards({ onChoose, current, busy, cta = "Choose", backTo = "/plans", focus, initialInterval = "month" }: { onChoose(p: Plan, interval: Interval): void; current?: string; busy?: string | null; cta?: string; backTo?: string; focus?: string; initialInterval?: Interval }) {
+  const [iv, setIv] = useState<Interval>(initialInterval);
   return (
     <div className="stack">
       <div className="chips" style={{ justifyContent: "center" }}>
@@ -17,7 +17,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
       </div>
       <div className="plan-grid">
         {PLANS.map((p) => (
-          <div key={p.id} className={`plan${p.popular ? " pop" : ""}`}>
+          <div key={p.id} className={`plan${p.popular ? " pop" : ""}${focus === p.id ? " plan-focus" : ""}`}>
             {p.popular && <div className="plan-flag">Most popular</div>}
             <div className="plan-name">{p.name}</div>
             <div className="small muted">{p.tagline}</div>

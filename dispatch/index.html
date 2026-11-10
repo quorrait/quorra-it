@@ -32,7 +32,8 @@
 }
 * { box-sizing: border-box; margin: 0; }
 html { scroll-behavior: smooth; }
-body { font-family: var(--body); color: var(--ink); background: var(--paper); line-height: 1.55; -webkit-font-smoothing: antialiased; }
+body { font-family: var(--body); color: var(--ink); background: var(--paper); line-height: 1.55; -webkit-font-smoothing: antialiased; -webkit-user-select: none; user-select: none; }
+input, textarea, [contenteditable="true"] { -webkit-user-select: text; user-select: text; caret-color: auto; }
 img { max-width: 100%; display: block; }
 a { color: inherit; }
 :focus-visible { outline: 3px solid var(--orange); outline-offset: 3px; border-radius: 6px; }
@@ -214,7 +215,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
       <a href="#pricing">Pricing</a>
       <a href="/field/?demo=1">Demo</a>
       <a href="/field-test/#/login">Sign in</a>
-      <a class="btn go" href="/field-test/#/start?plan=essentials">Start free trial</a>
+      <a class="btn go" href="/app/plans">Start free trial</a>
     </nav>
   </div>
 </header>
@@ -227,7 +228,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
         <h1>Every job, first call to <em>paid.</em></h1>
         <p class="lead" style="margin-top:26px">Quorra Dispatch is field service software for HVAC, plumbing and electrical crews. Quote, schedule, send the crew and collect payment from one app on your phone.</p>
         <div class="cta">
-          <a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a>
+          <a class="btn go" href="/app/plans">Start 14-day free trial</a>
           <a class="btn ghost" href="/field/?demo=1">Try the demo</a>
         </div>
         <p class="fine">14 days free, then 50% off your first 3 months. Cancel any time in the app.</p>
@@ -302,7 +303,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
         <div class="price"><span data-m="80" data-y="72">80</span><small> /mo</small></div>
         <div class="bill" data-m="Billed monthly" data-y="$864 billed yearly">Billed monthly</div>
         <ul><li>1 login for the owner</li><li>Scheduling, calendar and phone sync</li><li>Estimates, invoices and customer portal</li><li>Take card, cash and check payments</li><li>Website lead form and Leads</li><li>Email support</li></ul>
-        <a class="btn line" data-plan="basic" href="/field-test/#/start?plan=basic">Start free trial</a>
+        <a class="btn line" data-plan="basic" href="/app/plans?plan=basic">Start free trial</a>
       </article>
       <article class="plan top">
         <span class="tag">Most popular</span>
@@ -310,14 +311,14 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
         <div class="price"><span data-m="190" data-y="171">190</span><small> /mo</small></div>
         <div class="bill" data-m="Billed monthly" data-y="$2,052 billed yearly">Billed monthly</div>
         <ul><li>Everything in Basic</li><li>Up to 5 logins with roles</li><li>Customers book a time online</li><li>Text and email reminders</li><li>Timesheets and purchase orders</li><li>Recurring service plans</li><li>Priority email support</li></ul>
-        <a class="btn go" data-plan="essentials" href="/field-test/#/start?plan=essentials">Start free trial</a>
+        <a class="btn go" data-plan="essentials" href="/app/plans?plan=essentials">Start free trial</a>
       </article>
       <article class="plan">
         <h3>Enterprise</h3><p class="for">For a growing company</p>
         <div class="price"><span data-m="300" data-y="270">300</span><small> /mo</small></div>
         <div class="bill" data-m="Billed monthly" data-y="$3,240 billed yearly">Billed monthly</div>
         <ul><li>Everything in Essentials</li><li>Up to 15 logins with roles</li><li>QuickBooks Online sync</li><li>Your own invoice layout</li><li>Reports, commission and labor cost</li><li>Onboarding and data import help</li><li>Phone support</li></ul>
-        <a class="btn line" data-plan="enterprise" href="/field-test/#/start?plan=enterprise">Start free trial</a>
+        <a class="btn line" data-plan="enterprise" href="/app/plans?plan=enterprise">Start free trial</a>
       </article>
     </div>
     <p class="big">More than 15 logins? <a href="mailto:support@quorrait.com?subject=Quorra%20Dispatch%20custom%20plan">Email us</a> for a custom plan priced per technician.</p>
@@ -340,7 +341,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
 <section class="close">
   <div class="wrap">
     <h2>Send the crew. Get paid.</h2>
-    <div class="cta"><a class="btn go" href="/field-test/#/start?plan=essentials">Start 14-day free trial</a><a class="btn ghost" href="/field/?demo=1">Try the demo</a></div>
+    <div class="cta"><a class="btn go" href="/app/plans">Start 14-day free trial</a><a class="btn ghost" href="/field/?demo=1">Try the demo</a></div>
     <p class="fine">No charge until the trial ends.</p>
   </div>
 </section>
@@ -364,7 +365,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
   function set(yearly) {
     m.setAttribute("aria-pressed", String(!yearly)); y.setAttribute("aria-pressed", String(yearly));
     document.querySelectorAll("[data-m]").forEach(function (el) { el.textContent = el.getAttribute(yearly ? "data-y" : "data-m"); });
-    document.querySelectorAll("a[data-plan]").forEach(function (a) { a.href = "/field-test/#/start?plan=" + a.getAttribute("data-plan") + (yearly ? "&interval=year" : ""); });
+    document.querySelectorAll("a[data-plan]").forEach(function (a) { a.href = "/app/plans?plan=" + a.getAttribute("data-plan") + (yearly ? "&interval=year" : ""); });
   }
   m.onclick = function () { set(false); }; y.onclick = function () { set(true); };
 })();
