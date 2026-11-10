@@ -920,3 +920,15 @@ end;
 $$;
 revoke all on function public.register_device_token(text, text) from public, anon;
 grant execute on function public.register_device_token(text, text) to authenticated;
+
+-- A notification can name one person. Null still means the whole business.
+alter table public.notifications add column if not exists user_id uuid references auth.users (id) on delete cascade;
+create index if not exists notifications_user_idx on public.notifications (user_id, created_at desc);
+drop policy if exists "account notifications" on public.notifications;
+create policy "account notifications" on public.notifications for select using (
+  owner_id = public.account_id() and (user_id is null or user_id = auth.uid())
+);
+drop policy if exists "account notifications delete" on public.notifications;
+create policy "account notifications delete" on public.notifications for delete using (
+  owner_id = public.account_id() and (user_id is null or user_id = auth.uid())
+);

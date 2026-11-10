@@ -16,6 +16,7 @@ handler(async (req) => {
     title,
     body: typeof b.body === "string" ? b.body : "",
     link: typeof b.link === "string" ? b.link : "",
+    userId: typeof b.user_id === "string" ? b.user_id : undefined,
   });
   return json({ ok: true });
 });

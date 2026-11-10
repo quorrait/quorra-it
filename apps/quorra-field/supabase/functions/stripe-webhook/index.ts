@@ -3,6 +3,7 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
+import { notifyAccount } from "../_shared/alert.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { getStyle } from "../_shared/templates.ts";
 
@@ -54,9 +55,16 @@ Deno.serve(async (req) => {
               db.from("business").select("name,phone,email,email_templates").eq("owner_id", s.metadata.owner_id).maybeSingle(),
               db.from("customers").select("name,email").eq("id", inv.customer_id).maybeSingle(),
             ]);
+            const amt = `$${((s.amount_total ?? 0) / 100).toFixed(2)}`;
+            try {
+              await notifyAccount(db, s.metadata.owner_id, {
+                title: `Paid: invoice #${inv.number ?? ""} – ${amt}`,
+                body: `${cust?.name ?? "A customer"} paid ${amt}.`,
+                link: `/invoices/${inv.id}`,
+              });
+            } catch (e) { console.error("payment notice", e); }
             const to = cust?.email || s.customer_details?.email || "";
             if (to) {
-              const amt = `$${((s.amount_total ?? 0) / 100).toFixed(2)}`;
               const first = (cust?.name ?? "").split(" ")[0] || "there";
               const brand = b2?.name || "Your contractor";
               await sendEmail({

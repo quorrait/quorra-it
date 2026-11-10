@@ -52,5 +52,7 @@ handler(async (req) => {
     source: "Website form", stage: "new", value_cents: 0,
   });
   if (error) throw error;
+  const detail = [clip(b.service, 200) || "Website form", [phone, email].filter(Boolean).join(", ")].filter(Boolean).join(" · ");
+  await notifyAccount(db, biz.owner_id, { title: `New lead: ${name}`, body: detail, link: "/leads" });
   return json({ ok: true });
 });

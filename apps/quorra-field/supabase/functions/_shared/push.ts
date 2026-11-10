@@ -88,11 +88,15 @@ function deadToken(status: number, body: string): boolean {
   return /BadDeviceToken|Unregistered|UNREGISTERED|INVALID_ARGUMENT|NotRegistered/i.test(body);
 }
 
-/** Push one in-app notification to every phone signed into that business. */
-export async function pushToAccount(db: SupabaseClient, ownerId: string, note: { title: string; body: string; link: string }): Promise<void> {
-  const ids = new Set<string>([ownerId]);
-  const { data: members } = await db.from("account_members").select("user_id").eq("owner_id", ownerId);
-  for (const m of members ?? []) if (m.user_id) ids.add(m.user_id as string);
+/** Push one in-app notification. With userId, only that person's phones; otherwise the whole business. */
+export async function pushToAccount(db: SupabaseClient, ownerId: string, note: { title: string; body: string; link: string; userId?: string }): Promise<void> {
+  const ids = new Set<string>();
+  if (note.userId) ids.add(note.userId);
+  else {
+    ids.add(ownerId);
+    const { data: members } = await db.from("account_members").select("user_id").eq("owner_id", ownerId);
+    for (const m of members ?? []) if (m.user_id) ids.add(m.user_id as string);
+  }
   const { data: rows } = await db.from("device_tokens").select("token, platform").in("user_id", [...ids]);
   if (!rows?.length) return;
 
