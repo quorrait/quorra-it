@@ -110,13 +110,21 @@ export default function Layout() {
         </div>
       </aside>
 
-      <NotificationBell />
-      <main className="main">
-        {error && <div className="error-banner">{error}</div>}
-        <Outlet />
-        <Tour />
-        <div className="appfoot"><PublicFooter /></div>
-      </main>
+      <div className="stage">
+        <header className="appbar">
+          <div className="appbar-brand">
+            <img className="logo-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
+            <span>Dispatch</span>
+          </div>
+          <NotificationBell />
+        </header>
+        <main className="main">
+          {error && <div className="error-banner">{error}</div>}
+          <Outlet />
+          <Tour />
+          <div className="appfoot"><PublicFooter /></div>
+        </main>
+      </div>
 
       <nav className="tabbar" aria-label="Main">
         {LINKS.filter(mine).map((l) => (

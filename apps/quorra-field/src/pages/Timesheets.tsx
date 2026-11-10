@@ -137,8 +137,8 @@ export default function Timesheets() {
         <button className="btn sm" onClick={() => setWeek(Math.min(0, week + 1))} disabled={week >= 0}>Next ›</button>
       </div>
 
-      <div className="card flush scroll-x">
-        <table className="tbl">
+      <div className="card flush">
+        <table className="tbl tbl-cards">
           <thead><tr><th>Member</th><th className="r">Hours</th><th className="r">Overtime</th><th className="r">Labor cost</th></tr></thead>
           <tbody>
             {team.map((m) => {
@@ -146,7 +146,7 @@ export default function Timesheets() {
               if (!mine.length) return null;
               const h = hrs(mine.reduce((s, t) => s + ms(t), 0));
               const ot = Math.min(h, mine.reduce((s, t) => s + otH(t), 0));
-              return <tr key={m.id}><td><span className="row"><span className="avatar" style={{ background: m.color, width: 26, height: 26, fontSize: 11 }}>{initials(m.name)}</span>{m.name}</span></td><td className="r num">{h.toFixed(1)}</td><td className="r num">{ot ? ot.toFixed(1) : "–"}</td><td className="r num">{money(Math.round((h - ot) * m.hourly_cents + ot * m.hourly_cents * OT_RATE))}</td></tr>;
+              return <tr key={m.id}><td data-label="Member"><span className="row"><span className="avatar" style={{ background: m.color, width: 26, height: 26, fontSize: 11 }}>{initials(m.name)}</span>{m.name}</span></td><td className="r num" data-label="Hours">{h.toFixed(1)}</td><td className="r num" data-label="Overtime">{ot ? ot.toFixed(1) : "–"}</td><td className="r num" data-label="Labor cost">{money(Math.round((h - ot) * m.hourly_cents + ot * m.hourly_cents * OT_RATE))}</td></tr>;
             })}
             {inWeek.length === 0 && <tr><td colSpan={4} className="muted">No time logged this week</td></tr>}
           </tbody>

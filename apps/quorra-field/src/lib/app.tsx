@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setEmail(data.session?.user.email ?? null);
       setAuthName(String(data.session?.user.user_metadata?.name ?? ""));
       setReady(true);
-    });
+    }).catch(() => { setEmail(null); setReady(true); });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { setEmail(session?.user.email ?? null); setAuthName(String(session?.user.user_metadata?.name ?? "")); });
     const stop = watchSession(() => { void supabase!.auth.signOut({ scope: "local" }); });
     return () => { sub.subscription.unsubscribe(); stop(); };

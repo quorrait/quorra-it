@@ -95,7 +95,7 @@ export function LineItemsEditor({ rows, setRows, useCost, priceLabel = "Price" }
 
   return (
     <div className="stack" style={{ gap: 10 }}>
-      <div className="li-row small muted bold">
+      <div className="li-row li-head small muted bold">
         <span>Item</span><span>Qty</span><span>{priceLabel}</span><span />
       </div>
       {rows.map((r, i) => (
@@ -103,7 +103,7 @@ export function LineItemsEditor({ rows, setRows, useCost, priceLabel = "Price" }
           <input className="input" placeholder="Description" value={r.description} onChange={(e) => set(i, { description: e.target.value })} />
           <input className="input" inputMode="decimal" value={r.qty} onChange={(e) => set(i, { qty: e.target.value })} aria-label="Quantity" />
           <input className="input" inputMode="decimal" placeholder="0.00" value={r.price} onChange={(e) => set(i, { price: e.target.value })} aria-label="Unit price" />
-          <button className="x" style={{ width: 28, height: 28, fontSize: 16 }} onClick={() => setRows(rows.length > 1 ? rows.filter((_, k) => k !== i) : [blank])} aria-label="Remove line">×</button>
+          <button className="x" onClick={() => setRows(rows.length > 1 ? rows.filter((_, k) => k !== i) : [blank])} aria-label="Remove line">×</button>
         </div>
       ))}
       <div className="row wrap">

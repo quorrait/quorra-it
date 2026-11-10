@@ -70,7 +70,7 @@ function AlreadySignedIn() {
 
 function Gate() {
   const { ready, email } = useAuth();
-  if (!ready) return <Spinner />;
+  if (!ready) return <div className="auth"><Spinner /></div>;
   if (!email) return (
     <div className="pub">
     <Routes>

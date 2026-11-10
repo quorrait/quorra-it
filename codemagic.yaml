@@ -34,6 +34,7 @@ workflows:
           [ -d ios ] || npx cap add ios
           npx @capacitor/assets generate --ios || true
           npx cap sync ios
+          node scripts/prepare-native.mjs ios
       - name: Set up code signing
         script: xcode-project use-profiles
       - name: Build number and archive
@@ -79,6 +80,7 @@ workflows:
           [ -d android ] || npx cap add android
           npx @capacitor/assets generate --android || true
           npx cap sync android
+          node scripts/prepare-native.mjs android
       - name: Build signed app bundle
         script: |
           cd android
@@ -110,6 +112,7 @@ workflows:
           [ -d android ] || npx cap add android
           npx @capacitor/assets generate --android || true
           npx cap sync android
+          node scripts/prepare-native.mjs android
       - name: Build test APK
         script: |
           cd android

@@ -1,16 +1,27 @@
-import { StrictMode } from "react";
+import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, HashRouter } from "react-router-dom";
+import { keepInputsVisible, prepareNativeShell } from "./lib/native";
 
 const Router = import.meta.env.VITE_HASH_ROUTER ? HashRouter : BrowserRouter;
 import App from "./App";
 import "./styles.css";
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
+function Root() {
+  useEffect(() => { void prepareNativeShell(); }, []);
+  return (
     <Router>
       <App />
     </Router>
+  );
+}
+
+keepInputsVisible();
+void prepareNativeShell();
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <Root />
   </StrictMode>,
 );
 
