@@ -2,6 +2,7 @@
 import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { supportEmail } from "../_shared/publicUrl.ts";
 
 const clean = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
@@ -15,7 +16,7 @@ handler(async (req) => {
   const { data: biz } = await admin().from("business").select("name").eq("owner_id", owner).maybeSingle();
   const email = user.email ?? "";
   await sendEmail({
-    to: Deno.env.get("CONTACT_TO") ?? "quorrait@gmail.com", replyTo: email || undefined,
+    to: supportEmail(), replyTo: email || undefined,
     subject: `Integration request: ${app}`,
     text: `App: ${app}\nFrom: ${biz?.name ?? ""} (${email})\n\n${what}`,
     html: emailHtml({ heading: `Integration request: ${app}`, rows: [{ label: "App", value: app }, { label: "Business", value: biz?.name || "-" }, { label: "Email", value: email || "-" }], paragraphs: what ? ["What it should do:", what] : [], button: email ? { label: "Reply", url: `mailto:${email}` } : undefined }),

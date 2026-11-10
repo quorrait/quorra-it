@@ -3,6 +3,7 @@ import { useData } from "../lib/app";
 import { Field, useToast } from "../components/ui";
 import { errMsg } from "../lib/errors";
 import { hasSupabase, supabase } from "../lib/supabase";
+import { SUPPORT_EMAIL } from "../lib/publicUrl";
 
 const CATS: [string, string][] = [["question", "Question"], ["problem", "Something is not working"], ["billing", "Billing"], ["idea", "Idea or request"]];
 
@@ -26,7 +27,7 @@ export default function Support() {
         if (error) throw error;
       }
       setSent(true); setSubject(""); setMessage("");
-    } catch (e) { toast(errMsg(e, "Could not send. Please try again, or email quorrait@gmail.com.")); }
+    } catch (e) { toast(errMsg(e, `Could not send. Please try again, or email ${SUPPORT_EMAIL}.`)); }
     finally { setBusy(false); }
   }
 

@@ -1,3 +1,5 @@
+import { SUPPORT_EMAIL } from "./publicUrl";
+
 export interface Plan {
   id: "basic" | "essentials" | "enterprise";
   name: string;
@@ -58,7 +60,7 @@ export const CUSTOM_PLAN = {
   name: "Custom",
   tagline: "For crews of more than 15",
   per_tech_cents: 2000,
-  contact_email: "quorrait@gmail.com",
+  contact_email: SUPPORT_EMAIL,
   extras: ["Everything in Enterprise", "Your 15 logins plus a flat rate for each technician after that", "Onboarding call and data import help", "Phone support"],
 };
 

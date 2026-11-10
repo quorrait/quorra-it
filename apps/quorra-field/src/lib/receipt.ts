@@ -1,6 +1,6 @@
 import { jsPDF } from "jspdf";
 import { money } from "./money";
-import { PUBLIC_SITE_URL } from "./publicUrl";
+import { PUBLIC_SITE_URL, SUPPORT_EMAIL } from "./publicUrl";
 
 /** Our own branded receipt for a Quorra Dispatch subscription payment. Clean white page, one accent color. */
 export function buildReceiptPdf(o: { id: string; date: string; description: string; amount_cents: number; status: string; billedTo: string; email: string; logo?: string }): jsPDF {
@@ -50,7 +50,7 @@ export function buildReceiptPdf(o: { id: string; date: string; description: stri
   text("Total paid", R - 150, y + 28, 14, INK, true); text(money(o.amount_cents), R, y + 28, 14, ORANGE, true, "right");
 
   pdf.setDrawColor(...LINE).setLineWidth(0.6).line(M, 700, R, 700);
-  text("Thank you for choosing Quorra Dispatch. Questions about this receipt? Contact quorrait@gmail.com.", M, 722, 9, MUTE);
+  text(`Thank you for choosing Quorra Dispatch. Questions about this receipt? Contact ${SUPPORT_EMAIL}.`, M, 722, 9, MUTE);
   text(PUBLIC_SITE_URL.replace(/^https:\/\//, ""), M, 738, 9, ORANGE, true);
   return pdf;
 }
