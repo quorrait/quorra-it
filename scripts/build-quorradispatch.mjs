@@ -69,12 +69,20 @@ for (const file of ["favicon-32.png", "apple-touch-icon.png", "logo-mark-v2.png"
   cpSync(join(appDir, "public", file), join(out, file));
 }
 
-// Static files win over these rules. Splats only catch paths with no file,
-// which is what the app's client-side router needs.
+// Pages rejects "/app/* /app/index.html 200" as an infinite loop, then (with no
+// root 404.html) serves the landing page for every path that is not a file.
+// A root 404.html turns that off. Copies of each app's index at app/404.html
+// and test/404.html are what a missing deep link renders. _worker.js returns
+// those with status 200 so the address bar stays on /app/jobs.
+cpSync(join(out, "app/index.html"), join(out, "app/404.html"));
+cpSync(join(out, "test/index.html"), join(out, "test/404.html"));
+cpSync(join(root, "scripts/quorradispatch-404.html"), join(out, "404.html"));
+cpSync(join(root, "scripts/quorradispatch-worker.js"), join(out, "_worker.js"));
+
 writeFileSync(join(out, "_redirects"), [
-  "/field-test/*   /test/:splat   301",
+  "# Exact paths before splats. SPA deep links are _worker.js, not a 200 rewrite:",
+  "# Pages drops \"/app/* /app/index.html 200\" and would serve the landing page.",
   "/field-test     /test/         301",
-  "/field/*        /app/:splat    301",
   "/field          /app/          301",
   "/dispatch/privacy/  /privacy/  301",
   "/dispatch/privacy   /privacy/  301",
@@ -83,8 +91,8 @@ writeFileSync(join(out, "_redirects"), [
   "/app            /app/          301",
   "/test           /test/         301",
   "/privacy        /privacy/      301",
-  "/app/*          /app/index.html  200",
-  "/test/*         /test/index.html 200",
+  "/field-test/*   /test/:splat   301",
+  "/field/*        /app/:splat    301",
   "",
 ].join("\n"));
 
