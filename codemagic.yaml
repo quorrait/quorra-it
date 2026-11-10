@@ -10,7 +10,7 @@ workflows:
     max_build_duration: 60
     working_directory: apps/quorra-field
     integrations:
-      app_store_connect: Quorra
+      app_store_connect: Quorra IT
     environment:
       groups: [quorra_app]
       node: 20
