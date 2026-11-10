@@ -41,9 +41,14 @@ workflows:
           cd ios/App
           BUILD=$(app-store-connect get-latest-app-store-build-number "$APP_STORE_APPLE_ID" 2>/dev/null || echo 0)
           agvtool new-version -all $((BUILD + 1))
-          xcode-project build-ipa --workspace App.xcworkspace --scheme App
+          xcode-project build-ipa \
+            --workspace App.xcworkspace \
+            --scheme App \
+            --disable-xcpretty \
+            --verbose
     artifacts:
       - apps/quorra-field/ios/App/build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
     publishing:
       app_store_connect:
         auth: integration
