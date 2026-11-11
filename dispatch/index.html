@@ -256,7 +256,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
     <h2 class="title">See it in action.</h2>
     <p class="sub">A short tour of Quorra Dispatch, from the first lead to getting paid.</p>
     <div class="demo-frame">
-      <video controls playsinline preload="none" poster="/media/poster.jpg" aria-label="Demo of Quorra Dispatch">
+      <video id="demo-video" controls controlsList="nodownload noplaybackrate noremoteplayback" disablePictureInPicture oncontextmenu="return false" playsinline preload="none" poster="/media/poster.jpg" aria-label="Demo of Quorra Dispatch">
         <source src="/media/dispatch-demo.mp4" type="video/mp4">
         <track kind="captions" srclang="en" label="English" src="/media/dispatch-demo.vtt" default>
       </video>
@@ -397,6 +397,17 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
   if (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) { v.removeAttribute("autoplay"); v.pause(); }
   b.addEventListener("click", function () { if (v.paused) v.play(); else v.pause(); });
   v.addEventListener("play", sync); v.addEventListener("pause", sync); sync();
+})();
+</script>
+<script>
+(function () {
+  var d = document.getElementById("demo-video");
+  if (!d) return;
+  d.addEventListener("ended", function () {
+    d.currentTime = 0;
+    d.pause();
+    d.load();
+  });
 })();
 </script>
 </body>
