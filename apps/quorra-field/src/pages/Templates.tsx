@@ -2,13 +2,13 @@ import DurationField from "../components/DurationField";
 import { errMsg } from "../lib/errors";
 import { useState } from "react";
 import { useData } from "../lib/app";
-import { money } from "../lib/money";
+import { lineTotal, money } from "../lib/money";
 import { LIBRARY, type LibPack } from "../lib/library";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "../components/LineItems";
 import type { DocTemplate, TemplateKind } from "../lib/types";
 
-const total = (t: DocTemplate) => t.items.reduce((s, i) => s + Math.round(i.qty * i.unit_cents), 0);
+const total = (t: DocTemplate) => t.items.reduce((s, i) => s + lineTotal(i), 0);
 
 function TemplateForm({ tpl, kind, onClose }: { tpl?: DocTemplate; kind: TemplateKind; onClose(): void }) {
   const { store, refresh } = useData();

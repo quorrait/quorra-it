@@ -33,7 +33,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
   ] },
   { title: "Work", links: [
     LINKS[2], LINKS[3],
-    { f: "plans", gate: "service_plans", to: "/plans", label: "Service plans", icon: Icon.cal, end: false },
+    { f: "plans", gate: "service_plans", to: "/service-plans", label: "Service plans", icon: Icon.cal, end: false },
     { f: "purchase_orders", gate: "purchase_orders", to: "/purchase-orders", label: "Purchase orders", icon: Icon.jobs, end: false },
   ] },
   { title: "Manage", links: [

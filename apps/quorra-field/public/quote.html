@@ -58,6 +58,13 @@
   var app = document.getElementById("app");
   var usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
   var money = function (c) { return usd.format(c / 100); };
+  var lineCents = function (qty, unit) {
+    var q = Math.abs(Number(qty) || 0).toFixed(4).split(".");
+    var digits = BigInt(q[0] + (q[1] + "0000").slice(0, 4));
+    var prod = digits * BigInt(Math.trunc(Math.abs(Number(unit) || 0)));
+    var n = Number((prod + 5000n) / 10000n);
+    return (Number(qty) < 0) !== (Number(unit) < 0) ? -n : n;
+  };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
   var fmt = function (iso) { return new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); };
   function fail(m) { app.innerHTML = '<div class="card"><b>' + esc(m) + "</b></div>"; }
@@ -77,7 +84,7 @@
       '<div><h1>' + esc(b.name) + '</h1><div class="muted">' + esc([b.phone, b.email].filter(Boolean).join(" · ")) + "</div></div></header></div>";
     h += '<div class="card"><div class="muted">Quote #' + d.number + " for " + esc(d.customer) + " · valid until " + fmt(d.valid_until) + "</div><h1 style=\"margin-top:6px\">" + esc(d.title) + "</h1>";
     d.items.forEach(function (li) {
-      h += '<div class="li"><div>' + esc(li.description || "Item") + '<div class="muted">' + li.qty + " × " + money(li.unit_cents) + "</div></div><b>" + money(Math.round(li.qty * li.unit_cents)) + "</b></div>";
+      h += '<div class="li"><div>' + esc(li.description || "Item") + '<div class="muted">' + li.qty + " × " + money(li.unit_cents) + "</div></div><b>" + money(lineCents(li.qty, li.unit_cents)) + "</b></div>";
     });
     h += '<div class="tot muted"><span>Subtotal</span><span>' + money(d.subtotal_cents) + "</span></div>";
     h += '<div class="tot muted"><span>Tax (' + d.tax_rate + '%)</span><span>' + money(d.total_cents - d.subtotal_cents) + "</span></div>";

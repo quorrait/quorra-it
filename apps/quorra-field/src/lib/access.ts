@@ -34,7 +34,7 @@ export const isManager = (role: Role) => role === "Owner" || role === "Manager";
 
 /** Route path -> feature required */
 export const ROUTE_FEATURE: Record<string, Feature> = {
-  "/leads": "leads", "/estimates": "estimates", "/pricebook": "pricebook", "/templates": "templates", "/import": "import", "/plans": "plans",
+  "/leads": "leads", "/estimates": "estimates", "/pricebook": "pricebook", "/templates": "templates", "/import": "import", "/service-plans": "plans",
   "/purchase-orders": "purchase_orders", "/team": "team", "/timesheets": "timesheets", "/reports": "reports",
   "/settings": "settings", "/integrations": "settings", "/billing": "billing", "/invoices": "invoices", "/customers": "customers",
 };
