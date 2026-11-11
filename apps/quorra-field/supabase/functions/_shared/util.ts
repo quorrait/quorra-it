@@ -34,10 +34,16 @@ export async function requireUser(req: Request) {
   return data.user;
 }
 
-/** The business a signed-in person works for: their own, or the one that invited them. */
+/** The business a signed-in person works for: their own, or the one that invited them. A deactivated login cannot act. */
 export async function accountOwner(userId: string): Promise<string> {
-  const { data } = await admin().from("account_members").select("owner_id").eq("user_id", userId).maybeSingle();
-  return (data?.owner_id as string | undefined) ?? userId;
+  const db = admin();
+  const withActive = await db.from("account_members").select("owner_id, active").eq("user_id", userId).maybeSingle();
+  if (withActive.error) {
+    const { data } = await db.from("account_members").select("owner_id").eq("user_id", userId).maybeSingle();
+    return (data?.owner_id as string | undefined) ?? userId;
+  }
+  if (withActive.data && withActive.data.active === false) throw new HttpError(403, "This login is deactivated.");
+  return (withActive.data?.owner_id as string | undefined) ?? userId;
 }
 
 export class HttpError extends Error {

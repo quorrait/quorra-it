@@ -5,6 +5,7 @@ import { Field, Icon, Sheet, useToast } from "../components/ui";
 import { hasSupabase, supabase } from "../lib/supabase";
 import CalendarSync from "../components/CalendarSync";
 import { errMsg } from "../lib/errors";
+import UpgradePrompt from "../components/UpgradePrompt";
 
 interface Item { id: string; name: string; what: string; color: string; mark: string; live: boolean; slug?: string; cat: string }
 
@@ -25,7 +26,7 @@ const ITEMS: Item[] = [
 
 /** Every app Quorra Dispatch connects to, as a grid. Tap a card to connect it. */
 export default function Integrations() {
-  const { business, invoices, payments, store, refresh } = useData();
+  const { business, invoices, payments, store, refresh, allows } = useData();
   const toast = useToast();
   const [open, setOpen] = useState<Item | null>(null);
   const [ask, setAsk] = useState(false);
@@ -44,7 +45,8 @@ export default function Integrations() {
       {business.stripe_connected ? <div className="badge good" style={{ alignSelf: "flex-start" }}>Connected</div> : <button className="btn dark" disabled={busy === "stripe"} onClick={() => run("stripe", () => store.stripeConnect())}>{Icon.card} Connect Stripe</button>}
     </div>
   );
-  if (open?.id === "qbo") body = business.qbo_connected ? (
+  if (open?.id === "qbo" && !allows("qbo")) body = <UpgradePrompt feature="qbo" title="QuickBooks Online" />;
+  else if (open?.id === "qbo") body = business.qbo_connected ? (
     <div className="stack">
       <p className="small muted">Linked to <b>{business.qbo_company ?? "your company"}</b>. Sent and paid invoices, their customers and their payments go over automatically.</p>
       <div className="card stack" style={{ background: "#f8fafc" }}>

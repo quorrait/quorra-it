@@ -89,6 +89,9 @@ h1, h2, h3, p { margin: 0; }
   .side-link svg { width: 20px; height: 20px; }
   .side-link:hover { background: rgba(255,255,255,.07); }
   .side-link.active { background: var(--brand); color: #fff; }
+  .side-link.locked { opacity: .85; }
+  .nav-lock { margin-left: auto; display: flex; }
+  .nav-lock svg { width: 16px; height: 16px; }
   .side-out { margin-top: 10px; width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.16); background: transparent; color: #dbe3ee; font: inherit; font-weight: 700; cursor: pointer; }
   .side-out:hover { background: rgba(255,255,255,.08); }
   .side-foot { margin-top: auto; padding-top: 14px; font-size: 12px; color: #8793a3; padding: 10px; }
@@ -513,6 +516,12 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
 .bell-item { padding: 10px 12px; border-top: 1px solid var(--line, #e2e8f0); cursor: pointer; display: grid; gap: 2px; }
 .appfoot .pubfoot { color: var(--muted, #64748b) !important; padding-top: 28px; } .appfoot .pubfoot .pf-name { color: var(--ink, #0f172a) !important; }
 .main { display: flex; flex-direction: column; } .appfoot { margin-top: auto; }
+.main:has(.upgrade-screen) .appfoot { margin-top: 0; }
+.upgrade-screen { flex: 1 0 auto; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; padding: 24px 0; }
+.upgrade-lock { align-items: flex-start; width: min(460px, 100%); max-width: 460px; }
+.upgrade-lock-icon { width: 42px; height: 42px; border-radius: 12px; background: #fff4ec; color: var(--brand); display: flex; align-items: center; justify-content: center; }
+.upgrade-lock-icon svg { width: 22px; height: 22px; }
+.plan-seat-block { background: #fff7ed; border: 1px solid #fdba74; border-radius: 12px; padding: 12px 14px; }
 .plan-list li.plan-sub { padding-left: 0; font-weight: 800; } .plan-list li.plan-sub::before { display: none; }
 .notice.bad { background: var(--bad-soft); color: var(--bad); } .notice.warn { background: #fef3c7; color: #92400e; }
 

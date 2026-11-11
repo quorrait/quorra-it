@@ -1,6 +1,7 @@
 // Brings a business's existing QuickBooks data into the app: customers, invoices from the last 12 months, and their payments.
 // Nothing is changed in QuickBooks. Things that came from the app (or were imported before) are skipped, so it is safe to run again.
 import { accountOwner, admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { assertFeature } from "../_shared/plan.ts";
 import { getConnection, qboQuery } from "../_shared/qbo.ts";
 
 type Conn = { realm: string; token: string };
@@ -22,6 +23,7 @@ handler(async (req) => {
   const user = await requireUser(req);
   const owner = await accountOwner(user.id);
   if (owner !== user.id) throw new HttpError(403, "Only the owner can import from QuickBooks");
+  await assertFeature(owner, "qbo");
   const db = admin();
   const conn = await getConnection(owner);
   const since = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);

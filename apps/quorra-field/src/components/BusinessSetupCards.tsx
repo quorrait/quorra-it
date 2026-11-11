@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { Field, useToast } from "./ui";
+import UpgradePrompt from "./UpgradePrompt";
 import { useRegisterSave } from "../lib/saveAll";
 import { errMsg } from "../lib/errors";
 /** Compares settings ignoring key order (the database reorders JSON keys, which made saves look unsaved). */
@@ -97,15 +98,19 @@ const REMIND: [number, string][] = [[0, "Off"], [1, "1 hour before"], [2, "2 hou
 
 /** Who is told when a customer books a time or a job is moved. */
 export function NotifyCard() {
-  const { store, business, refresh } = useData();
+  const { store, business, refresh, allows } = useData();
   const toast = useToast();
+  const remindersOk = allows("reminders");
   const [email, setEmail] = useState(business.notify_email ?? "");
   const [phone, setPhone] = useState(business.notify_phone ?? "");
   const [custH, setCustH] = useState(business.reminders?.customer_hours ?? 24);
   const [teamH, setTeamH] = useState(business.reminders?.team_hours ?? 24);
-  const dirty = email.trim() !== (business.notify_email ?? "") || phone.trim() !== (business.notify_phone ?? "") || custH !== (business.reminders?.customer_hours ?? 24) || teamH !== (business.reminders?.team_hours ?? 24);
+  const dirty = email.trim() !== (business.notify_email ?? "") || phone.trim() !== (business.notify_phone ?? "") || (remindersOk && (custH !== (business.reminders?.customer_hours ?? 24) || teamH !== (business.reminders?.team_hours ?? 24)));
   useRegisterSave("notify", dirty, async () => {
-    try { await store.saveBusiness({ notify_email: email.trim(), notify_phone: phone.trim(), reminders: { customer_hours: custH, team_hours: teamH } }); await refresh(); toast("Notification settings saved"); }
+    try {
+      await store.saveBusiness({ notify_email: email.trim(), notify_phone: phone.trim(), ...(remindersOk ? { reminders: { customer_hours: custH, team_hours: teamH } } : {}) });
+      await refresh(); toast("Notification settings saved");
+    }
     catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); }
   });
   return (
@@ -114,6 +119,7 @@ export function NotifyCard() {
       <div className="stack">
         <p className="small muted" style={{ margin: 0 }}>When a customer books a time, or anyone moves a job, everyone on your account sees it under the bell in the app. It is also emailed here.</p>
         <Field label="Notification email"><input className="input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={business.email || "you@company.com"} /></Field>
+        {remindersOk ? (
         <div className="opt-group">
           <h4>Visit reminders</h4>
           <div className="grid2 stack-sm">
@@ -122,6 +128,7 @@ export function NotifyCard() {
           </div>
           <div className="small muted">Reminders go out by email, and by text once texting is set up. They run hourly, so timing is within the hour.</div>
         </div>
+        ) : <UpgradePrompt feature="reminders" title="Text and email reminders" />}
         <Field label="Text alerts to (optional)"><input className="input" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(916) 555-0100" /></Field>
       </div>
     </details>

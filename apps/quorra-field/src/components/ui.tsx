@@ -20,6 +20,7 @@ export const Icon = {
   check: <svg viewBox="0 0 24 24" {...P}><path d="M5 12.5l4.5 4.5L19 7.500" /></svg>,
   plug: <svg viewBox="0 0 24 24" {...P}><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4" /></svg>,
   send: <svg viewBox="0 0 24 24" {...P}><path d="M21 3L10 14M21 3l-7 18-4-7-7-4z" /></svg>,
+  lock: <svg viewBox="0 0 24 24" {...P}><rect x="5" y="11" width="14" height="10" rx="2" /><path d="M8 11V8a4 4 0 018 0v3" /></svg>,
 };
 
 /* ---------- Toast ---------- */

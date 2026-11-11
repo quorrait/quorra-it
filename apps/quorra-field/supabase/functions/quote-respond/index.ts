@@ -1,6 +1,7 @@
 // Public: the customer accepts or declines a quote, then picks a time from the open slots. Deploy with --no-verify-jwt.
 // Accept -> quote approved. Schedule -> a job is put on the calendar and the customer gets a confirmation text with a reschedule link.
 import { admin, handler, HttpError, json } from "../_shared/util.ts";
+import { featureOn } from "../_shared/plan.ts";
 import { availableSlots, normHours } from "../_shared/schedule.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
@@ -44,7 +45,8 @@ handler(async (req) => {
     return json({ ok: true, status: "approved" });
   }
 
-  // schedule (or reschedule)
+  // schedule (or reschedule). Accepting the quote is on every plan; picking a time is Essentials.
+  if (!(await featureOn(est.owner_id, "booking"))) throw new HttpError(403, "Online booking is on the Essentials plan.");
   if (est.status !== "approved") throw new HttpError(409, "Please accept the quote first");
   const startMs = new Date(String(b.start)).getTime();
   if (Number.isNaN(startMs)) throw new HttpError(400, "Please choose a time");

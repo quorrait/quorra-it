@@ -11,9 +11,10 @@ import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { useData, useAuth } from "../lib/app";
 import type { Feature } from "../lib/access";
+import type { GatedFeature } from "../lib/plans";
 import type { ReactNode } from "react";
 
-interface NavItem { to: string; label: string; icon: ReactNode; end?: boolean; f?: Feature }
+interface NavItem { to: string; label: string; icon: ReactNode; end?: boolean; f?: Feature; gate?: GatedFeature }
 
 const LINKS: NavItem[] = [
   { to: "/", label: "Home", icon: Icon.home, end: true },
@@ -32,14 +33,14 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
   ] },
   { title: "Work", links: [
     LINKS[2], LINKS[3],
-    { f: "plans", to: "/plans", label: "Service plans", icon: Icon.cal, end: false },
-    { f: "purchase_orders", to: "/purchase-orders", label: "Purchase orders", icon: Icon.jobs, end: false },
+    { f: "plans", gate: "service_plans", to: "/plans", label: "Service plans", icon: Icon.cal, end: false },
+    { f: "purchase_orders", gate: "purchase_orders", to: "/purchase-orders", label: "Purchase orders", icon: Icon.jobs, end: false },
   ] },
   { title: "Manage", links: [
     { f: "customers", to: "/customers", label: "Customers", icon: Icon.users, end: false },
     { f: "team", to: "/team", label: "Team", icon: Icon.users, end: false },
-    { f: "timesheets", to: "/timesheets", label: "Timesheets", icon: Icon.cal, end: false },
-    { f: "reports", to: "/reports", label: "Reports", icon: Icon.invoice, end: false },
+    { f: "timesheets", gate: "timesheets", to: "/timesheets", label: "Timesheets", icon: Icon.cal, end: false },
+    { f: "reports", gate: "reports", to: "/reports", label: "Reports", icon: Icon.invoice, end: false },
     { f: "import", to: "/import", label: "Import", icon: Icon.send, end: false },
     { f: "settings", to: "/integrations", label: "Integrations", icon: Icon.plug, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
@@ -49,7 +50,7 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
 ];
 
 export default function Layout() {
-  const { store, business, error, can, me, viewAs, team, leads, locked, loading } = useData();
+  const { store, business, error, can, allows, me, viewAs, team, leads, locked, loading } = useData();
   const { signOut } = useAuth();
   const nav = useNavigate();
   const ask = useConfirm();
@@ -79,6 +80,7 @@ export default function Layout() {
   const newLeads = leads.filter((l) => l.stage === "new").length;
   // Wait for the role to load before showing any menu, so the wrong menu never flashes.
   const mine = (l: NavItem) => (loading ? false : locked ? l.f === "billing" : !l.f || can(l.f));
+  const planLocked = (l: NavItem) => Boolean(l.gate && !allows(l.gate));
   return (
     <div className="shell">
       <aside className="side">
@@ -90,10 +92,11 @@ export default function Layout() {
           <div key={g.title}>
             {g.title && <div className="nav-sec">{g.title}</div>}
             {g.links.map((l) => (
-              <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>
+              <NavLink key={l.to} to={l.to} end={l.end} className={({ isActive }) => `side-link${isActive ? " active" : ""}${planLocked(l) ? " locked" : ""}`}>
                 {l.icon}
                 {l.label}
                 {l.to === "/leads" && newLeads > 0 && <span className="nav-badge">{newLeads}</span>}
+                {planLocked(l) && <span className="nav-lock" title="Upgrade">{Icon.lock}</span>}
               </NavLink>
             ))}
           </div>

@@ -10,6 +10,8 @@ import { canAccess, type Feature, type RoleAccess } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
 import { createSupabaseStore } from "./supabaseStore";
 import { demoMode, hasSupabase, supabase } from "./supabase";
+import { demoPlanPreview } from "./demoMode";
+import { planAllows, planLabel, resolvePlanId, seatLimit, type GatedFeature, type PlanId } from "./plans";
 
 /* ---------------- Auth ---------------- */
 
@@ -131,6 +133,11 @@ interface DataCtx {
   me: { id: string | null; name: string; email: string; role: Role; isOwner: boolean };
   subscription: Subscription | null;
   locked: boolean;
+  planId: PlanId;
+  allows(f: GatedFeature): boolean;
+  activeLogins: number;
+  loginDisabled(teamMemberId: string): boolean;
+  setLoginActive(teamMemberId: string, active: boolean): Promise<string | null>;
   can(f: Feature): boolean;
   viewAs(memberId: string): void;
   store: Store;
@@ -168,7 +175,7 @@ const EMPTY_BUSINESS: Business = {
 };
 
 export function DataProvider({ children }: { children: ReactNode }) {
-  const { email, name: authName } = useAuth();
+  const { email, name: authName, signOut } = useAuth();
   const [asId, setAsId] = useState<string | null>(() => { try { return localStorage.getItem("qf-view-as"); } catch { return null; } });
   const store = useMemo<Store>(() => (hasSupabase ? createSupabaseStore() : createDemoStore()), []);
   const [loading, setLoading] = useState(true);
@@ -191,6 +198,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [myMemberId, setMyMemberId] = useState<string | null>(null);
   const [myRole, setMyRole] = useState<string | null>(null);
   const [isStaff, setIsStaff] = useState(false);
+  const [serverPlan, setServerPlan] = useState<PlanId | null>(null);
+  const [platformStaff, setPlatformStaff] = useState(false);
+  const [loginOff, setLoginOff] = useState(false);
+  const [activeLogins, setActiveLogins] = useState(1);
+  const [loginFlags, setLoginFlags] = useState<Record<string, boolean>>({});
+  const [demoOff, setDemoOff] = useState<string[]>(() => { try { return JSON.parse(localStorage.getItem("qd-demo-login-off") || "[]"); } catch { return []; } });
 
   const refresh = useCallback(async () => {
     try {
@@ -203,17 +216,43 @@ export function DataProvider({ children }: { children: ReactNode }) {
           if (err) setError(err);
         }
         const uid = (await supabase.auth.getUser()).data.user?.id ?? "";
-        const [mem, sub, set, rol] = await Promise.all([
-          supabase.from("account_members").select("team_member_id").eq("user_id", uid).maybeSingle(),
+        let mem = await supabase.from("account_members").select("team_member_id, active").eq("user_id", uid).maybeSingle();
+        if (mem.error) mem = await supabase.from("account_members").select("team_member_id").eq("user_id", uid).maybeSingle();
+        if (mem.data && "active" in mem.data && mem.data.active === false) {
+          setLoginOff(true);
+          setLoading(false);
+          return;
+        }
+        setLoginOff(false);
+        const [sub, set, rol, planRes, staffRes, members] = await Promise.all([
           supabase.from("subscriptions").select("*").maybeSingle(),
           supabase.from("platform_settings").select("require_subscription").maybeSingle(),
           supabase.rpc("my_role"),
+          supabase.rpc("plan_id"),
+          supabase.rpc("is_platform_admin"),
+          supabase.from("account_members").select("team_member_id, active"),
         ]);
         setMyRole(typeof rol.data === "string" ? rol.data : null);
         setIsStaff(Boolean(mem.data));
         setMyMemberId((mem.data?.team_member_id as string | null | undefined) ?? null);
         setSubscription((sub.data as Subscription | null) ?? null);
         setRequireSub(Boolean(set.data?.require_subscription));
+        setPlatformStaff(staffRes.data === true);
+        if (typeof planRes.data === "string" && (planRes.data === "basic" || planRes.data === "essentials" || planRes.data === "enterprise")) setServerPlan(planRes.data);
+        if (!members.error && members.data) {
+          const flags: Record<string, boolean> = {};
+          let on = 0;
+          for (const row of members.data as { team_member_id: string | null; active?: boolean }[]) {
+            const live = row.active !== false;
+            if (row.team_member_id) flags[row.team_member_id] = live;
+            if (live) on++;
+          }
+          setLoginFlags(flags);
+          setActiveLogins(1 + on);
+        } else {
+          const fallback = await supabase.from("account_members").select("team_member_id");
+          setActiveLogins(1 + (fallback.data?.length ?? 0));
+        }
       } else {
         setSubscription({ status: "active", plan: "Quorra Dispatch", amount_cents: 19000, billing_interval: "month", current_period_end: new Date(Date.now() + 19 * 86400_000).toISOString(), cancel_at_period_end: false, comped: false });
       }
@@ -247,6 +286,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setLeads(ld);
       setPlans(sp);
       setTeam(tm);
+      if (!hasSupabase) setActiveLogins(1 + tm.filter((t) => t.role !== "Owner" && t.active !== false && !demoOff.includes(t.id)).length);
       setTimeEntries(te);
       setPurchaseOrders(po);
       setDocTemplates(dt);
@@ -256,7 +296,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     } finally {
       setLoading(false);
     }
-  }, [store]);
+  }, [store, demoOff]);
 
   useEffect(() => {
     void refresh();
@@ -279,20 +319,23 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const me = { id: meMember?.id ?? null, name: meMember?.name ?? (authName || fromEmail), email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
   const subOk = !hasSupabase || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
   const locked = !subOk;
+  const preview = demoMode ? demoPlanPreview() : null;
+  const planId: PlanId = preview ?? serverPlan ?? resolvePlanId(subscription?.plan, { demo: demoMode, comped: Boolean(subscription?.comped), staff: platformStaff });
+  const allows = (f: GatedFeature) => planAllows(planId, f);
   const visibleJobs = me.role === "Technician" ? jobs.filter((j) => j.assigned_to === me.name) : jobs;
 
   // First time QuickBooks is linked: bring their existing customers, invoices and payments in, so the earnings numbers are right.
   const qboImporting = useRef(false);
   useEffect(() => {
-    if (!hasSupabase || !me.isOwner || !business.qbo_connected || business.qbo_imported_at || loading || qboImporting.current) return;
+    if (!hasSupabase || !allows("qbo") || !me.isOwner || !business.qbo_connected || business.qbo_imported_at || loading || qboImporting.current) return;
     qboImporting.current = true;
     void store.qboImport().then(() => refresh()).catch(() => undefined);
-  }, [business.qbo_connected, business.qbo_imported_at, loading, me.isOwner, store, refresh]);
+  }, [business.qbo_connected, business.qbo_imported_at, loading, me.isOwner, store, refresh, planId]);
 
   // QuickBooks connected: send sent and paid invoices (and their payments) over automatically, once per change.
   const qboTried = useRef(new Set<string>());
   useEffect(() => {
-    if (!hasSupabase || !me.isOwner || !business.qbo_connected || loading) return;
+    if (!hasSupabase || !allows("qbo") || !me.isOwner || !business.qbo_connected || loading) return;
     const todo = qboPending(invoices, payments).filter((x) => !qboTried.current.has(x.key));
     if (!todo.length) return;
     todo.forEach((x) => qboTried.current.add(x.key));
@@ -301,13 +344,36 @@ export function DataProvider({ children }: { children: ReactNode }) {
       for (const x of todo.slice(0, 10)) { try { await store.qboSyncInvoice(x.id, { action: x.action, hash: x.hash }); did = true; } catch { /* Integrations has a Sync everything backup */ } }
       if (did) void refresh();
     })();
-  }, [invoices, payments, business.qbo_connected, loading, me.isOwner, store, refresh]);
+  }, [invoices, payments, business.qbo_connected, loading, me.isOwner, store, refresh, planId]);
+
+  const setLoginActive = useCallback(async (teamMemberId: string, active: boolean) => {
+    if (!hasSupabase || !supabase) {
+      const off = new Set(demoOff);
+      if (active) off.delete(teamMemberId);
+      else off.add(teamMemberId);
+      const next = 1 + team.filter((t) => t.role !== "Owner" && t.active !== false && !off.has(t.id)).length;
+      if (active && next > seatLimit(planId)) return `Your ${planLabel(planId)} plan allows ${seatLimit(planId)} logins. Deactivate another login first.`;
+      const list = [...off];
+      try { localStorage.setItem("qd-demo-login-off", JSON.stringify(list)); } catch { /* ignore */ }
+      setDemoOff(list);
+      return null;
+    }
+    const { error } = await supabase.rpc("set_login_active", { p_member: teamMemberId, p_active: active });
+    if (error) return error.message;
+    await refresh();
+    return null;
+  }, [demoOff, team, planId, refresh]);
 
   const value = useMemo<DataCtx>(
     () => ({
       me,
       subscription,
       locked,
+      planId,
+      allows,
+      activeLogins,
+      loginDisabled: (id) => (hasSupabase ? loginFlags[id] === false : demoOff.includes(id)),
+      setLoginActive,
       can: (f) => canAccess(me.role, f, business.role_access as RoleAccess | null | undefined, meMember?.access as Feature[] | null | undefined),
       viewAs(id) { try { localStorage.setItem("qf-view-as", id); } catch { /* ignore */ } setAsId(id); },
       store,
@@ -333,8 +399,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       customerById: (id) => customers.find((c) => c.id === id),
     }),
-    [store, subscription, locked, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
+    [store, subscription, locked, planId, activeLogins, loginFlags, demoOff, setLoginActive, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
   );
+
+  if (loginOff) {
+    return (
+      <div className="auth"><div className="auth-card stack">
+        <h1>Login deactivated</h1>
+        <p className="muted" style={{ margin: 0 }}>The account owner turned this login off. Your jobs and history are still there. You cannot sign in until they turn it back on.</p>
+        <button className="btn block" onClick={() => void signOut()}>Sign out</button>
+      </div></div>
+    );
+  }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
 }

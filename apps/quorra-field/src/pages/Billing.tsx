@@ -1,8 +1,8 @@
 import { errMsg } from "../lib/errors";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import EmbeddedStripe from "../components/EmbeddedStripe";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useAuth, useData } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { fmtDate } from "../lib/dates";
@@ -10,7 +10,7 @@ import { buildReceiptPdf, loadLogo } from "../lib/receipt";
 import { money } from "../lib/money";
 import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
-import { PLANS, planByName } from "../lib/plans";
+import { PLANS, downgradeLoginMessage, planByName, type PlanId } from "../lib/plans";
 import { isIosApp } from "../lib/iosPlan";
 import BuyService from "../components/BuyService";
 
@@ -22,7 +22,7 @@ const DEMO_CHARGES: Charge[] = [
 
 /** Plan, status and the buttons that hand off to Stripe for card, receipts, plan changes and cancelling. */
 export default function Billing() {
-  const { loading, subscription: sub, me, refresh, locked, business } = useData();
+  const { loading, subscription: sub, me, refresh, locked, business, activeLogins } = useData();
   const { email } = useAuth();
   const toast = useToast();
   const [params, setParams] = useSearchParams();
@@ -34,6 +34,8 @@ export default function Billing() {
   const [embed, setEmbed] = useState<{ kind: "checkout" | "card"; secret: string; pk: string; title: string; current?: { brand: string; last4: string; exp_month: number; exp_year: number } | null } | null>(null);
   const [why, setWhy] = useState({ reason: "", details: "", contact: false, phone: "" });
   const [charges, setCharges] = useState<Charge[] | null>(null);
+  const [seatBlock, setSeatBlock] = useState<string | null>(null);
+  const openedPlan = useRef(false);
 
   useEffect(() => {
     if (params.get("canceled")) { toast("Your plan is canceled. You keep access until the end of the period you paid for."); setParams({}, { replace: true }); void refresh(); return; }
@@ -52,6 +54,15 @@ export default function Billing() {
     if (params.get("start")) setParams({}, { replace: true });
     const [pl, iv] = st.split(":");
     void openEmbedded("checkout", pl, iv);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, loading, isOwner, hasPlan]);
+  useEffect(() => {
+    if (openedPlan.current || loading || !isOwner) return;
+    const plan = params.get("plan");
+    if (plan !== "basic" && plan !== "essentials" && plan !== "enterprise") return;
+    openedPlan.current = true;
+    if (hasPlan) setChangeOpen(true);
+    else if (!isIosApp()) void openEmbedded("checkout", plan, "month");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, loading, isOwner, hasPlan]);
   const [upcoming, setUpcoming] = useState<{ amount_cents: number; date: string } | null>(null);
@@ -256,7 +267,13 @@ export default function Billing() {
         <Sheet title="Change your plan" onClose={() => setChangeOpen(false)}>
           <div className="stack">
             <p className="small muted" style={{ margin: 0 }}>{sub?.trialing ? `Your plan changes right away and your trial end stays the same. You won't be charged until${sub.current_period_end ? ` ${fmtDate(sub.current_period_end)}` : " the trial ends"}. Pay monthly and get 50% off your first 3 months, or pay yearly and save 10%.` : "Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference."}</p>
-            <PlanCards backTo="/billing" busy={busy} current={sub?.plan ?? undefined} cta="Switch to" onChoose={(p, iv) => void change({ action: "change", plan: p.id, interval: iv }, `You are now on ${p.name}.`)} />
+            {seatBlock && <div className="plan-seat-block" data-testid="seat-block"><b>{seatBlock}</b> <Link to="/team">Open Team</Link></div>}
+            <PlanCards backTo="/billing" busy={busy} current={sub?.plan ?? undefined} focus={params.get("plan") ?? undefined} cta="Switch to" onChoose={(p, iv) => {
+              const msg = downgradeLoginMessage(activeLogins, p.id as PlanId);
+              if (msg) { setSeatBlock(msg); return; }
+              setSeatBlock(null);
+              void change({ action: "change", plan: p.id, interval: iv }, `You are now on ${p.name}.`);
+            }} />
           </div>
         </Sheet>
       )}

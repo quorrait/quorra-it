@@ -40,10 +40,7 @@ export default function PlanCards({ onChoose, current, busy, cta = "Choose", bac
       <div className="card plan-custom">
         <div className="grow stack" style={{ gap: 4 }}>
           <div className="plan-name">{CUSTOM_PLAN.name}</div>
-          <div className="small muted">{CUSTOM_PLAN.tagline}</div>
-          <div className="plan-price"><span className="num">{money(PLANS[2].price_cents).replace(".00", "")}</span><span className="muted"> / month, 15 logins included</span></div>
-          <div className="plan-price"><span className="num">+ {money(CUSTOM_PLAN.per_tech_cents).replace(".00", "")}</span><span className="muted"> / month per technician after 15</span></div>
-          <ul className="plan-list">{CUSTOM_PLAN.extras.map((x) => <li key={x}>{x}</li>)}</ul>
+          <div>{CUSTOM_PLAN.tagline}</div>
         </div>
         <Link className="btn dark" to="/contact" state={{ back: backTo }}>Contact us</Link>
       </div>

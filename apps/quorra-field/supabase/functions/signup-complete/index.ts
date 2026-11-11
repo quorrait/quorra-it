@@ -3,11 +3,13 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
 
-function planName(id?: string): string {
+function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
     if (id && (id === Deno.env.get(`STRIPE_PRICE_${key}`) || id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
   }
-  return "Quorra Dispatch";
+  const picked = (fallback ?? "").toLowerCase();
+  if (picked === "basic" || picked === "essentials" || picked === "enterprise") return picked.charAt(0).toUpperCase() + picked.slice(1);
+  return "Basic";
 }
 
 handler(async (req) => {
@@ -55,7 +57,7 @@ handler(async (req) => {
   }
   const item = sub.items.data[0];
   await db.from("subscriptions").upsert({
-    owner_id: ownerId, status: "active", plan: planName(item?.price?.id), amount_cents: item?.price?.unit_amount ?? 30000,
+    owner_id: ownerId, status: "active", plan: planName(item?.price?.id, plan), amount_cents: item?.price?.unit_amount ?? 30000,
     billing_interval: item?.price?.recurring?.interval ?? "month", trialing: true,
     current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
