@@ -21,6 +21,8 @@ verify_jwt = false
 verify_jwt = false
 [functions.send-reminders]
 verify_jwt = false
+[functions.login]
+verify_jwt = false
 
 # Tap to Pay. The phone is signed in. Stripe itself calls stripe-webhook, not these.
 [functions.terminal-connection-token]

@@ -91,10 +91,11 @@ function DemoBanner() {
 }
 
 function Gate() {
-  const { ready, email } = useAuth();
-  useEffect(() => { if (!email) void applyStatusBar("login"); }, [email]);
+  const { ready, email, recovery } = useAuth();
+  useEffect(() => { if (!email || recovery) void applyStatusBar("login"); }, [email, recovery]);
   let body: JSX.Element;
   if (!ready) body = <div className="auth"><Spinner /></div>;
+  else if (recovery) body = <Login />;
   else if (!email) body = (
     <div className="pub">
     <Routes>
