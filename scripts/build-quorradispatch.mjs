@@ -41,7 +41,6 @@ function rewriteMarketing(html) {
     .replaceAll('href="/field-test/#/start?plan=', 'href="/app/plans?plan=')
     .replaceAll('"/field-test/#/start?plan="', '"/app/plans?plan="')
     .replaceAll("https://quorradispatch.com/app/start", "https://quorradispatch.com/app/plans")
-    .replaceAll('href="/field/?demo=1"', 'href="/app/?demo=1"')
     .replaceAll('src="/field/', 'src="/')
     .replaceAll('href="/field/', 'href="/')
     .replace(/href="\/dispatch\//g, "href=\"/")
