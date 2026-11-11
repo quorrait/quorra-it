@@ -91,7 +91,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
         const fresh = await store.listInvoices();
         saved = await store.saveInvoice(build(Math.max(1000, ...fresh.map((i) => i.number)) + 1));
       }
-      if (fromEst && !invoice) await store.saveRow("estimates", { ...fromEst, invoice_id: saved.id });
+      if (fromEst && !invoice && fromEst.customer_id === cid) await store.saveRow("estimates", { ...fromEst, invoice_id: saved.id });
       await refresh();
       toast(invoice ? "Invoice updated" : "Invoice created");
       onSaved?.(saved);
@@ -110,7 +110,12 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
         <Field label="Customer">
           <select className="select" value={cust} onChange={(e) => {
             setCust(e.target.value);
-            if (!touched && !invoice) { const e2 = estFor(e.target.value); setFromEst(e2); if (e2) { setRows(fill(e2)); setTaxRate(String(e2.tax_rate)); } }
+            if (!invoice) {
+              const e2 = estFor(e.target.value);
+              setFromEst(e2);
+              if (e2) { setRows(fill(e2)); setTaxRate(String(e2.tax_rate)); setNotes(`For estimate #${e2.number}: ${e2.title}`); }
+              else { setRows([{ description: job?.title ?? "", qty: "1", price: "" }]); setTaxRate(String(defaultTaxRate(business))); setNotes(""); }
+            }
           }}>
             <option value="__new__">+ New customer</option>
             {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -128,6 +133,7 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
             <select className="select" value={fromEst?.id ?? ""} onChange={(e) => {
               const x = estimates.find((q) => q.id === e.target.value); setFromEst(x); setTouched(true);
               if (x) { setRows(fill(x)); setTaxRate(String(x.tax_rate)); setNotes(`For estimate #${x.number}: ${x.title}`); }
+              else { setRows([{ description: job?.title ?? "", qty: "1", price: "" }]); setTaxRate(String(defaultTaxRate(business))); setNotes(""); }
             }}>
               <option value="">None (blank invoice)</option>
               {estsFor(cust).map((x) => <option key={x.id} value={x.id}>#{x.number} · {x.title} · {money(invoiceTotals({ items: x.items, tax_rate: x.tax_rate }).total)}</option>)}

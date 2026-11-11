@@ -29,6 +29,8 @@ test("a new invoice does not copy estimate #2007 from another customer or anothe
   assert.equal(invoiceEstimates(rows, { customerId: "c1" })[0]?.number, 2004);
   assert.equal(invoiceEstimates(rows, { customerId: "c2" })[0]?.number, 2007);
   assert.equal(invoiceEstimates(rows, {}).length, 0);
+  assert.equal(invoiceEstimates(rows, { estimateId: "b", customerId: "c1" }).length, 0);
+  assert.equal(invoiceEstimates(rows, { estimateId: "b", customerId: "c2" })[0]?.number, 2007);
 });
 
 test("building a quote never moves a lead back to Contacted", () => {

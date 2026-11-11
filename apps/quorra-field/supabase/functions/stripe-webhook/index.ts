@@ -31,8 +31,7 @@ Deno.serve(async (req) => {
     const { data: biz } = await db.from("business").select("stripe_account_id").eq("owner_id", ownerId).maybeSingle();
     const { data: inv } = await db.from("invoices").select("id,customer_id,number").eq("id", invoiceId).eq("owner_id", ownerId).maybeSingle();
     if (!inv || !biz?.stripe_account_id || biz.stripe_account_id !== event.account) return false;
-    const { data: had } = await db.from("payments").select("id").eq("stripe_payment_intent", paymentIntentId).maybeSingle();
-    const { error } = await db.from("payments").upsert(
+    const { data: inserted, error } = await db.from("payments").upsert(
       {
         owner_id: ownerId,
         invoice_id: inv.id,
@@ -41,12 +40,13 @@ Deno.serve(async (req) => {
         stripe_payment_intent: paymentIntentId,
       },
       { onConflict: "stripe_payment_intent", ignoreDuplicates: true },
-    );
+    ).select("id");
     if (error) {
       console.error(error);
       throw new Error("db error");
     }
-    if (!had) {
+    const created = Array.isArray(inserted) ? inserted.length > 0 : Boolean(inserted);
+    if (created) {
       try {
         const [{ data: b2 }, { data: cust }] = await Promise.all([
           db.from("business").select("name,phone,email,email_templates").eq("owner_id", ownerId).maybeSingle(),

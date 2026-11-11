@@ -131,7 +131,7 @@ export default function Billing() {
     void refresh(); [2000, 5000, 9000, 15000, 25000].forEach((ms) => setTimeout(() => void refresh(), ms));
   }
 
-  async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel" | "update", plan?: string, interval?: string) {
+  async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel", plan?: string, interval?: string) {
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? fn + (flow ?? ""));
     try {
@@ -266,7 +266,7 @@ export default function Billing() {
       {changeOpen && !isIosApp() && (
         <Sheet title="Change your plan" onClose={() => setChangeOpen(false)}>
           <div className="stack">
-            <p className="small muted" style={{ margin: 0 }}>{sub?.trialing ? `Your plan changes right away and your trial end stays the same. You won't be charged until${sub.current_period_end ? ` ${fmtDate(sub.current_period_end)}` : " the trial ends"}. Pay monthly and get 50% off your first 3 months, or pay yearly and save 10%.` : "Pick a plan. Upgrades and downgrades are prorated: you are credited for unused time on your current plan and billed the difference."}</p>
+            <p className="small muted" style={{ margin: 0 }}>{sub?.trialing ? `Your plan changes right away and your trial end stays the same. You won't be charged until${sub.current_period_end ? ` ${fmtDate(sub.current_period_end)}` : " the trial ends"}. Pay monthly and get 50% off your first 3 months, or pay yearly and save 10%.` : "Pick a plan. An upgrade is charged now for the rest of this period. A downgrade takes effect at the next billing date, with no credit."}</p>
             {seatBlock && <div className="plan-seat-block" data-testid="seat-block"><b>{seatBlock}</b> <Link to="/team">Open Team</Link></div>}
             <PlanCards backTo="/billing" busy={busy} current={sub?.plan ?? undefined} focus={params.get("plan") ?? undefined} cta="Switch to" onChoose={(p, iv) => {
               const msg = downgradeLoginMessage(activeLogins, p.id as PlanId);

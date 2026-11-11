@@ -28,13 +28,20 @@ async function save(sub: Stripe.Subscription) {
   }
   if (!ownerId) return;
   const item = sub.items.data[0];
-  const status = sub.status === "active" || sub.status === "trialing" ? "active" : sub.status === "past_due" || sub.status === "unpaid" ? "past_due" : sub.status === "canceled" ? "canceled" : "incomplete";
+  const status = sub.status === "active" || sub.status === "trialing" ? "active" : sub.status === "past_due" ? "past_due" : sub.status === "canceled" || sub.status === "unpaid" ? "canceled" : "incomplete";
+  const { data: prev } = await db.from("subscriptions").select("status, past_due_since, trial_used_at").eq("owner_id", ownerId).maybeSingle();
+  const pastDueSince = status === "past_due"
+    ? (prev?.status === "past_due" && prev.past_due_since ? prev.past_due_since : new Date().toISOString())
+    : null;
+  const trialUsedAt = prev?.trial_used_at ?? (sub.status === "trialing" ? new Date().toISOString() : null);
   const { error } = await db.from("subscriptions").upsert({
     owner_id: ownerId,
     status,
     plan: planName(item?.price),
     amount_cents: item?.price?.unit_amount ?? 30000,
     billing_interval: item?.price?.recurring?.interval ?? "month",
+    past_due_since: pastDueSince,
+    trial_used_at: trialUsedAt,
     // Newer Stripe API versions keep the period end on the item; a scheduled cancel date wins when there is one.
     current_period_end: (() => {
       const t = sub.cancel_at ?? (item as unknown as { current_period_end?: number })?.current_period_end ?? (sub as unknown as { current_period_end?: number }).current_period_end ?? sub.trial_end;
@@ -107,8 +114,10 @@ Deno.serve(async (req) => {
         });
       }
     } else if (event.type === "invoice.payment_failed") {
-      const inv = event.data.object as Stripe.Invoice;
-      if (inv.subscription) await save(await stripe.subscriptions.retrieve(String(inv.subscription)));
+      const inv = event.data.object as Stripe.Invoice & { parent?: { subscription_details?: { subscription?: string | { id: string } | null } } };
+      const raw = inv.parent?.subscription_details?.subscription;
+      const subId = typeof raw === "string" ? raw : raw?.id;
+      if (subId) await save(await stripe.subscriptions.retrieve(subId));
     }
   } catch (e) {
     console.error(e);

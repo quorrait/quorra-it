@@ -1,5 +1,5 @@
 // Moves a job. Signed-in team only (leave Verify JWT ON). Texts and emails the customer, and tells everyone on the account.
-import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, accountOwner, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { featureOn } from "../_shared/plan.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
@@ -15,6 +15,7 @@ handler(async (req) => {
   if (!b?.job_id || isNaN(start.getTime()) || isNaN(end.getTime()) || end <= start) throw new HttpError(400, "Pick a valid start and end time");
   const db = admin();
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   const { data: job } = await db.from("jobs").select("id,title,customer_id,start_at,assigned_to").eq("id", b.job_id).eq("owner_id", owner).maybeSingle();
   if (!job) throw new HttpError(404, "Job not found");
   const { error } = await db.from("jobs").update({ start_at: start.toISOString(), end_at: end.toISOString(), reminder_sent_at: null, customer_reminded_at: null, team_reminded_at: null }).eq("id", job.id);

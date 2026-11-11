@@ -1,11 +1,12 @@
 // Lists the QuickBooks accounts a payment can be deposited into (bank accounts and Undeposited Funds). Signed-in team members only.
-import { accountOwner, handler, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, assertBilling, handler, json, requireUser } from "../_shared/util.ts";
 import { assertFeature } from "../_shared/plan.ts";
 import { getConnection, qboQuery } from "../_shared/qbo.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
+  await assertBilling(ownerId);
   await assertFeature(ownerId, "qbo");
   const conn = await getConnection(ownerId);
   const r = await qboQuery(conn, "select Id, Name, AccountType, AccountSubType from Account where Active = true and AccountType in ('Bank', 'Other Current Asset') maxresults 200");

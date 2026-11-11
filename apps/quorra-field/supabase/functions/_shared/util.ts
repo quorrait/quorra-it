@@ -109,3 +109,16 @@ export async function billingOwner(userId: string, roles: readonly string[] = ["
   if (roles.includes(String(tm?.role ?? ""))) return data.owner_id as string;
   throw new HttpError(403, roles.includes("Manager") ? "Only an owner or manager can connect Stripe" : "Only the account owner can manage billing");
 }
+
+/** Service-role check of billing_ok_for. Unpaid businesses get 402. */
+export async function assertBilling(ownerId: string): Promise<void> {
+  const { data, error } = await admin().rpc("billing_ok_for", { p_owner: ownerId });
+  if (error) { console.error(error); throw new HttpError(500, "Server error"); }
+  if (!data) throw new HttpError(402, "Plan not active");
+}
+
+export async function billingActive(ownerId: string): Promise<boolean> {
+  const { data, error } = await admin().rpc("billing_ok_for", { p_owner: ownerId });
+  if (error) { console.error(error); throw new HttpError(500, "Server error"); }
+  return Boolean(data);
+}

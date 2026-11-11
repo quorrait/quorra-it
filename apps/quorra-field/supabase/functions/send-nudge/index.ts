@@ -1,6 +1,6 @@
 // Manual "nudge to schedule": the business taps a button on an accepted quote that has no visit booked yet.
 // Emails (and optionally texts) the customer a link to pick a time. Signed-in team members only (leave Verify JWT ON).
-import { accountOwner, admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, admin, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { assertFeature } from "../_shared/plan.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
@@ -15,6 +15,7 @@ handler(async (req) => {
   const wantText = Boolean(b?.text);
   const db = admin();
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   await assertFeature(owner, "booking");
   const { data: e } = await db.from("estimates").select("id,customer_id,title,status,job_id,quote_link,schedule_nudges").eq("id", id).eq("owner_id", owner).maybeSingle();
   if (!e) throw new HttpError(404, "Quote not found");

@@ -83,7 +83,7 @@ export default function Leads() {
   const [q, setQ] = useState("");
   const [edit, setEdit] = useState<Lead | "new" | null>(null);
   const [over, setOver] = useState<LeadStage | null>(null);
-  const [quote, setQuote] = useState<{ lead: Lead; customerId: string } | null>(null);
+  const [quote, setQuote] = useState<{ lead: Lead; customerId: string; fromButton: boolean } | null>(null);
   const [schedule, setSchedule] = useState<{ lead: Lead; customerId: string } | null>(null);
   const [decline, setDecline] = useState<Lead | null>(null);
 
@@ -108,15 +108,15 @@ export default function Leads() {
     if (r.sent) { await refresh(); toast("Reminder sent to pick a time"); } else toast(r.reason || "Could not send");
   }
 
+  async function startQuote(l: Lead, fromButton: boolean) {
+    setQuote({ lead: l, customerId: await customerFor(l), fromButton });
+  }
+
   async function move(l: Lead, stage: LeadStage) {
-    if (stage === "send_quote") {
-      if (l.estimate_id && estimates.some((e) => e.id === l.estimate_id)) {
-        if (l.stage !== "send_quote") await patch(l, { stage: stageAfterBuildQuote(l.stage) });
-        return;
-      }
-      return setQuote({ lead: l, customerId: await customerFor(l) });
-    }
     if (l.stage === stage) return;
+    if (stage === "send_quote" && !(l.estimate_id && estimates.some((e) => e.id === l.estimate_id))) {
+      return startQuote(l, false);
+    }
     if (stage === "quote_sent") {
       const est = estimates.find((e) => e.id === l.estimate_id);
       if (est && est.status === "draft") await store.saveRow("estimates", { ...est, status: "sent" });
@@ -263,11 +263,11 @@ export default function Leads() {
         </div>
       )}
 
-      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} onBuildQuote={(l) => void move(l, "send_quote")} />}
+      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} onBuildQuote={(l) => void startQuote(l, true)} />}
 
       {quote && (
         <EstimateForm customerId={quote.customerId} title={quote.lead.service} onClose={() => setQuote(null)}
-          onSaved={async (est) => { await patch(quote.lead, { estimate_id: est.id, stage: stageAfterBuildQuote(quote.lead.stage), customer_id: quote.customerId }); toast("Quote built. Send it, then confirm it was sent."); nav(`/estimates/${est.id}`); }} />
+          onSaved={async (est) => { await patch(quote.lead, { estimate_id: est.id, stage: quote.fromButton ? stageAfterBuildQuote(quote.lead.stage) : "send_quote", customer_id: quote.customerId }); toast("Quote built. Send it, then confirm it was sent."); nav(`/estimates/${est.id}`); }} />
       )}
 
       {schedule && (

@@ -1,6 +1,6 @@
 // Sends a quote or invoice to a customer by email and/or text, as a clean branded message with a link (and an optional PDF).
 // Signed-in team members only (leave Verify JWT ON). Secrets: RESEND_API_KEY, FROM_EMAIL; for texts also TWILIO_*.
-import { accountOwner, admin, appUrl, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, admin, appUrl, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { allowedApi, allowedAppUrl } from "../_shared/safeUrl.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
@@ -23,6 +23,7 @@ handler(async (req) => {
 
   const db = admin();
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   // Only people already in this business's customer list can be messaged through us.
   const { data: custs } = await db.from("customers").select("name,email,phone").eq("owner_id", owner);
   const digits = (s: string) => s.replace(/\D/g, "").slice(-10);

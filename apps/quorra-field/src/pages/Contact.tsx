@@ -15,8 +15,9 @@ export default function Contact() {
   const [done, setDone] = useState(false);
   const nav = useNavigate();
   useEffect(() => { void applyStatusBar("login"); }, []);
-  const back = (useLocation().state as { back?: string } | null)?.back ?? "/plans";
-  const backName = back === "/billing" ? "Billing" : "plans";
+  const loc = useLocation();
+  const back = (loc.state as { back?: string } | null)?.back ?? `/billing${loc.search}`;
+  const backName = back.startsWith("/billing") ? "Billing" : "plans";
   const set = (k: keyof typeof f, v: string) => setF({ ...f, [k]: v });
 
   async function submit(e: FormEvent) {

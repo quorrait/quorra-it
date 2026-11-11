@@ -6,7 +6,7 @@ import type { Estimate } from "./types";
  * Never another customer's quote, even if it has a higher number.
  */
 export function invoiceEstimates(estimates: Estimate[], opts: { customerId?: string; jobId?: string; estimateId?: string }): Estimate[] {
-  if (opts.estimateId) return estimates.filter((e) => e.id === opts.estimateId);
+  if (opts.estimateId) return estimates.filter((e) => e.id === opts.estimateId && (!opts.customerId || e.customer_id === opts.customerId));
   const open = estimates.filter((e) => (e.status === "approved" || e.status === "sent") && !e.invoice_id);
   if (opts.jobId) {
     return open

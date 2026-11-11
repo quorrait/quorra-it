@@ -37,6 +37,9 @@ handler(async (req) => {
   // Annual prices already include 10% off. The launch coupon is monthly only, and only while the secret is set.
   // Do not also set allow_promotion_codes: Stripe rejects a session that has both.
   const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
+  const prior = await stripe.subscriptions.list({ customer, status: "all", limit: 1 });
+  const { data: trialRow } = await db.from("subscriptions").select("trial_used_at").eq("owner_id", user.id).maybeSingle();
+  const grantTrial = prior.data.length === 0 && !trialRow?.trial_used_at;
   const base = {
     mode: "subscription" as const,
     customer,
@@ -44,7 +47,7 @@ handler(async (req) => {
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
     subscription_data: {
-      trial_period_days: 14,
+      ...(grantTrial ? { trial_period_days: 14 } : {}),
       metadata: { owner_id: user.id },
       ...(promo ? { discounts: [{ coupon: promo }] } : {}),
     },

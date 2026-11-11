@@ -1,7 +1,7 @@
 // Subscribable calendar feed (iCalendar). Deploy with --no-verify-jwt: phones fetch it without logging in.
 // The unguessable token in the URL is the credential. A business token returns every job; a team member's token
 // returns only the jobs assigned to that person. Tokens can be reset in the app.
-import { admin } from "../_shared/util.ts";
+import { admin, billingActive } from "../_shared/util.ts";
 import { buildIcs, type CalEvent } from "../_shared/ics.ts";
 
 Deno.serve(async (req) => {
@@ -25,6 +25,9 @@ Deno.serve(async (req) => {
     }
   }
   if (!ownerId) return plain(404, "This calendar link is not valid. Ask for a new one.");
+  if (!(await billingActive(ownerId))) {
+    return new Response(buildIcs(calName, []), { headers: { "Content-Type": "text/calendar; charset=utf-8", "Cache-Control": "private, max-age=300" } });
+  }
 
   const from = new Date(Date.now() - 45 * 86400_000).toISOString();
   const to = new Date(Date.now() + 400 * 86400_000).toISOString();

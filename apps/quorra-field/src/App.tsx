@@ -40,6 +40,11 @@ import Integrations from "./pages/Integrations";
 import Support from "./pages/Support";
 import Hub from "./pages/Hub";
 
+function BillingPlansRedirect() {
+  const { search } = useLocation();
+  return <Navigate to={`/billing${search}`} replace />;
+}
+
 function Guard({ path, children }: { path: string; children: JSX.Element }) {
   const { can, loading } = useData();
   const f = ROUTE_FEATURE[path];
@@ -129,7 +134,7 @@ function Gate() {
           <Route path="templates" element={<Guard path="/templates"><Templates /></Guard>} />
           <Route path="import" element={<Guard path="/import"><Import /></Guard>} />
           <Route path="service-plans" element={<Guard path="/service-plans"><PlanGate feature="service_plans"><ServicePlans /></PlanGate></Guard>} />
-          <Route path="plans" element={<Navigate to="/service-plans" replace />} />
+          <Route path="plans" element={<BillingPlansRedirect />} />
           <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PlanGate feature="purchase_orders"><PurchaseOrders /></PlanGate></Guard>} />
           <Route path="team" element={<Guard path="/team"><Team /></Guard>} />
           <Route path="timesheets" element={<Guard path="/timesheets"><PlanGate feature="timesheets"><Timesheets /></PlanGate></Guard>} />

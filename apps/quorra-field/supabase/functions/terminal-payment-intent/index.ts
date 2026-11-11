@@ -1,12 +1,13 @@
 // Card-present PaymentIntent for Tap to Pay, on the contractor's connected account.
 // Signed-in user only (Verify JWT ON). stripe-webhook records payment_intent.succeeded the same way as Checkout.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, env, handler, HttpError, invoiceTotalCents, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, assertBilling, env, handler, HttpError, invoiceTotalCents, json, requireUser, accountOwner } from "../_shared/util.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
+  await assertBilling(ownerId);
   const { invoice_id } = await req.json().catch(() => ({}));
   if (!invoice_id) throw new HttpError(400, "invoice_id required");
   const db = admin();

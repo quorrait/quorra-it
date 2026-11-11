@@ -1,5 +1,5 @@
 // Emails the signed-in owner sample copies of the customer emails (reminder, quote, schedule nudge, payment receipt). Deploy with JWT ON.
-import { admin, appUrl, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, appUrl, assertBilling, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { fill, getTpl, getStyle } from "../_shared/templates.ts";
@@ -7,6 +7,7 @@ import { fill, getTpl, getStyle } from "../_shared/templates.ts";
 handler(async (req) => {
   const user = await requireUser(req);
   const owner = (await accountOwner(user.id)) ?? user.id;
+  await assertBilling(owner);
   const { data: biz } = await admin().from("business").select("name,phone").eq("owner_id", owner).maybeSingle();
   const brand = biz?.name || "Your Company";
   const to = user.email as string;

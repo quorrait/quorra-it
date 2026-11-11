@@ -20,7 +20,6 @@ handler(async (req) => {
   }
   const params: Stripe.BillingPortal.SessionCreateParams = { customer: sub.stripe_customer_id, return_url: `${appUrl()}/billing` };
   if (sub.stripe_subscription_id && flow === "cancel") params.flow_data = { type: "subscription_cancel", subscription_cancel: { subscription: sub.stripe_subscription_id }, after_completion: { type: "redirect", redirect: { return_url: `${appUrl()}/billing?canceled=1` } } };
-  if (sub.stripe_subscription_id && flow === "update") params.flow_data = { type: "subscription_update", subscription_update: { subscription: sub.stripe_subscription_id } };
   const session = await stripe.billingPortal.sessions.create(params);
   return json({ url: session.url });
 });

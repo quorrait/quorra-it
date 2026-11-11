@@ -1,5 +1,5 @@
 // A job was just saved with a new assignee. Tell that person's login, not the whole business.
-import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, accountOwner, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 
 handler(async (req) => {
@@ -10,6 +10,7 @@ handler(async (req) => {
   if (!jobId) throw new HttpError(400, "Missing job");
   const db = admin();
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   const { data: job } = await db.from("jobs").select("id,title,assigned_to,customer_id").eq("id", jobId).eq("owner_id", owner).maybeSingle();
   if (!job) throw new HttpError(404, "Job not found");
   const name = String(job.assigned_to ?? "").trim();

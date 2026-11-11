@@ -1,5 +1,5 @@
 // Emails a team invite. Signed-in owners/managers only (leave Verify JWT ON). Secrets: RESEND_API_KEY, FROM_EMAIL.
-import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, accountOwner, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { assertInviteAllowed } from "../_shared/plan.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
@@ -13,6 +13,7 @@ handler(async (req) => {
   if (!code || !link) throw new HttpError(400, "Missing invite");
   const db = admin();
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   const { data: inv } = await db.from("invites").select("email,role,status,team_member_id").eq("code", code).eq("owner_id", owner).maybeSingle();
   if (!inv || inv.status !== "pending") throw new HttpError(404, "Invite not found");
   if (inv.team_member_id) await assertInviteAllowed(owner, inv.team_member_id as string);
