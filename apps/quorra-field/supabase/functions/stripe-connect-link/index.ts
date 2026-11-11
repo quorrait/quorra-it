@@ -1,11 +1,11 @@
 // Starts (or resumes) Stripe onboarding for a contractor. Uses Standard connected accounts:
 // they own their Stripe account, payouts and disputes; funds never sit with us.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, appUrl, env, handler, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, appUrl, env, handler, json, requireUser, billingOwner } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
-  const ownerId = await accountOwner(user.id);
+  const ownerId = await billingOwner(user.id, ["Owner", "Manager"]);
   const db = admin();
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 

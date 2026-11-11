@@ -17,7 +17,8 @@ handler(async (req) => {
   const db = admin();
   const { data: biz } = await db.from("business").select("name").eq("owner_id", owner).maybeSingle();
   const r = { owner_id: owner, email: user.email ?? "", business: biz?.name ?? "", reason, details: clean(b.details, 2000), contact_me: Boolean(b.contact_me), phone: clean(b.phone, 40) };
-  await db.from("cancel_requests").insert(r);
+  const { error } = await db.from("cancel_requests").insert(r);
+  if (error) { console.error(error); throw new HttpError(500, "Server error"); }
   await sendEmail({
     to: supportEmail(),
     subject: `${r.contact_me ? "[CONTACT ME] " : ""}Cancellation: ${r.business || r.email}`,

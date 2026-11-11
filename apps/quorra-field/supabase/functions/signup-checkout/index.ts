@@ -2,8 +2,10 @@
 // Secrets: STRIPE_SECRET_KEY, STRIPE_PUBLISHABLE_KEY, STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE (and _ANNUAL).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
+import { clientIp, rateLimit } from "../_shared/limit.ts";
 
 handler(async (req) => {
+  await rateLimit("signup-checkout", clientIp(req), 8, 60 * 60);
   const b = await req.json().catch(() => ({}));
   const email = String(b.email ?? "").trim().toLowerCase();
   const name = String(b.name ?? "").trim().slice(0, 80);
@@ -15,7 +17,7 @@ handler(async (req) => {
   if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
   // Stop early if this email already has a login, so nobody pays for an account that cannot be created.
   const { data: taken } = await admin().rpc("email_in_use", { p_email: email });
-  if (taken === true) throw new HttpError(409, "That email already has a login. Sign in instead, or use a different email.");
+  if (taken === true) throw new HttpError(409, "We could not start signup for that email. If you already have an account, sign in.");
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   const customer = await stripe.customers.create({ email, name, metadata: { business, signup: "1" } });

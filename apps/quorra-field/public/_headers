@@ -1,0 +1,19 @@
+# Cloudflare Pages. The signed-in app and the public portal, quote, and lead pages
+# are served under /app/ on quorradispatch.com. The same rules are repeated for /*
+# so they still apply if this project is deployed as the app root.
+#
+# The sha256 allows the one-line history rewrite in index.html. Page scripts are files.
+# Stripe's embedded card form also talks to r.stripe.com, m.stripe.com, and hooks.stripe.com.
+# Maps are normal links, not frames. The app does not load a web font.
+
+/app/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; connect-src 'self' https://vlwsrrbofnnatctezsmn.supabase.co wss://vlwsrrbofnnatctezsmn.supabase.co https://api.stripe.com https://r.stripe.com https://m.stripe.com https://js.stripe.com; script-src 'self' https://js.stripe.com 'sha256-0vEmG7vKr3CQwQFbpTROeFCFxWvFhpV4fwFvbe/m+mA='; frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+/*
+  Content-Security-Policy: default-src 'self'; base-uri 'self'; object-src 'none'; connect-src 'self' https://vlwsrrbofnnatctezsmn.supabase.co wss://vlwsrrbofnnatctezsmn.supabase.co https://api.stripe.com https://r.stripe.com https://m.stripe.com https://js.stripe.com; script-src 'self' https://js.stripe.com 'sha256-0vEmG7vKr3CQwQFbpTROeFCFxWvFhpV4fwFvbe/m+mA='; frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; worker-src 'self' blob:; frame-ancestors 'none'
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin

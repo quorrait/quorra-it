@@ -1,6 +1,7 @@
 // Sends a quote or invoice to a customer by email and/or text, as a clean branded message with a link (and an optional PDF).
 // Signed-in team members only (leave Verify JWT ON). Secrets: RESEND_API_KEY, FROM_EMAIL; for texts also TWILIO_*.
-import { accountOwner, admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { accountOwner, admin, appUrl, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { allowedApi, allowedAppUrl } from "../_shared/safeUrl.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { fill, getTpl, getStyle } from "../_shared/templates.ts";
@@ -13,7 +14,9 @@ handler(async (req) => {
   const b = await req.json().catch(() => null);
   if (!b) throw new HttpError(400, "Invalid request");
   const kind = b.kind === "invoice" ? "invoice" : "quote";
-  const link = typeof b.link === "string" && b.link.startsWith("https://") ? b.link : "";
+  const linkRaw = typeof b.link === "string" ? b.link : "";
+  const link = linkRaw && (allowedAppUrl(linkRaw, appUrl()) || allowedApi(linkRaw)) ? linkRaw : "";
+  if (linkRaw && !link) throw new HttpError(400, "That link is not allowed");
   const to = clip(b.to, 200).toLowerCase(), phone = clip(b.phone, 40);
   const wantEmail = Boolean(b.channels?.email && to), wantText = Boolean(b.channels?.text && phone);
   if (!wantEmail && !wantText) throw new HttpError(400, "Pick email or text, and make sure the customer has that contact on file");
@@ -30,6 +33,12 @@ handler(async (req) => {
   const first = String(cust.name ?? "").split(" ")[0] || "there";
   const title = clip(b.doc_title, 160), amount = clip(b.amount, 40), valid = clip(b.valid_until, 60);
   const noun = kind === "invoice" ? "invoice" : "quote";
+
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { count, error: capErr } = await db.from("message_log").select("id", { count: "exact", head: true }).eq("owner_id", owner).gte("created_at", since);
+  if (capErr) { console.error(capErr); throw new HttpError(500, "Server error"); }
+  const sending = (wantEmail ? 1 : 0) + (wantText ? 1 : 0);
+  if ((count ?? 0) + sending > 200) throw new HttpError(429, "This account has reached the daily message limit. Try again tomorrow.");
 
   const out: { email?: unknown; text?: unknown } = {};
   if (wantEmail) {
@@ -51,5 +60,7 @@ handler(async (req) => {
     });
   }
   if (wantText) out.text = await sendSms({ to: phone, body: `Hi ${first}, ${bizName} sent your ${noun} for ${title}${amount ? ` (${amount})` : ""}: ${link}` });
+  const logged = [...(wantEmail ? ["email"] : []), ...(wantText ? ["text"] : [])].map((kind) => ({ owner_id: owner, kind }));
+  if (logged.length) await db.from("message_log").insert(logged);
   return json(out);
 });

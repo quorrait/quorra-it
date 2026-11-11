@@ -12,6 +12,8 @@ import { createSupabaseStore } from "./supabaseStore";
 import { demoMode, hasSupabase, supabase } from "./supabase";
 import { demoPlanPreview } from "./demoMode";
 import { planAllows, planLabel, resolvePlanId, seatLimit, type GatedFeature, type PlanId } from "./plans";
+import { PUBLIC_APP_URL } from "./publicUrl";
+import { passwordError } from "./safeUrl";
 
 /* ---------------- Auth ---------------- */
 
@@ -20,8 +22,11 @@ interface AuthCtx {
   email: string | null;
   name: string;
   mode: "demo" | "supabase";
+  recovery: boolean;
   signIn(email: string, password: string): Promise<void>;
   signUp(email: string, password: string, businessName?: string): Promise<{ needsConfirm: boolean }>;
+  resetPassword(email: string): Promise<void>;
+  setPassword(password: string): Promise<void>;
   signOut(): Promise<void>;
 }
 
@@ -32,6 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const [authName, setAuthName] = useState("");
+  const [recovery, setRecovery] = useState(false);
 
   useEffect(() => {
     if (!supabase) {
@@ -61,21 +67,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setAuthName(String(data.session?.user.user_metadata?.name ?? ""));
       setReady(true);
     }).catch(() => { setEmail(null); setReady(true); });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => { setEmail(session?.user.email ?? null); setAuthName(String(session?.user.user_metadata?.name ?? "")); });
+    const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
+      setEmail(session?.user.email ?? null);
+      setAuthName(String(session?.user.user_metadata?.name ?? ""));
+      if (event === "PASSWORD_RECOVERY") setRecovery(true);
+    });
     // Native only: register this phone once a session exists. The browser build never reaches enablePush.
     const stop = watchSession(() => { void supabase!.auth.signOut({ scope: "local" }); });
     return () => { sub.subscription.unsubscribe(); stop(); };
   }, []);
 
   useEffect(() => {
-    if (email) void enablePush().catch((e) => console.error("push", e));
-  }, [email]);
+    if (email && !recovery) void enablePush().catch((e) => console.error("push", e));
+  }, [email, recovery]);
 
   const value = useMemo<AuthCtx>(
     () => ({
       ready,
       email,
       name: authName,
+      recovery,
       mode: hasSupabase ? "supabase" : "demo",
       async signIn(e, p) {
         if (!supabase) {
@@ -87,8 +98,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmail(e || "demo@example.com");
           return;
         }
-        const { error } = await supabase.auth.signInWithPassword({ email: e, password: p });
+        const { data, error } = await supabase.functions.invoke("login", { body: { email: e, password: p } });
+        if (error) throw await functionError(error, "Could not sign in.");
+        const session = data as { access_token?: string; refresh_token?: string } | null;
+        if (!session?.access_token || !session.refresh_token) throw new Error("Could not sign in.");
+        const { error: setErr } = await supabase.auth.setSession({ access_token: session.access_token, refresh_token: session.refresh_token });
+        if (setErr) throw setErr;
+        await claimSession().catch(() => undefined);
+      },
+      async resetPassword(address) {
+        if (!supabase) throw new Error("Password reset is not available in the demo.");
+        const { error } = await supabase.auth.resetPasswordForEmail(address.trim(), { redirectTo: PUBLIC_APP_URL });
         if (error) throw error;
+      },
+      async setPassword(password) {
+        if (!supabase) throw new Error("Password reset is not available in the demo.");
+        const pw = passwordError(password);
+        if (pw) throw new Error(pw);
+        const { error } = await supabase.auth.updateUser({ password });
+        if (error) throw error;
+        const { error: clearError } = await supabase.functions.invoke("login", { body: { action: "clear" } });
+        if (clearError) throw await functionError(clearError, "Your password was changed, but sign-in could not be unlocked. Sign in with the new password.");
+        setRecovery(false);
         await claimSession().catch(() => undefined);
       },
       async signUp(e, p, businessName) {
@@ -115,10 +146,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await supabase.auth.signOut();
       },
     }),
-    [ready, email, authName],
+    [ready, email, authName, recovery],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+async function functionError(error: unknown, fallback: string): Promise<Error> {
+  const ctx = (error as { context?: Response }).context;
+  try {
+    const body = await ctx?.json();
+    if (body && typeof body === "object" && "error" in body && body.error) return new Error(String(body.error));
+  } catch { /* keep the fallback */ }
+  return new Error(fallback);
 }
 
 export const useAuth = () => {

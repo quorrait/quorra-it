@@ -1,13 +1,20 @@
 // Quorra Dispatch Hub: for platform admins only (listed in public.platform_admins). Leave Verify JWT ON.
 // Actions: overview, tickets, ticket_update, impersonate.
-import { admin, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { allowedAppUrl } from "../_shared/safeUrl.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
   const db = admin();
   const email = (user.email ?? "").toLowerCase();
-  const { data: ok } = await db.from("platform_admins").select("email").ilike("email", email).maybeSingle();
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const asUser = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), {
+    global: { headers: { Authorization: authHeader } },
+    auth: { persistSession: false },
+  });
+  const { data: ok } = await asUser.rpc("is_platform_admin");
   if (!ok) throw new HttpError(403, "Not allowed");
   const b = await req.json().catch(() => ({}));
 
@@ -47,6 +54,7 @@ handler(async (req) => {
     const { data: target } = await db.auth.admin.getUserById(owner);
     if (!target?.user?.email) throw new HttpError(404, "No login found for that business");
     const back = String(b.return_to ?? "");
+    if (back && !allowedAppUrl(back, appUrl())) throw new HttpError(400, "That return address is not allowed");
     const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email: target.user.email, options: back ? { redirectTo: back } : undefined });
     if (error || !data?.properties?.action_link) throw new HttpError(500, error?.message ?? "Could not make a link");
     await db.from("hub_audit").insert({ admin_email: email, action: "sign_in_as", target_owner: owner });

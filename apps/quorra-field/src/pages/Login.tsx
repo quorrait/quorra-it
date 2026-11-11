@@ -3,12 +3,14 @@ import { errMsg } from "../lib/errors";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
+import { supabase } from "../lib/supabase";
 import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { isIosApp } from "../lib/iosPlan";
 import BuyService from "../components/BuyService";
 import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
+import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
 
 /** Sign in. Creating a login here is only possible through a team invite; new businesses buy a plan first. */
 export default function Login() {
@@ -16,7 +18,7 @@ export default function Login() {
   const nav = useNavigate();
   const code = codeFromHash();
   const [invite, setInvite] = useState<{ business: string; email: string; role: string } | null>(null);
-  const [mode, setMode] = useState<"in" | "up">(code ? "up" : "in");
+  const [mode, setMode] = useState<"in" | "up" | "forgot">(code ? "up" : "in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
@@ -24,6 +26,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(() => (wasKicked() ? "You have been logged out because this account signed in on another device." : null));
+  const [resendBusy, setResendBusy] = useState(false);
 
   useEffect(() => {
     if (!code) return;
@@ -44,6 +47,11 @@ export default function Login() {
     setErr(null);
     setInfo(null);
     try {
+      if (mode === "forgot") {
+        await auth.resetPassword(email);
+        setInfo("If that email has a login, we sent a link to choose a new password. You can reset it even if sign-in is locked.");
+        return;
+      }
       if (mode === "in") {
         await auth.signIn(email, password);
         try { sessionStorage.setItem("qd_alive", "1"); remember ? localStorage.removeItem("qd_no_remember") : localStorage.setItem("qd_no_remember", "1"); } catch { /* ignore */ }
@@ -52,23 +60,72 @@ export default function Login() {
       }
       else {
         if (password !== confirm) throw new Error("The passwords do not match.");
+        const pw = passwordError(password);
+        if (pw) throw new Error(pw);
         const r = await auth.signUp(email, password);
         if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in with the same email.");
       }
     } catch (e) {
-      setErr(errMsg(e, "Something went wrong. Please try again."));
+      const m = errMsg(e, "Something went wrong. Please try again.");
+      if (/confirm/i.test(m)) setInfo("Check your email to confirm your account, then sign in with the same email.");
+      else setErr(m);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    if (!supabase || !email.trim()) return setErr("Enter your email, then resend the confirmation.");
+    setResendBusy(true);
+    setErr(null);
+    try {
+      const { error } = await supabase.functions.invoke("signup-complete", { body: { resend: true, email: email.trim() } });
+      if (error) throw error;
+      setInfo("Check your email to confirm your account, then sign in with the same email.");
+    } catch (e) {
+      setErr(errMsg(e, "Could not resend the confirmation email. Try again in a few minutes."));
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
+  async function choosePassword(e: FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setErr(null);
+    try {
+      if (password !== confirm) throw new Error("The passwords do not match.");
+      await auth.setPassword(password);
+    } catch (e) {
+      setErr(errMsg(e, "Could not save the new password."));
     } finally {
       setBusy(false);
     }
   }
 
   const joining = Boolean(code);
+  if (auth.recovery) return (
+    <div className="auth">
+      <form className="auth-card stack" method="post" action="#" onSubmit={choosePassword}>
+        <h1>Choose a new password</h1>
+        <p className="muted">This also unlocks sign-in if it was temporarily locked.</p>
+        <Field label="New password">
+          <PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={MIN_PASSWORD} placeholder="At least 8 characters" />
+        </Field>
+        <Field label="Confirm password">
+          <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={MIN_PASSWORD} placeholder="Type it again" />
+        </Field>
+        {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
+        <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : "Save password"}</button>
+      </form>
+    </div>
+  );
   return (
     <div className="auth">
       <form className="auth-card stack" method="post" action="#" onSubmit={submit}>
         {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="auth-head">
-          {mode === "in" ? (
+          {mode !== "up" ? (
             <img className="auth-wide" src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt={APP_NAME} />
           ) : (
             <>
@@ -80,26 +137,30 @@ export default function Login() {
         </div>
 
         {auth.mode === "demo" && <div className="notice">Demo mode: any email works and sample data is saved in this browser only.</div>}
+        {mode === "forgot" && <p className="muted">We will email you a link to choose a new password. This works even if sign-in is locked.</p>}
         {joining && mode === "in" && <div className="notice">Sign in with the email you were invited with to join the team.</div>}
 
         <Field label="Email">
           <input className="input" type="email" name="email" id="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
         </Field>
-        <Field label="Password">
-          <PasswordInput name="password" id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
-        </Field>
+        {mode !== "forgot" && <Field label="Password">
+          <PasswordInput name="password" id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={mode === "up" ? MIN_PASSWORD : undefined} placeholder={mode === "up" ? "At least 8 characters" : "••••••••"} />
+        </Field>}
+        {mode === "in" && auth.mode !== "demo" && <button type="button" className="small muted" style={{ background: "none", border: 0, padding: 0, textAlign: "left", cursor: "pointer" }} onClick={() => { setMode("forgot"); setErr(null); setInfo(null); }}>Forgot your password?</button>}
         {mode === "up" && (
           <Field label="Confirm password">
-            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} placeholder="Type it again" />
+            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={MIN_PASSWORD} placeholder="Type it again" />
           </Field>
         )}
 
         {mode === "in" && <label className="check-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember me on this device</label>}
+        {mode === "in" && auth.mode !== "demo" && <button type="button" className="btn block" disabled={resendBusy} onClick={() => void resend()}>{resendBusy ? "Sending..." : "Resend confirmation email"}</button>}
+        {mode === "forgot" && <button type="button" className="btn block" onClick={() => { setMode("in"); setErr(null); setInfo(null); }}>Back to sign in</button>}
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
 
         <button className="btn primary block" disabled={busy || (mode === "up" && !invite)}>
-          {busy ? "One moment..." : mode === "in" ? (auth.mode === "demo" ? "Open the demo" : "Sign in") : "Create my login"}
+          {busy ? "One moment..." : mode === "forgot" ? "Email me a reset link" : mode === "in" ? (auth.mode === "demo" ? "Open the demo" : "Sign in") : "Create my login"}
         </button>
         {joining ? (
           <button type="button" className="btn block" onClick={() => setMode(mode === "in" ? "up" : "in")}>

@@ -1,6 +1,7 @@
 // Public: the customer accepts or declines a quote, then picks a time from the open slots. Deploy with --no-verify-jwt.
 // Accept -> quote approved. Schedule -> a job is put on the calendar and the customer gets a confirmation text with a reschedule link.
-import { admin, handler, HttpError, json } from "../_shared/util.ts";
+import { admin, appUrl, handler, HttpError, json } from "../_shared/util.ts";
+import { allowedAppUrl, API_BASE } from "../_shared/safeUrl.ts";
 import { featureOn } from "../_shared/plan.ts";
 import { availableSlots, normHours } from "../_shared/schedule.ts";
 import { sendEmail, sendSms } from "../_shared/notify.ts";
@@ -34,8 +35,8 @@ handler(async (req) => {
     if (est.status !== "sent") throw new HttpError(409, "This quote is not ready yet");
     await db.from("estimates").update({ status: "approved" }).eq("id", est.id);
     // The lead stays in the pipeline until a time is actually booked; then it becomes a work order.
-    const back = typeof b.return_to === "string" && b.return_to.startsWith("https://") ? b.return_to.split("?")[0] : "";
-    const quoteLink = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(typeof b.api === "string" ? b.api : "")}` : null;
+    const back = typeof b.return_to === "string" && allowedAppUrl(b.return_to, appUrl()) ? b.return_to.split("?")[0] : "";
+    const quoteLink = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(API_BASE)}` : null;
     await db.from("estimates").update({ accepted_at: new Date().toISOString(), schedule_nudges: 0, quote_link: quoteLink }).eq("id", est.id); // needs SQL 0025
     const { data: c2 } = await db.from("customers").select("name,phone,email,address").eq("id", est.customer_id).maybeSingle();
     // Every accepted quote shows up in Leads until a time is booked, even if it was never built from a lead.
@@ -78,8 +79,8 @@ handler(async (req) => {
   }
 
   // Confirmation text (and email) with a link to change the time.
-  const back = typeof b.return_to === "string" && b.return_to.startsWith("https://") ? b.return_to.split("?")[0] : "";
-  const link = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(typeof b.api === "string" ? b.api : "")}` : "";
+  const back = typeof b.return_to === "string" && allowedAppUrl(b.return_to, appUrl()) ? b.return_to.split("?")[0] : "";
+  const link = back ? `${back}?t=${encodeURIComponent(t)}&api=${encodeURIComponent(API_BASE)}` : "";
   const when = new Intl.DateTimeFormat("en-US", { timeZone: hours.tz, weekday: "long", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(start);
   const first = (cust?.name ?? "").split(" ")[0] || "there";
   const msg = `Hi ${first}, your ${est.title} with ${biz?.name ?? "us"} is scheduled for ${when}.${link ? ` Need to change it? Reschedule here: ${link}` : ""}`;
