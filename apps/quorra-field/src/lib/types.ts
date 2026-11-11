@@ -16,6 +16,7 @@ export interface Business {
   qbo_imported_at?: string | null; // when we first pulled their QuickBooks history in
   invoice_next?: number | null; // the next invoice number to use, set by the business
   stripe_connected: boolean;
+  terminal_location_id?: string | null; // Stripe Terminal location for Tap to Pay, set by the server
   logo: string | null; // small data URL shown on printed invoices/estimates
   lead_key?: string | null; // public key for the website lead form
   calendar_token?: string | null; // private link for the all-jobs phone calendar feed

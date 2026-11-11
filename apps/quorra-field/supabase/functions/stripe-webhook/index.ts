@@ -1,5 +1,7 @@
 // Stripe Connect webhook. Deploy with --no-verify-jwt (Stripe calls it, not a signed-in user).
-// Events to send: checkout.session.completed, checkout.session.async_payment_succeeded, account.updated  ("Events on Connected accounts").
+// Events to send (Events on Connected accounts): checkout.session.completed,
+// checkout.session.async_payment_succeeded, payment_intent.succeeded, account.updated.
+// Checkout and Tap to Pay both land here. There is no separate payment_intent handler today.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
@@ -25,57 +27,75 @@ Deno.serve(async (req) => {
 
   const db = admin();
 
+  async function recordCardPayment(ownerId: string, invoiceId: string, amountCents: number, paymentIntentId: string, receiptEmail?: string | null) {
+    const { data: biz } = await db.from("business").select("stripe_account_id").eq("owner_id", ownerId).maybeSingle();
+    const { data: inv } = await db.from("invoices").select("id,customer_id,number").eq("id", invoiceId).eq("owner_id", ownerId).maybeSingle();
+    if (!inv || !biz?.stripe_account_id || biz.stripe_account_id !== event.account) return false;
+    const { data: had } = await db.from("payments").select("id").eq("stripe_payment_intent", paymentIntentId).maybeSingle();
+    const { error } = await db.from("payments").upsert(
+      {
+        owner_id: ownerId,
+        invoice_id: inv.id,
+        amount_cents: amountCents,
+        method: "card",
+        stripe_payment_intent: paymentIntentId,
+      },
+      { onConflict: "stripe_payment_intent", ignoreDuplicates: true },
+    );
+    if (error) {
+      console.error(error);
+      throw new Error("db error");
+    }
+    if (!had) {
+      try {
+        const [{ data: b2 }, { data: cust }] = await Promise.all([
+          db.from("business").select("name,phone,email,email_templates").eq("owner_id", ownerId).maybeSingle(),
+          db.from("customers").select("name,email").eq("id", inv.customer_id).maybeSingle(),
+        ]);
+        const amt = `$${(amountCents / 100).toFixed(2)}`;
+        try {
+          await notifyAccount(db, ownerId, {
+            title: `Paid: invoice #${inv.number ?? ""} – ${amt}`,
+            body: `${cust?.name ?? "A customer"} paid ${amt}.`,
+            link: `/invoices/${inv.id}`,
+          });
+        } catch (e) { console.error("payment notice", e); }
+        const to = cust?.email || receiptEmail || "";
+        if (to) {
+          const first = (cust?.name ?? "").split(" ")[0] || "there";
+          const brand = b2?.name || "Your contractor";
+          await sendEmail({
+            to, replyTo: b2?.email || undefined, fromName: brand, subject: `Payment received: ${amt}`, text: `Hi ${first}, we received your payment of ${amt}. Thank you! ${brand}`,
+            html: emailHtml({ brand, style: getStyle(b2?.email_templates), heading: "Thank you for your payment", paragraphs: [`Hi ${first}, we received your payment. Thank you for choosing ${brand}.`],
+              rows: [{ label: "Amount paid", value: amt }, { label: "Invoice", value: `#${inv.number ?? ""}` }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }],
+              fine: b2?.phone ? `Questions about your bill? Call ${b2.phone} or reply to this email.` : "Questions about your bill? Reply to this email." }),
+          });
+        }
+      } catch (e) { console.error("receipt email", e); }
+    }
+    return true;
+  }
+
   if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
     const s = event.data.object as Stripe.Checkout.Session;
     if (s.payment_status === "paid" && s.metadata?.invoice_id && s.metadata?.owner_id) {
-      // Make sure the invoice really belongs to the owner named in the metadata and to the account that sent this event.
-      const { data: biz } = await db.from("business").select("stripe_account_id").eq("owner_id", s.metadata.owner_id).maybeSingle();
-      const { data: inv } = await db.from("invoices").select("id,customer_id,number").eq("id", s.metadata.invoice_id).eq("owner_id", s.metadata.owner_id).maybeSingle();
-      if (inv && biz?.stripe_account_id && biz.stripe_account_id === event.account) {
-        const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? s.id;
-        const { data: had } = await db.from("payments").select("id").eq("stripe_payment_intent", pi).maybeSingle();
-        const { error } = await db.from("payments").upsert(
-          {
-            owner_id: s.metadata.owner_id,
-            invoice_id: inv.id,
-            amount_cents: s.amount_total ?? 0,
-            method: "card",
-            stripe_payment_intent: pi,
-          },
-          { onConflict: "stripe_payment_intent", ignoreDuplicates: true },
-        );
-        if (error) {
-          console.error(error);
-          return new Response("db error", { status: 500 }); // Stripe will retry
-        }
-        // Receipt to the customer, from the business (their name, their colors, replies to their email).
-        if (!had) {
-          try {
-            const [{ data: b2 }, { data: cust }] = await Promise.all([
-              db.from("business").select("name,phone,email,email_templates").eq("owner_id", s.metadata.owner_id).maybeSingle(),
-              db.from("customers").select("name,email").eq("id", inv.customer_id).maybeSingle(),
-            ]);
-            const amt = `$${((s.amount_total ?? 0) / 100).toFixed(2)}`;
-            try {
-              await notifyAccount(db, s.metadata.owner_id, {
-                title: `Paid: invoice #${inv.number ?? ""} – ${amt}`,
-                body: `${cust?.name ?? "A customer"} paid ${amt}.`,
-                link: `/invoices/${inv.id}`,
-              });
-            } catch (e) { console.error("payment notice", e); }
-            const to = cust?.email || s.customer_details?.email || "";
-            if (to) {
-              const first = (cust?.name ?? "").split(" ")[0] || "there";
-              const brand = b2?.name || "Your contractor";
-              await sendEmail({
-                to, replyTo: b2?.email || undefined, fromName: brand, subject: `Payment received: ${amt}`, text: `Hi ${first}, we received your payment of ${amt}. Thank you! ${brand}`,
-                html: emailHtml({ brand, style: getStyle(b2?.email_templates), heading: "Thank you for your payment", paragraphs: [`Hi ${first}, we received your payment. Thank you for choosing ${brand}.`],
-                  rows: [{ label: "Amount paid", value: amt }, { label: "Invoice", value: `#${inv.number ?? ""}` }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }],
-                  fine: b2?.phone ? `Questions about your bill? Call ${b2.phone} or reply to this email.` : "Questions about your bill? Reply to this email." }),
-              });
-            }
-          } catch (e) { console.error("receipt email", e); }
-        }
+      const pi = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? s.id;
+      try {
+        await recordCardPayment(s.metadata.owner_id, s.metadata.invoice_id, s.amount_total ?? 0, pi, s.customer_details?.email);
+      } catch {
+        return new Response("db error", { status: 500 });
+      }
+    }
+  }
+
+  // Tap to Pay never opens Checkout, so the connected-account PaymentIntent is what marks the invoice paid.
+  if (event.type === "payment_intent.succeeded") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    if (pi.metadata?.invoice_id && pi.metadata?.owner_id) {
+      try {
+        await recordCardPayment(pi.metadata.owner_id, pi.metadata.invoice_id, pi.amount_received || pi.amount, pi.id, pi.receipt_email);
+      } catch {
+        return new Response("db error", { status: 500 });
       }
     }
   }

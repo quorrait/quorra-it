@@ -12,6 +12,7 @@
     "cap:sync": "npm run build:app && npx cap sync"
   },
   "dependencies": {
+    "@capacitor-community/stripe-terminal": "^6.5.1",
     "@capacitor/android": "^6.2.3",
     "@capacitor/browser": "^6.0.6",
     "@capacitor/core": "^6.2.3",
