@@ -2,6 +2,8 @@
 // Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_* , optional STRIPE_AUTOMATIC_TAX.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
+import { passwordError } from "../_shared/safeUrl.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -16,7 +18,8 @@ handler(async (req) => {
   const b = await req.json().catch(() => ({}));
   const email = String(b.email ?? "").trim().toLowerCase();
   const password = String(b.password ?? "");
-  if (password.length < 6) throw new HttpError(400, "Password must be at least 6 characters.");
+  const pw = passwordError(password);
+  if (pw) throw new HttpError(400, pw);
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   const s = await stripe.checkout.sessions.retrieve(String(b.session_id), { expand: ["setup_intent"] });
   if (s.status !== "complete" || s.metadata?.signup !== "1" || s.metadata?.email !== email) throw new HttpError(403, "The card step was not completed.");
@@ -32,7 +35,7 @@ handler(async (req) => {
   if (used) throw new HttpError(409, "This signup was already completed. Sign in instead.");
 
   const { data: created, error: cErr } = await db.auth.admin.createUser({
-    email, password, email_confirm: true,
+    email, password, email_confirm: false,
     user_metadata: { business_name: s.metadata?.business ?? "", name: s.metadata?.name ?? "" },
   });
   if (cErr || !created.user) throw new HttpError(409, /already/i.test(cErr?.message ?? "") ? "That email already has a login. Sign in instead." : (cErr?.message ?? "Could not create the account"));
@@ -62,5 +65,8 @@ handler(async (req) => {
     current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
   }, { onConflict: "owner_id" });
-  return json({ ok: true });
+  // The project sends its own confirmation email. We do not mark the address confirmed here.
+  const pub = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
+  await pub.auth.resend({ type: "signup", email }).catch((e) => console.error("confirm email", e));
+  return json({ ok: true, needs_confirm: true });
 });

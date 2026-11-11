@@ -6,9 +6,9 @@ export const apiBase = () => (hasSupabase ? `${import.meta.env.VITE_SUPABASE_URL
 const root = () => `${location.origin}${import.meta.env.BASE_URL}`;
 
 /** Standalone, public pages (no login) that talk to the edge functions. */
-export const quoteUrl = (token?: string) => (hasSupabase && token ? `${root()}quote.html?t=${token}&api=${encodeURIComponent(apiBase())}` : "");
-export const portalUrl = (token?: string) => (hasSupabase && token ? `${root()}portal.html?t=${token}&api=${encodeURIComponent(apiBase())}` : "");
-export const leadFormUrl = (key?: string | null, name?: string) => (hasSupabase && key ? `${root()}lead.html?k=${key}&api=${encodeURIComponent(apiBase())}${name ? `&n=${encodeURIComponent(name)}` : ""}&a=${encodeURIComponent(String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? ""))}` : "");
+export const quoteUrl = (token?: string) => (hasSupabase && token ? `${root()}quote.html?t=${token}` : "");
+export const portalUrl = (token?: string) => (hasSupabase && token ? `${root()}portal.html?t=${token}` : "");
+export const leadFormUrl = (key?: string | null, name?: string) => (hasSupabase && key ? `${root()}lead.html?k=${key}${name ? `&n=${encodeURIComponent(name)}` : ""}` : "");
 /** Sample customer portal with made-up data (demo mode and before going live). */
 export const portalPreviewUrl = () => `${root()}portal.html?demo=1`;
 /** Preview of the form that does not send anything (used in demo mode and before going live). */

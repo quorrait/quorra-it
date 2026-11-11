@@ -9,6 +9,7 @@ import { isIosApp } from "../lib/iosPlan";
 import BuyService from "../components/BuyService";
 import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
+import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
 
 /** Sign in. Creating a login here is only possible through a team invite; new businesses buy a plan first. */
 export default function Login() {
@@ -52,11 +53,15 @@ export default function Login() {
       }
       else {
         if (password !== confirm) throw new Error("The passwords do not match.");
+        const pw = passwordError(password);
+        if (pw) throw new Error(pw);
         const r = await auth.signUp(email, password);
         if (r.needsConfirm) setInfo("Check your email to confirm your account, then sign in with the same email.");
       }
     } catch (e) {
-      setErr(errMsg(e, "Something went wrong. Please try again."));
+      const m = errMsg(e, "Something went wrong. Please try again.");
+      if (/confirm/i.test(m)) setInfo("Check your email to confirm your account, then sign in with the same email.");
+      else setErr(m);
     } finally {
       setBusy(false);
     }
@@ -86,11 +91,11 @@ export default function Login() {
           <input className="input" type="email" name="email" id="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} readOnly={mode === "up" && Boolean(invite)} required={auth.mode === "supabase"} placeholder="you@company.com" />
         </Field>
         <Field label="Password">
-          <PasswordInput name="password" id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={6} placeholder="••••••••" />
+          <PasswordInput name="password" id="password" autoComplete={mode === "in" ? "current-password" : "new-password"} value={password} onChange={(e) => setPassword(e.target.value)} required={auth.mode === "supabase"} minLength={mode === "up" ? MIN_PASSWORD : undefined} placeholder={mode === "up" ? "At least 8 characters" : "••••••••"} />
         </Field>
         {mode === "up" && (
           <Field label="Confirm password">
-            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={6} placeholder="Type it again" />
+            <PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required minLength={MIN_PASSWORD} placeholder="Type it again" />
           </Field>
         )}
 

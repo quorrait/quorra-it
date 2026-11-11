@@ -3,11 +3,13 @@ import { admin, handler, HttpError, json } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { supportEmail } from "../_shared/publicUrl.ts";
+import { clientIp, rateLimit } from "../_shared/limit.ts";
 
 const clean = (v: unknown, max: number) => String(v ?? "").trim().slice(0, max);
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
+  await rateLimit("contact-request", clientIp(req), 10, 60 * 60);
   const b = await req.json().catch(() => ({}));
   if (clean(b.hp, 50)) return json({ ok: true }); // honeypot: bots fill this in
   const r = { name: clean(b.name, 120), company: clean(b.company, 160), email: clean(b.email, 200), phone: clean(b.phone, 40), best_way: clean(b.best_way, 20), message: clean(b.message, 4000) };

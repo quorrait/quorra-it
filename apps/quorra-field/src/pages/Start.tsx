@@ -11,6 +11,7 @@ import EmbeddedStripe from "../components/EmbeddedStripe";
 import BuyService from "../components/BuyService";
 import { isIosApp } from "../lib/iosPlan";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
+import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
 
 /** Buy service: create the account, then go straight to Stripe to pay for the plan. */
 export default function Start() {
@@ -36,6 +37,8 @@ export default function Start() {
     if (hasSupabase && !yourName.trim()) return setErr("Enter your name.");
     if (hasSupabase && !biz.trim()) return setErr("Enter your business name.");
     if (password !== confirm) return setErr("The passwords do not match.");
+    const pw = passwordError(password);
+    if (hasSupabase && pw) return setErr(pw);
     setBusy(true);
     try {
       if (!hasSupabase || !supabase) { await auth.signUp(email, password, biz.trim()); return; }
@@ -57,9 +60,9 @@ export default function Start() {
     try {
       const { error } = await supabase.functions.invoke("signup-complete", { body: { session_id: card.session_id, email, password } });
       if (error) { let m = error.message; try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
-      await auth.signIn(email, password);
-      try { sessionStorage.setItem("qd_alive", "1"); } catch { /* ignore */ }
-      location.hash = "#/";
+      setInfo("Check your email to confirm your account, then sign in with the same email.");
+      setCard(null);
+      setFinishing(false);
     } catch (e2) {
       setErr(errMsg(e2, "Your card was saved but the account could not be finished. Try signing in, or contact support."));
       setFinishing(false);
@@ -121,8 +124,8 @@ export default function Start() {
         <Field label="Your name"><input className="input" autoComplete="name" value={yourName} onChange={(e) => setYourName(e.target.value)} placeholder="Jane Smith" required={hasSupabase} /></Field>
         <Field label="Business name"><input className="input" autoComplete="organization" value={biz} onChange={(e) => setBiz(e.target.value)} placeholder="Summit Home Services" required={hasSupabase} /></Field>
         <Field label="Email"><input className="input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@company.com" required={hasSupabase} /></Field>
-        <Field label="Password"><PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required={hasSupabase} placeholder="At least 6 characters" /></Field>
-        <Field label="Confirm password"><PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={6} required={hasSupabase} placeholder="Type it again" /></Field>
+        <Field label="Password"><PasswordInput autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={MIN_PASSWORD} required={hasSupabase} placeholder="At least 8 characters" /></Field>
+        <Field label="Confirm password"><PasswordInput autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={MIN_PASSWORD} required={hasSupabase} placeholder="Type it again" /></Field>
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
         <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : hasSupabase ? "Continue to card" : "Open the demo"}</button>

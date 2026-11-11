@@ -61,7 +61,7 @@ export function handler(fn: (req: Request) => Promise<Response>) {
     } catch (e) {
       if (e instanceof HttpError) return json({ error: e.message }, e.status);
       console.error(e);
-      return json({ error: e instanceof Error ? e.message : "Server error" }, 500);
+      return json({ error: "Server error" }, 500);
     }
   });
 }
@@ -101,11 +101,11 @@ export const invoiceTotalCents = (items: LineItem[], taxRate: number) => {
  */
 export const appUrl = () => (Deno.env.get("PUBLIC_APP_URL") || Deno.env.get("APP_URL") || PUBLIC_APP_URL).replace(/\/$/, "");
 
-/** The account owner's id for billing. The real owner, or a team member whose role is set to Owner, may manage billing. */
-export async function billingOwner(userId: string): Promise<string> {
+/** The account owner's id for billing. The real owner passes. A team login passes only when their role is in `roles` (Owner by default). */
+export async function billingOwner(userId: string, roles: readonly string[] = ["Owner"]): Promise<string> {
   const { data } = await admin().from("account_members").select("owner_id, team_member_id").eq("user_id", userId).maybeSingle();
   if (!data) return userId;
   const { data: tm } = await admin().from("team_members").select("role").eq("id", data.team_member_id).maybeSingle();
-  if (tm?.role === "Owner") return data.owner_id as string;
-  throw new HttpError(403, "Only the account owner can manage billing");
+  if (roles.includes(String(tm?.role ?? ""))) return data.owner_id as string;
+  throw new HttpError(403, roles.includes("Manager") ? "Only an owner or manager can connect Stripe" : "Only the account owner can manage billing");
 }
