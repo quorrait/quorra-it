@@ -5,6 +5,7 @@ import { Icon, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Customer, Invoice, PayMethod } from "../lib/types";
 import { money } from "../lib/money";
+import { TAP_TO_PAY_ENABLED } from "../lib/tapToPay";
 
 /** Card payment: hosted checkout link + QR the customer can scan with their own phone. */
 export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
@@ -52,9 +53,8 @@ export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice:
         {!link && !err && <div className="spinner" />}
         {link && (
           <>
-            <p className="muted small" style={{ textAlign: "center" }}>
-              Hand the customer your phone, or have them scan this code to pay on their own phone. Apple Pay and Google Pay work too.
-            </p>
+            <p className="muted small" style={{ textAlign: "center", margin: 0 }}>Have the customer scan to pay.</p>
+            <p className="small muted" style={{ textAlign: "center", margin: 0 }}>Text the link instead.</p>
             <div className="qr"><canvas ref={canvas} width={220} height={220} /></div>
 
             {link.demo ? (
@@ -69,16 +69,9 @@ export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice:
                 </button>
               </div>
             ) : (
-              <div className="stack">
-                <a className="btn primary block" href={link.url} target="_blank" rel="noopener">{Icon.card} Open checkout on this phone</a>
-                <button className="btn block" onClick={async () => { await refresh(); toast("Refreshed"); }}>I've been paid, refresh</button>
-              </div>
+              <button className="btn block" onClick={async () => { await refresh(); toast("Refreshed"); }}>I've been paid, refresh</button>
             )}
 
-            <details className="small muted">
-              <summary style={{ cursor: "pointer" }}>Tap to Pay or swipe a card (Square)</summary>
-              <p style={{ margin: "8px 0 0" }}>Tap to Pay on iPhone and Square card readers need a native app, which a web app cannot use. Take the card in your Square (or other) app, then come back and choose Cash, check or other, and pick Other so the invoice is marked paid here.</p>
-            </details>
             <div className="grid2">
               <a className="btn" href={`sms:${customer?.phone ?? ""}?&body=${smsBody}`}>{Icon.send} Text link</a>
               <button className="btn" onClick={async () => { await navigator.clipboard?.writeText(link.url); toast("Link copied"); }}>Copy link</button>
@@ -144,10 +137,10 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
 export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
   const { store, refresh } = useData();
   const toast = useToast();
-  const [step, setStep] = useState<"pick" | "cash" | "card">("pick");
+  const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card">("pick");
   const [busy, setBusy] = useState(false);
 
-  async function ensureSent(next: "cash" | "card") {
+  async function ensureSent(next: "cash" | "card-how") {
     setBusy(true);
     try {
       if (invoice.status === "draft") { await store.saveInvoice({ ...invoice, status: "sent" }); await refresh(); }
@@ -161,12 +154,23 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
 
   if (step === "cash") return <ManualPaySheet invoice={{ ...invoice, status: "sent" }} balance={balance} onClose={onClose} />;
   if (step === "card") return <CardPaySheet invoice={{ ...invoice, status: "sent" }} customer={customer} balance={balance} onClose={onClose} />;
+  if (step === "card-how") return (
+    <Sheet title={`Card · ${money(balance)}`} onClose={onClose}>
+      <div className="stack">
+        <button className="btn primary block" style={{ minHeight: 64 }} onClick={() => setStep("card")}>{Icon.card} QR code</button>
+        <p className="small muted" style={{ margin: 0 }}>Have the customer scan to pay.</p>
+        <button className="btn block" style={{ minHeight: 64 }} disabled={!TAP_TO_PAY_ENABLED} onClick={() => { if (!TAP_TO_PAY_ENABLED) return; }}>
+          {TAP_TO_PAY_ENABLED ? "Tap to Pay" : "Tap to Pay, coming soon"}
+        </button>
+      </div>
+    </Sheet>
+  );
   return (
     <Sheet title={`Take payment · ${money(balance)}`} onClose={onClose}>
       <div className="stack">
         <button className="btn good block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("cash")}>{Icon.check} Cash, check or other</button>
-        <button className="btn primary block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("card")}>{Icon.card} Card</button>
-        <p className="small muted" style={{ margin: 0 }}>Card: the customer scans a code or opens a link and pays with their card, Apple Pay or Google Pay. Paid invoices move the job to Completed.</p>
+        <button className="btn primary block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("card-how")}>{Icon.card} Card</button>
+        <p className="small muted" style={{ margin: 0 }}>Card: the customer scans a QR code on their own phone. Tap to Pay is not available yet.</p>
       </div>
     </Sheet>
   );
