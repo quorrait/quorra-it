@@ -78,6 +78,11 @@ nav .btn { padding: 11px 18px; font-size: 14px; color: #fff; }
 .fine { font-size: 14px; color: rgba(255,255,255,.62); margin-top: 14px; }
 @media (max-width: 860px) { .hero-row { grid-template-columns: 1fr; gap: 36px; } .hero { padding-top: 48px; } }
 
+/* demo */
+.demo { padding: 72px 0 48px; }
+.demo-frame { margin-top: 32px; width: min(960px, 100%); border-radius: 20px; overflow: hidden; background: #08182f; box-shadow: 0 24px 60px rgba(11,37,69,.18), 0 0 0 1px var(--line); }
+.demo-frame video { display: block; width: 100%; height: auto; background: #08182f; }
+
 /* dispatch board */
 .board { margin-top: 56px; background: #fff; color: var(--ink); border-radius: 22px 22px 0 0; padding: 20px 20px 26px; box-shadow: 0 -8px 60px rgba(0,0,0,.25); position: relative; }
 .board-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 700; margin-bottom: 14px; }
@@ -229,6 +234,7 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
         <p class="lead" style="margin-top:26px">Quorra Dispatch is field service software for HVAC, plumbing and electrical crews. Quote, schedule, send the crew and collect payment from one app on your phone.</p>
         <div class="cta">
           <a class="btn go" href="/app/plans">Start 14-day free trial</a>
+          <a class="btn ghost" href="#demo">Watch the demo</a>
           <a class="btn ghost" href="/field/?demo=1">Try the demo</a>
         </div>
         <p class="fine">14 days free, then 50% off your first 3 months. Cancel any time in the app.</p>
@@ -244,6 +250,19 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
 
   </div>
 </div>
+
+<section class="demo" id="demo">
+  <div class="wrap">
+    <h2 class="title">See it in action.</h2>
+    <p class="sub">A short tour of Quorra Dispatch, from the first lead to getting paid.</p>
+    <div class="demo-frame">
+      <video controls playsinline preload="none" poster="/media/poster.jpg" aria-label="Demo of Quorra Dispatch">
+        <source src="/media/dispatch-demo.mp4" type="video/mp4">
+        <track kind="captions" srclang="en" label="English" src="/media/dispatch-demo.vtt" default>
+      </video>
+    </div>
+  </div>
+</section>
 
 <section id="how">
   <div class="wrap">

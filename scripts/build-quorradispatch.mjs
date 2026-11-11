@@ -71,6 +71,7 @@ writeFileSync(join(out, "robots.txt"), "User-agent: *\nAllow: /\nDisallow: /test
 for (const file of ["reel.mp4", "reel.webm", "reel-poster.jpg"]) {
   cpSync(join(root, "dispatch", file), join(out, file));
 }
+cpSync(join(root, "dispatch/media"), join(out, "media"), { recursive: true });
 for (const file of ["favicon-32.png", "apple-touch-icon.png", "logo-mark-v2.png", "favicon.ico"]) {
   cpSync(join(appDir, "public", file), join(out, file));
 }
