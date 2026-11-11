@@ -446,6 +446,9 @@ div:focus, section:focus, li:focus, h1:focus, h2:focus, main:focus { outline: no
   .main h1, .main h2, .main h3, .main p, .main .list-item, .main .card { overflow-wrap: anywhere; min-width: 0; }
   .btn, .chip, .list-item, .seg button, .opt-group .seg button { min-height: 44px; }
   .btn { white-space: normal; text-align: center; }
+  .answer-actions, .doc-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .answer-actions > .btn, .doc-actions > .btn { white-space: nowrap; width: 100%; min-width: 0; }
+  .answer-actions > .btn:first-child { grid-column: 1 / -1; }
   input, select, textarea, .input, .select, .textarea { font-size: 16px; }
   .tbl-cards thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .tbl-cards, .tbl-cards tbody, .tbl-cards tr, .tbl-cards td { display: block; width: auto; }

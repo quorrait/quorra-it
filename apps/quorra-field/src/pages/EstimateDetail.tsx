@@ -120,7 +120,7 @@ export default function EstimateDetail() {
         {est.status === "sent" && (
           <>
             <div className="card-title" style={{ margin: 0 }}>Customer's answer</div>
-            <div className="row wrap">
+            <div className="row wrap answer-actions">
               <button className="btn good grow" disabled={busy} onClick={() => setStatus("approved", "Estimate approved")}>{Icon.check} Approved</button>
               <button className="btn danger grow" disabled={busy} onClick={() => setStatus("declined", "Marked declined")}>Declined</button>
               <button className="btn grow" onClick={() => setSendOpen(true)}>Resend</button>
@@ -139,7 +139,7 @@ export default function EstimateDetail() {
         )}
       </div>
 
-      <div className="row wrap no-print">
+      <div className="row wrap no-print doc-actions">
         <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`)}>Download PDF</button>
         <button className="btn grow" onClick={async () => void savePdf(await makePdf(), `Estimate-${est.number}.pdf`, true)}>Share PDF</button>
         {est.status !== "draft" && <button className="btn grow" onClick={() => setSendOpen(true)}>Email / Text</button>}
