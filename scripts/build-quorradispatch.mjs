@@ -28,6 +28,10 @@ function vite(base, dir) {
 
 vite("/app/", join(out, "app"));
 vite("/test/", join(out, "test"));
+// Vite copies public/_headers into each app. Pages ignores it under /app and would
+// serve the file at /app/_headers. The worker sets the headers instead.
+rmSync(join(out, "app/_headers"), { force: true });
+rmSync(join(out, "test/_headers"), { force: true });
 
 // Pages live in this repo under dispatch/<slug>/ and are published at quorradispatch.com/<slug>/.
 function rewriteMarketing(html) {

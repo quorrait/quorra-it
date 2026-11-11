@@ -7,6 +7,7 @@ import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
+import { missingCheckoutSession } from "../_shared/stripeError.ts";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -51,7 +52,13 @@ handler(async (req) => {
   const pw = passwordError(password);
   if (pw) throw new HttpError(400, pw);
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
-  const s = await stripe.checkout.sessions.retrieve(String(b.session_id), { expand: ["setup_intent"] });
+  let s: Stripe.Checkout.Session;
+  try {
+    s = await stripe.checkout.sessions.retrieve(String(b.session_id), { expand: ["setup_intent"] });
+  } catch (e) {
+    if (missingCheckoutSession(e)) throw new HttpError(403, "The card step was not completed.");
+    throw e;
+  }
   if (s.status !== "complete" || s.metadata?.signup !== "1" || s.metadata?.email !== email) throw new HttpError(403, "The card step was not completed.");
   const si = s.setup_intent as Stripe.SetupIntent | null;
   const pmRaw = si?.payment_method;
