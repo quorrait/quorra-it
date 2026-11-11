@@ -72,9 +72,26 @@ export interface LineItem {
   qty: number;
   unit_cents: number;
 }
+function roundRatio(numerator: bigint, scale: bigint): number {
+  const neg = numerator < 0n;
+  const abs = neg ? -numerator : numerator;
+  return Number((neg ? -1n : 1n) * ((abs + scale / 2n) / scale));
+}
+function scaled(n: number, places: number): bigint {
+  if (!Number.isFinite(n)) return 0n;
+  const [whole, frac = ""] = Math.abs(n).toFixed(places).split(".");
+  return BigInt(whole + (frac + "0".repeat(places)).slice(0, places));
+}
+export const lineCents = (qty: number, unit: number) => {
+  const neg = qty < 0 !== unit < 0;
+  return roundRatio((neg ? -1n : 1n) * scaled(qty, 4) * BigInt(Math.trunc(Math.abs(unit))), 10000n);
+};
 export const invoiceTotalCents = (items: LineItem[], taxRate: number) => {
-  const subtotal = items.reduce((s, li) => s + Math.round(li.qty * li.unit_cents), 0);
-  return subtotal + Math.round((subtotal * taxRate) / 100);
+  const subtotal = items.reduce((s, li) => s + lineCents(Number(li.qty), Number(li.unit_cents)), 0);
+  const rate = Number(taxRate);
+  const neg = subtotal < 0 !== rate < 0;
+  const tax = roundRatio((neg ? -1n : 1n) * BigInt(Math.trunc(Math.abs(subtotal))) * scaled(rate, 2), 10000n);
+  return subtotal + tax;
 };
 
 /**

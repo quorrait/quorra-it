@@ -35,7 +35,7 @@ export function More() {
           {can("estimates") && <Link to="/estimates" className="list-item">{Icon.invoice}<div className="grow title">Estimates</div>›</Link>}
           {can("pricebook") && <Link to="/pricebook" className="list-item">{Icon.card}<div className="grow title">Price book</div>›</Link>}
           {can("templates") && <Link to="/templates" className="list-item">{Icon.invoice}<div className="grow title">Templates</div>›</Link>}
-          {can("plans") && <Link to="/plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>{!allows("service_plans") && Icon.lock}›</Link>}
+          {can("plans") && <Link to="/service-plans" className="list-item">{Icon.cal}<div className="grow title">Service plans</div>{!allows("service_plans") && Icon.lock}›</Link>}
           {can("purchase_orders") && <Link to="/purchase-orders" className="list-item">{Icon.jobs}<div className="grow title">Purchase orders</div>{!allows("purchase_orders") && Icon.lock}›</Link>}
           {can("customers") && <Link to="/customers" className="list-item">{Icon.users}<div className="grow title">Customers</div>›</Link>}
           {can("team") && <Link to="/team" className="list-item">{Icon.users}<div className="grow title">Team</div>›</Link>}

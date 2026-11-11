@@ -1,6 +1,6 @@
 // Keeps one invoice in step with QuickBooks Online: creates it, updates it after edits, voids it, or deletes it. Safe to call repeatedly.
 // Body: { invoice_id, action?: "sync" | "void" | "delete", hash?: string }  (hash = the app's fingerprint of the invoice contents)
-import { admin, handler, HttpError, json, requireUser, type LineItem, accountOwner } from "../_shared/util.ts";
+import { admin, handler, HttpError, invoiceTotalCents, json, lineCents, requireUser, type LineItem, accountOwner } from "../_shared/util.ts";
 import { assertFeature } from "../_shared/plan.ts";
 import { getConnection, q, qbo, qboQuery } from "../_shared/qbo.ts";
 
@@ -35,12 +35,12 @@ async function buildLines(conn: Conn, inv: any) {
   const { out, generic } = await itemIds(conn, items.map((li) => li.description || "Service"));
   const lines: unknown[] = items.map((li) => ({
     DetailType: "SalesItemLineDetail",
-    Amount: Math.round(li.qty * li.unit_cents) / 100,
+    Amount: lineCents(Number(li.qty), Number(li.unit_cents)) / 100,
     Description: li.description,
     SalesItemLineDetail: { ItemRef: { value: out.get(li.description || "Service") ?? generic }, Qty: li.qty, UnitPrice: li.unit_cents / 100 },
   }));
-  const subtotal = items.reduce((s, li) => s + Math.round(li.qty * li.unit_cents), 0);
-  const tax = Math.round((subtotal * Number(inv.tax_rate)) / 100);
+  const subtotal = items.reduce((s, li) => s + lineCents(Number(li.qty), Number(li.unit_cents)), 0);
+  const tax = invoiceTotalCents(items, Number(inv.tax_rate)) - subtotal;
   // Tax goes in as its own line so QuickBooks' total always matches the invoice the customer saw.
   if (tax > 0) lines.push({ DetailType: "SalesItemLineDetail", Amount: tax / 100, Description: `Sales tax (${inv.tax_rate}%)`, SalesItemLineDetail: { ItemRef: { value: generic }, Qty: 1, UnitPrice: tax / 100 } });
   return lines;

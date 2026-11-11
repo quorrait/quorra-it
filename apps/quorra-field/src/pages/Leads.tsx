@@ -12,6 +12,7 @@ import { centsToStr, strToCents } from "../components/LineItems";
 import EstimateForm from "../components/EstimateForm";
 import JobForm from "../components/JobForm";
 import type { Lead, LeadStage } from "../lib/types";
+import { stageAfterBuildQuote } from "../lib/leadStage";
 
 export const STAGE_LABEL: Record<LeadStage, string> = {
   new: "New", contacted: "Contacted", send_quote: "Send quote", quote_sent: "Quote sent", work_order: "Work order", declined: "Declined", completed: "Completed",
@@ -108,11 +109,14 @@ export default function Leads() {
   }
 
   async function move(l: Lead, stage: LeadStage) {
-    if (l.stage === stage) return;
     if (stage === "send_quote") {
-      if (l.estimate_id && estimates.some((e) => e.id === l.estimate_id)) return patch(l, { stage });
+      if (l.estimate_id && estimates.some((e) => e.id === l.estimate_id)) {
+        if (l.stage !== "send_quote") await patch(l, { stage: stageAfterBuildQuote(l.stage) });
+        return;
+      }
       return setQuote({ lead: l, customerId: await customerFor(l) });
     }
+    if (l.stage === stage) return;
     if (stage === "quote_sent") {
       const est = estimates.find((e) => e.id === l.estimate_id);
       if (est && est.status === "draft") await store.saveRow("estimates", { ...est, status: "sent" });
@@ -143,7 +147,7 @@ export default function Leads() {
     switch (l.stage) {
       case "new": return <>{btn("Mark contacted", () => void move(l, "contacted"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "contacted": return <>{btn("Send quote →", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
-      case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move({ ...l, stage: "contacted" }, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
+      case "send_quote": return <>{est ? btn("Open quote", () => nav(`/estimates/${est.id}`), true) : btn("Build quote", () => void move(l, "send_quote"), true)}{btn("Decline", () => void move(l, "declined"))}</>;
       case "quote_sent": return <>{est?.status === "approved" && !est.job_id && <span className="badge good" style={{ whiteSpace: "normal", textAlign: "left", display: "block", lineHeight: 1.3 }}>Accepted, waiting for them to pick a time</span>}{est?.status === "approved" && !est.job_id && hasSupabase && btn(est.schedule_nudges ? `Nudge again (${est.schedule_nudges} sent)` : "Nudge to schedule", () => void nudge(est.id))}{est?.status === "approved" ? btn("Schedule", () => void move(l, "work_order"), true) : btn("Mark accepted", async () => { if (est) await store.saveRow("estimates", { ...est, status: "approved" }); await refresh(); void move(l, "work_order"); }, true)}{btn("Declined", () => void move(l, "declined"))}{est && btn("View quote", () => nav(`/estimates/${est.id}`))}</>;
       default: return null;
     }
@@ -259,11 +263,11 @@ export default function Leads() {
         </div>
       )}
 
-      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} onBuildQuote={(l) => void move({ ...l, stage: "contacted" }, "send_quote")} />}
+      {edit && <LeadForm lead={edit === "new" ? undefined : edit} onClose={() => setEdit(null)} onBuildQuote={(l) => void move(l, "send_quote")} />}
 
       {quote && (
         <EstimateForm customerId={quote.customerId} title={quote.lead.service} onClose={() => setQuote(null)}
-          onSaved={async (est) => { await patch(quote.lead, { estimate_id: est.id, stage: "send_quote", customer_id: quote.customerId }); toast("Quote built. Send it, then confirm it was sent."); nav(`/estimates/${est.id}`); }} />
+          onSaved={async (est) => { await patch(quote.lead, { estimate_id: est.id, stage: stageAfterBuildQuote(quote.lead.stage), customer_id: quote.customerId }); toast("Quote built. Send it, then confirm it was sent."); nav(`/estimates/${est.id}`); }} />
       )}
 
       {schedule && (

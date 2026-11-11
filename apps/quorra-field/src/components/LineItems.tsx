@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Sheet } from "./ui";
 import { useData } from "../lib/app";
 import type { LineItem, PriceCategory } from "../lib/types";
-import { money } from "../lib/money";
+import { lineTotal, money } from "../lib/money";
 
 export interface Row {
   description: string;
@@ -72,7 +72,7 @@ function POPicker({ onPick, onClose }: { onPick(rows: Row[]): void; onClose(): v
                 <div className="title">PO #{po.number} · {po.vendor || "No vendor"}</div>
                 <div className="small muted">{po.items.length} item{po.items.length === 1 ? "" : "s"}. Prices are your cost, so adjust them for the customer.</div>
               </div>
-              <div className="bold num">{money(po.items.reduce((t, i) => t + Math.round(i.qty * i.unit_cents), 0))}</div>
+              <div className="bold num">{money(po.items.reduce((t, i) => t + lineTotal(i), 0))}</div>
             </div>
           ))}
         </div>

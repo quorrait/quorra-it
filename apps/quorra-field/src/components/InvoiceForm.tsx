@@ -10,6 +10,7 @@ import TemplatePicker from "./TemplatePicker";
 import { defaultTaxRate } from "../lib/stateTax";
 import PriceGuide from "./PriceGuide";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "./LineItems";
+import { invoiceEstimates } from "../lib/invoiceSource";
 
 export default function InvoiceForm({ invoice, jobId, customerId, estimateId, onClose, onSaved }: {
   invoice?: Invoice;
@@ -26,10 +27,8 @@ export default function InvoiceForm({ invoice, jobId, customerId, estimateId, on
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [cust, setCust] = useState(invoice?.customer_id ?? customerId ?? estimates.find((e) => e.id === estimateId)?.customer_id ?? job?.customer_id ?? customers[0]?.id ?? "");
-  // New invoices start from the customer's latest accepted estimate (or the one tied to this job).
-  const estsFor = (cid: string) => invoice ? [] : estimates
-    .filter((e) => e.id === estimateId || (e.status === "approved" || e.status === "sent") && !e.invoice_id && ((job && e.job_id === job.id) || e.customer_id === cid))
-    .sort((a, b) => Number(job && b.job_id === job.id) - Number(job && a.job_id === job.id) || b.number - a.number);
+  // A job copies only its own estimate. Otherwise only this customer's estimate. Never someone else's, even a higher number.
+  const estsFor = (cid: string) => invoice ? [] : invoiceEstimates(estimates, { customerId: cid, jobId: job?.id, estimateId });
   const estFor = (cid: string) => estsFor(cid)[0];
   const picked = estimateId ? estimates.find((e) => e.id === estimateId) : undefined;
   const est0 = picked ?? estFor(invoice?.customer_id ?? customerId ?? job?.customer_id ?? customers[0]?.id ?? "");

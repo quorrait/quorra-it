@@ -7,7 +7,7 @@ import { fmtDate, fmtDuration, fmtTime, fmtVariance, quotedMinutes } from "../li
 import { Field, Icon, InvoiceBadge, JobBadge, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import JobForm from "../components/JobForm";
 import InvoiceForm from "../components/InvoiceForm";
-import { invoiceTotals, isOverdue, money } from "../lib/money";
+import { invoiceTotals, isOverdue, lineTotal, money } from "../lib/money";
 import { buildIcs, downloadIcs } from "../lib/ics";
 import { jobEvents } from "../lib/jobEvents";
 import { amountPaid } from "../lib/money";
@@ -137,7 +137,7 @@ export default function JobDetail() {
       {can("money") && (() => {
         const billed = jobInvoices.reduce((a, i) => a + invoiceTotals(i).total, 0);
         const paid = jobInvoices.reduce((a, i) => a + amountPaid(i.id, payments), 0);
-        const mats = allows("purchase_orders") ? purchaseOrders.filter((p) => p.job_id === job.id && p.status !== "canceled").reduce((a, p) => a + p.items.reduce((b, li) => b + Math.round(li.qty * li.unit_cents), 0), 0) : 0;
+        const mats = allows("purchase_orders") ? purchaseOrders.filter((p) => p.job_id === job.id && p.status !== "canceled").reduce((a, p) => a + p.items.reduce((b, li) => b + lineTotal(li), 0), 0) : 0;
         const labor = allows("reports") ? timeEntries.filter((t) => t.job_id === job.id && t.end_at).reduce((a, t) => a + Math.round(((new Date(t.end_at!).getTime() - new Date(t.start_at).getTime()) / 3600_000) * (team.find((m) => m.id === t.member_id)?.hourly_cents ?? 0)), 0) : 0;
         const profit = billed - mats - labor;
         return (

@@ -46,6 +46,14 @@
   var app = document.getElementById("app");
   var usd = new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" });
   var money = function (c) { return usd.format(c / 100); };
+  // Same integer-cent multiply as the invoice. Float Math.round(qty * cents) is a cent or two low.
+  var lineCents = function (qty, unit) {
+    var q = Math.abs(Number(qty) || 0).toFixed(4).split(".");
+    var digits = BigInt(q[0] + (q[1] + "0000").slice(0, 4));
+    var prod = digits * BigInt(Math.trunc(Math.abs(Number(unit) || 0)));
+    var n = Number((prod + 5000n) / 10000n);
+    return (Number(qty) < 0) !== (Number(unit) < 0) ? -n : n;
+  };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
   var fmt = function (iso) { return new Date(String(iso).length === 10 ? iso + "T12:00:00" : iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); };
   var day = function (n) { return new Date(Date.now() + n * 86400000).toISOString().slice(0, 10); };
@@ -58,7 +66,7 @@
     customer: "Dana Whitfield", can_pay: true,
     business: { name: "Summit Home Services", phone: "(916) 555-0142", email: "office@summithome.example" },
     invoices: [
-      { id: "d1", number: 1042, status: "sent", issued_at: day(-20), due_at: day(-6), items: [{ description: "Replace kitchen faucet", qty: 1, unit_cents: 98000 }, { description: "Labor", qty: 6, unit_cents: 14333 }], total_cents: 184000, paid_cents: 50000, balance_cents: 134000, payments: [{ amount_cents: 50000, date: day(-18), method: "card" }] },
+      { id: "d1", number: 1042, status: "sent", issued_at: day(-20), due_at: day(-6), items: [{ description: "Replace kitchen faucet", qty: 1, unit_cents: 98000 }, { description: "Labor", qty: 6, unit_cents: 14333 }], total_cents: 183998, paid_cents: 50000, balance_cents: 133998, payments: [{ amount_cents: 50000, date: day(-18), method: "card" }] },
       { id: "d2", number: 1051, status: "sent", issued_at: day(-3), due_at: day(11), total_cents: 42500, paid_cents: 0, balance_cents: 42500, payments: [] },
       { id: "d3", number: 1018, status: "paid", issued_at: day(-70), due_at: day(-56), total_cents: 96000, paid_cents: 96000, balance_cents: 0, payments: [{ amount_cents: 96000, date: day(-60), method: "card" }] }
     ],
@@ -90,7 +98,7 @@
         '<div class="right"><b>' + money(open ? i.balance_cents : i.total_cents) + "</b>" +
         (open && i.paid_cents > 0 ? '<div class="muted">of ' + money(i.total_cents) + "</div>" : "") +
         (open && d.can_pay ? '<div><button data-pay="' + esc(i.id) + '" style="margin-top:8px">Pay now</button></div>' : "") + "</div></div>" +
-        (i.items && i.items.length ? '<div class="items">' + i.items.map(function (li) { return "<div><span>" + esc(li.description || "Item") + ' <span class="muted">' + (li.qty !== 1 ? li.qty + " x " + money(li.unit_cents) : "") + "</span></span><span>" + money(Math.round(li.qty * li.unit_cents)) + "</span></div>"; }).join("") + "</div>" : "");
+        (i.items && i.items.length ? '<div class="items">' + i.items.map(function (li) { return "<div><span>" + esc(li.description || "Item") + ' <span class="muted">' + (li.qty !== 1 ? li.qty + " x " + money(li.unit_cents) : "") + "</span></span><span>" + money(lineCents(li.qty, li.unit_cents)) + "</span></div>"; }).join("") + "</div>" : "");
     });
     if (openInv.length && !d.can_pay) h += '<div class="msg info">To pay these, please contact ' + esc(b.name || "the business") + ".</div>";
     if (d.invoices.length) h += "</div>";
