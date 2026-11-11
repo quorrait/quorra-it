@@ -174,7 +174,7 @@ export default function Team() {
   return (
     <div className="stack">
       <div className="page-head">
-        <div><h1 className="page-title">Team</h1><p className="page-sub">Everyone you can assign jobs to. {activeLogins} of {seatLimit(planId)} logins in use.</p></div>
+        <div><h1 className="page-title">Team</h1><p className="page-sub">Everyone you can assign jobs to. {activeLogins} of {seatLimit(planId)} {seatLimit(planId) === 1 ? "login" : "logins"} in use.</p></div>
         <button className="btn primary" onClick={() => setEdit("new")}>{Icon.plus} Invite or add member</button>
       </div>
       <div className="card flush"><div className="list">

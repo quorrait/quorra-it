@@ -175,7 +175,7 @@ export default function Billing() {
         {!sub?.comped && (
           <>
             {named && <div className="row between"><span className="muted">Includes</span><b>{named.seats} {named.seats === 1 ? "login" : "logins"}</b></div>}
-            <div className="row between"><span className="muted">Charged</span><b className="num">{money(sub?.amount_cents ?? 0)} per {sub?.billing_interval ?? "month"}</b></div>
+            <div className="row between"><span className="muted">Charged</span><b className="num">{money(upcoming?.amount_cents ?? sub?.amount_cents ?? 0)} per {sub?.billing_interval ?? "month"}</b></div>
           </>
         )}
         {sub?.current_period_end && active && !sub.comped && (

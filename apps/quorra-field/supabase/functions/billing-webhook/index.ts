@@ -5,6 +5,8 @@ import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { rememberTrial } from "../_shared/trialHistory.ts";
+import { supportEmail } from "../_shared/publicUrl.ts";
 
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -28,17 +30,29 @@ async function save(sub: Stripe.Subscription) {
   }
   if (!ownerId) return;
   const item = sub.items.data[0];
+  const list = item?.price?.unit_amount ?? 30000;
+  const coupon = (sub.discount && typeof sub.discount !== "string" ? sub.discount.coupon : undefined) as { percent_off?: number | null; amount_off?: number | null } | string | undefined;
+  const percent = coupon && typeof coupon !== "string" ? coupon.percent_off ?? 0 : 0;
+  const off = coupon && typeof coupon !== "string" ? coupon.amount_off ?? 0 : 0;
+  const amount = percent ? Math.round(list * (100 - percent) / 100) : Math.max(0, list - off);
   const status = sub.status === "active" || sub.status === "trialing" ? "active" : sub.status === "past_due" ? "past_due" : sub.status === "canceled" || sub.status === "unpaid" ? "canceled" : "incomplete";
   const { data: prev } = await db.from("subscriptions").select("status, past_due_since, trial_used_at").eq("owner_id", ownerId).maybeSingle();
   const pastDueSince = status === "past_due"
     ? (prev?.status === "past_due" && prev.past_due_since ? prev.past_due_since : new Date().toISOString())
     : null;
   const trialUsedAt = prev?.trial_used_at ?? (sub.status === "trialing" ? new Date().toISOString() : null);
+  if (sub.status === "trialing") {
+    try {
+      const customer = await stripe.customers.retrieve(String(sub.customer));
+      const email = customer.deleted ? "" : customer.email ?? "";
+      if (email) await rememberTrial(admin(), email, null, String(sub.customer));
+    } catch (e) { console.error("trial history", e); }
+  }
   const { error } = await db.from("subscriptions").upsert({
     owner_id: ownerId,
     status,
     plan: planName(item?.price),
-    amount_cents: item?.price?.unit_amount ?? 30000,
+    amount_cents: amount,
     billing_interval: item?.price?.recurring?.interval ?? "month",
     past_due_since: pastDueSince,
     trial_used_at: trialUsedAt,
@@ -95,7 +109,7 @@ Deno.serve(async (req) => {
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
       if (s.mode === "subscription" && s.subscription) await save(await stripe.subscriptions.retrieve(String(s.subscription)));
-    } else if (event.type.startsWith("customer.subscription.")) {
+    } else if (event.type.startsWith("customer.subscription.") && event.type !== "customer.subscription.trial_will_end") {
       const incoming = event.data.object as Stripe.Subscription;
       const live = await stripe.subscriptions.retrieve(incoming.id);
       console.log(`${event.type} sub=${live.id} event_status=${incoming.status} live_status=${live.status}`);
@@ -111,6 +125,20 @@ Deno.serve(async (req) => {
           subject: `Receipt for your Quorra Dispatch payment (${amt})`,
           text: `Thanks for your payment of ${amt} to Quorra Dispatch.${link ? `\n\nDownload your receipt from Billing: ${link}` : ""}\n\nQuestions? Reply to this email.`,
           html: emailHtml({ heading: "Thanks for your payment", paragraphs: [`We received your payment of ${amt} for Quorra Dispatch.`], rows: [{ label: "Amount", value: amt }, { label: "Date", value: new Date().toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) }], button: link ? { label: "Open billing", url: link } : undefined, fine: "Questions about your bill? Just reply to this email." }),
+        });
+      }
+    } else if (event.type === "customer.subscription.trial_will_end") {
+      const sub = event.data.object as Stripe.Subscription;
+      const customer = await stripe.customers.retrieve(String(sub.customer));
+      const to = customer.deleted ? "" : customer.email ?? "";
+      const when = sub.trial_end ? new Date(sub.trial_end * 1000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "in 3 days";
+      if (to) {
+        await sendEmail({
+          to,
+          replyTo: supportEmail(),
+          subject: "Your Quorra Dispatch trial ends in 3 days",
+          text: `Your free trial ends on ${when}. After that, your plan bills automatically. You can change or cancel it from Billing in the app. Questions? Email ${supportEmail()}.`,
+          html: emailHtml({ heading: "Your trial ends in 3 days", paragraphs: [`Your free trial ends on ${when}. After that, your plan bills automatically.`, "You can change or cancel it from Billing in the app."], button: { label: "Open billing", url: `${appUrl()}/billing` }, fine: `Questions? Email ${supportEmail()}.` }),
         });
       }
     } else if (event.type === "invoice.payment_failed") {

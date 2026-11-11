@@ -20,7 +20,9 @@ handler(async (req) => {
   if (taken === true) throw new HttpError(409, "We could not start signup for that email. If you already have an account, sign in.");
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
-  const customer = await stripe.customers.create({ email, name, metadata: { business, signup: "1" } });
+  const found = await stripe.customers.search({ query: `email:"${email.replace(/"/g, "")}"`, limit: 1 });
+  const customer = found.data[0] ?? await stripe.customers.create({ email, name, metadata: { business, signup: "1" } });
+  if (found.data[0]) await stripe.customers.update(customer.id, { name, metadata: { business, signup: "1" } });
   const session = await stripe.checkout.sessions.create({
     mode: "setup",
     currency: "usd",

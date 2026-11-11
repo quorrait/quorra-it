@@ -26,4 +26,7 @@ $$);
 Webhook endpoints: `stripe-webhook` (customer card payments) and `billing-webhook` (plan signups; events customer.subscription.*, checkout.session.completed). Create the three plan prices and put their IDs in the secrets above. Plan signups then flow Billing > Checkout > webhook > subscription active.
 
 ## Limits
-Tap to Pay and Square swipe need a native app / Square account; the web app uses Stripe checkout (QR, link, Apple/Google Pay). Google Calendar's phone app cannot subscribe from a link; Apple Calendar can (webcal).
+Tap to Pay on a real card needs a release build. Stripe blocks Tap to Pay on debuggable apps, so the android-test assembleDebug APK can never take a real tap. Use a release build, or set VITE_TERMINAL_SIMULATED=1 for a simulated reader. iOS Tap to Pay stays off until the ios-release environment sets TAP_TO_PAY_IOS=1 and VITE_TAP_TO_PAY_IOS=1, after Apple enables the proximity-reader capability. Google Calendar's phone app cannot subscribe from a link; Apple Calendar can (webcal).
+
+## Sign-in captcha
+The Free Supabase plan can use Cloudflare Turnstile. In the Supabase dashboard, turn on Captcha with a Turnstile secret. Set VITE_TURNSTILE_SITE_KEY for the app build. The sign-in form then shows the widget and the login function sends the token to Auth. Until that key is set, the widget is hidden. Direct calls to /auth/v1/token are still only limited by Supabase Auth's own rate limits. The Password Verification Attempt hook, which would lock that endpoint too, needs the Teams or Enterprise plan.

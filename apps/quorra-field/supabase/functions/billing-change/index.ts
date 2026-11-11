@@ -3,6 +3,7 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { activeLogins, downgradeLoginMessage } from "../_shared/plan.ts";
+import { phaseDiscounts, type DiscountRef as PhaseDiscount } from "../_shared/scheduleDiscounts.ts";
 
 /** Launch coupons that apply to monthly prices only. Annual prices already include 10% off. */
 function promoCouponIds(): Set<string> {
@@ -12,7 +13,7 @@ function promoCouponIds(): Set<string> {
   return ids;
 }
 
-type DiscountRef = { discount?: string; coupon?: string };
+type DiscountRef = PhaseDiscount;
 type SubWithDiscounts = Stripe.Subscription & {
   discount?: Stripe.Discount | string | null;
   discounts?: Array<Stripe.Discount | string> | null;
@@ -123,11 +124,16 @@ handler(async (req) => {
     const sch = await stripe.subscriptionSchedules.create({ from_subscription: id });
     const ph = sch.phases[0];
     const onYearNow = item.price.recurring?.interval === "year";
+    const carried = (ph.discounts ?? []).flatMap((d) => {
+      if (typeof d === "string") return [{ discount: d }];
+      const id = typeof d.discount === "string" ? d.discount : d.discount?.id;
+      return id ? [{ discount: id }] : [];
+    });
     await stripe.subscriptionSchedules.update(sch.id, {
       end_behavior: "release",
       phases: [
-        { items: [{ price: item.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date, discounts: keptDiscounts(cur as SubWithDiscounts, onYearNow) },
-        { items: [{ price: priceId, quantity: 1 }], discounts: keptDiscounts(cur as SubWithDiscounts, toYear) },
+        { items: [{ price: item.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date, discounts: phaseDiscounts(keptDiscounts(cur as SubWithDiscounts, onYearNow), carried, onYearNow) },
+        { items: [{ price: priceId, quantity: 1 }], discounts: phaseDiscounts(keptDiscounts(cur as SubWithDiscounts, toYear), carried, toYear) },
       ],
     });
     return json({ ok: true, mode: "downgrade", effective: ph.end_date });

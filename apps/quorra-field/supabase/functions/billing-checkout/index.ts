@@ -3,6 +3,7 @@
 // Optional: STRIPE_PROMO_COUPON (monthly only; leave unset to turn the launch offer off).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { trialAlreadyUsed } from "../_shared/trialHistory.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
@@ -36,10 +37,13 @@ handler(async (req) => {
 
   // Annual prices already include 10% off. The launch coupon is monthly only, and only while the secret is set.
   // Do not also set allow_promotion_codes: Stripe rejects a session that has both.
-  const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
+  const promoAllowed = !yearly;
   const prior = await stripe.subscriptions.list({ customer, status: "all", limit: 1 });
   const { data: trialRow } = await db.from("subscriptions").select("trial_used_at").eq("owner_id", user.id).maybeSingle();
-  const grantTrial = prior.data.length === 0 && !trialRow?.trial_used_at;
+  let usedBefore = false;
+  try { usedBefore = await trialAlreadyUsed(db, user.email ?? "", null); } catch { throw new HttpError(500, "Server error"); }
+  const grantTrial = prior.data.length === 0 && !trialRow?.trial_used_at && !usedBefore;
+  const promo = promoAllowed && grantTrial ? (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim() : "";
   const base = {
     mode: "subscription" as const,
     customer,
@@ -47,7 +51,7 @@ handler(async (req) => {
     line_items: [{ price: priceId, quantity: 1 }],
     metadata: { owner_id: user.id },
     subscription_data: {
-      ...(grantTrial ? { trial_period_days: 14 } : {}),
+      ...(grantTrial ? { trial_period_days: 14, trial_settings: { end_behavior: { missing_payment_method: "cancel" as const } } } : {}),
       metadata: { owner_id: user.id },
       ...(promo ? { discounts: [{ coupon: promo }] } : {}),
     },

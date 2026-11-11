@@ -59,7 +59,12 @@ if (runIos) {
         next = next.replace("</dict>\n</plist>", "\t<key>CFBundleDisplayName</key>\n\t<string>Dispatch</string>\n</dict>\n</plist>");
       }
       if (!next.includes("<key>NSLocationWhenInUseUsageDescription</key>")) {
-        next = next.replace("</dict>\n</plist>", "\t<key>NSLocationWhenInUseUsageDescription</key>\n\t<string>Dispatch uses your location to check you in at job sites.</string>\n</dict>\n</plist>");
+        next = next.replace("</dict>\n</plist>", "\t<key>NSLocationWhenInUseUsageDescription</key>\n\t<string>Dispatch uses your location to check you in at job sites and to take card payments with Tap to Pay.</string>\n</dict>\n</plist>");
+      } else {
+        next = next.replace(/(<key>NSLocationWhenInUseUsageDescription<\/key>\s*<string>)[^<]*(<\/string>)/, "$1Dispatch uses your location to check you in at job sites and to take card payments with Tap to Pay.$2");
+      }
+      if (!next.includes("<key>NSBluetoothAlwaysUsageDescription</key>")) {
+        next = next.replace("</dict>\n</plist>", "\t<key>NSBluetoothAlwaysUsageDescription</key>\n\t<string>Dispatch uses Bluetooth to connect to card readers.</string>\n</dict>\n</plist>");
       }
       const iphoneOrient = `\t<key>UISupportedInterfaceOrientations</key>
 \t<array>
@@ -93,12 +98,15 @@ if (runIos) {
     });
     const entitlements = join(ios, "App/App/App.entitlements");
     mkdirSync(dirname(entitlements), { recursive: true });
+    const tap = process.env.TAP_TO_PAY_IOS === "1"
+      ? "\n\t<key>com.apple.developer.proximity-reader.payment.acceptance</key>\n\t<true/>"
+      : "";
     writeFileSync(entitlements, `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>aps-environment</key>
-	<string>production</string>
+	<string>production</string>${tap}
 </dict>
 </plist>
 `);

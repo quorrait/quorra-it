@@ -23,7 +23,7 @@ interface AuthCtx {
   name: string;
   mode: "demo" | "supabase";
   recovery: boolean;
-  signIn(email: string, password: string): Promise<void>;
+  signIn(email: string, password: string, captchaToken?: string): Promise<void>;
   signUp(email: string, password: string, businessName?: string): Promise<{ needsConfirm: boolean }>;
   resetPassword(email: string): Promise<void>;
   setPassword(password: string): Promise<void>;
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       name: authName,
       recovery,
       mode: hasSupabase ? "supabase" : "demo",
-      async signIn(e, p) {
+      async signIn(e, p, captchaToken) {
         if (!supabase) {
           try {
             localStorage.setItem(DEMO_SESSION, e || "demo@example.com");
@@ -98,7 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmail(e || "demo@example.com");
           return;
         }
-        const { data, error } = await supabase.functions.invoke("login", { body: { email: e, password: p } });
+        const { data, error } = await supabase.functions.invoke("login", { body: { email: e, password: p, captcha_token: captchaToken || undefined } });
         if (error) throw await functionError(error, "Could not sign in.");
         const session = data as { access_token?: string; refresh_token?: string } | null;
         if (!session?.access_token || !session.refresh_token) throw new Error("Could not sign in.");
@@ -142,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setEmail(null);
           return;
         }
+        await import("./terminalPay").then((m) => m.disconnectTap()).catch(() => undefined);
         await disablePush().catch(() => undefined);
         await supabase.auth.signOut();
       },
@@ -392,7 +393,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (active) off.delete(teamMemberId);
       else off.add(teamMemberId);
       const next = 1 + team.filter((t) => t.role !== "Owner" && t.active !== false && !off.has(t.id)).length;
-      if (active && next > seatLimit(planId)) return `Your ${planLabel(planId)} plan allows ${seatLimit(planId)} logins. Deactivate another login first.`;
+      if (active && next > seatLimit(planId)) return `Your ${planLabel(planId)} plan allows ${seatLimit(planId)} ${seatLimit(planId) === 1 ? "login" : "logins"}. Deactivate another login first.`;
       const list = [...off];
       try { localStorage.setItem("qd-demo-login-off", JSON.stringify(list)); } catch { /* ignore */ }
       setDemoOff(list);

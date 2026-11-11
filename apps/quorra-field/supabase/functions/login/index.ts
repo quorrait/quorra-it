@@ -102,7 +102,11 @@ handler(async (req) => {
       apikey: env("SUPABASE_ANON_KEY"),
       Authorization: `Bearer ${env("SUPABASE_ANON_KEY")}`,
     },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({
+      email,
+      password,
+      ...(body?.captcha_token ? { gotrue_meta_security: { captcha_token: String(body.captcha_token) } } : {}),
+    }),
   });
   const authBody = await authRes.json().catch(() => ({})) as AuthBody;
   if (authRes.ok && authBody.access_token && authBody.refresh_token) {

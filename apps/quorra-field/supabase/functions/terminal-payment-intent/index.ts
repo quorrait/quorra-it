@@ -8,7 +8,7 @@ handler(async (req) => {
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
   await assertBilling(ownerId);
-  const { invoice_id } = await req.json().catch(() => ({}));
+  const { invoice_id, action, payment_intent_id } = await req.json().catch(() => ({}));
   if (!invoice_id) throw new HttpError(400, "invoice_id required");
   const db = admin();
   const { data: inv } = await db.from("invoices").select("*").eq("id", invoice_id).eq("owner_id", ownerId).maybeSingle();
@@ -22,6 +22,20 @@ handler(async (req) => {
   if (balance <= 0) throw new HttpError(400, "Nothing left to pay");
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
+  if (action === "confirm") {
+    if (!payment_intent_id) throw new HttpError(400, "payment_intent_id required");
+    const pi = await stripe.paymentIntents.retrieve(String(payment_intent_id), { stripeAccount: biz.stripe_account_id });
+    if (pi.status !== "succeeded" || pi.metadata?.invoice_id !== inv.id) return json({ paid: false });
+    const { error } = await db.from("payments").upsert({
+      owner_id: ownerId,
+      invoice_id: inv.id,
+      amount_cents: pi.amount_received || pi.amount,
+      method: "card",
+      stripe_payment_intent: pi.id,
+    }, { onConflict: "stripe_payment_intent", ignoreDuplicates: true });
+    if (error) { console.error(error); throw new HttpError(500, "Server error"); }
+    return json({ paid: true });
+  }
   const meta = { invoice_id: inv.id, owner_id: ownerId };
   const intent = await stripe.paymentIntents.create({
     amount: balance,
@@ -30,7 +44,7 @@ handler(async (req) => {
     capture_method: "automatic",
     description: `Invoice #${inv.number}`,
     metadata: meta,
-  }, { stripeAccount: biz.stripe_account_id });
+  }, { stripeAccount: biz.stripe_account_id, idempotencyKey: `tap:${inv.id}:${balance}` });
   if (!intent.client_secret) throw new HttpError(500, "Stripe did not return a payment secret");
   return json({ id: intent.id, client_secret: intent.client_secret });
 });

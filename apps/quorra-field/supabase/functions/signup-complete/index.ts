@@ -8,6 +8,7 @@ import { emailHtml } from "../_shared/emailTemplate.ts";
 import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
 import { missingCheckoutSession } from "../_shared/stripeError.ts";
+import { rememberTrial, trialAlreadyUsed } from "../_shared/trialHistory.ts";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -67,6 +68,12 @@ handler(async (req) => {
   const fingerprint = pm.card?.fingerprint ?? null;
   const customer = String(s.customer);
   const db = admin();
+  let repeat = false;
+  try { repeat = await trialAlreadyUsed(db, email, fingerprint); } catch { throw new HttpError(500, "Server error"); }
+  if (!repeat && fingerprint) {
+    const { data: seen } = await db.from("subscriptions").select("owner_id").eq("card_fingerprint", fingerprint).limit(1);
+    repeat = Boolean(seen?.length);
+  }
 
   // One checkout can create one account.
   const { data: used } = await db.from("subscriptions").select("owner_id").eq("stripe_customer_id", customer).maybeSingle();
@@ -92,16 +99,11 @@ handler(async (req) => {
   const yearly = s.metadata?.interval === "year";
   const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${yearly ? "_ANNUAL" : ""}`);
   // Monthly only. The coupon already exists in Stripe (STRIPE_PROMO_COUPON). Leave the secret empty to turn the offer off. Never create coupons here. Annual prices already include 10% off.
-  const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
-  let repeatCard = false;
-  if (fingerprint) {
-    const { data: seen } = await db.from("subscriptions").select("owner_id").eq("card_fingerprint", fingerprint).neq("owner_id", ownerId).limit(1);
-    repeatCard = Boolean(seen?.length);
-  }
+  const promo = yearly || repeat ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
   const params = {
     customer,
     items: [{ price: priceId, quantity: 1 }],
-    ...(repeatCard ? {} : { trial_period_days: 14 }),
+    ...(repeat ? { payment_behavior: "error_if_incomplete" as const } : { trial_period_days: 14 }),
     default_payment_method: pm.id,
     metadata: { owner_id: ownerId },
     ...(promo ? { discounts: [{ coupon: promo }] } : {}),
@@ -113,13 +115,17 @@ handler(async (req) => {
     sub = await stripe.subscriptions.create(params); // tax could not be worked out from the address; still start the trial
   }
   const item = sub.items.data[0];
+  const trialing = sub.status === "trialing";
+  const status = trialing || sub.status === "active" ? "active" : sub.status === "past_due" ? "past_due" : sub.status === "canceled" || sub.status === "unpaid" ? "canceled" : "incomplete";
+  const periodEnd = trialing ? sub.trial_end : ((item as unknown as { current_period_end?: number })?.current_period_end ?? sub.trial_end);
+  if (trialing) await rememberTrial(db, email, fingerprint, customer);
   await db.from("subscriptions").upsert({
-    owner_id: ownerId, status: "active", plan: planName(item?.price?.id, plan), amount_cents: item?.price?.unit_amount ?? 30000,
-    billing_interval: item?.price?.recurring?.interval ?? "month", trialing: true,
-    current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    owner_id: ownerId, status, plan: planName(item?.price?.id, plan), amount_cents: item?.price?.unit_amount ?? 30000,
+    billing_interval: item?.price?.recurring?.interval ?? "month", trialing,
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
     card_fingerprint: fingerprint,
-    ...(repeatCard ? {} : { trial_used_at: new Date().toISOString() }),
+    ...(trialing ? { trial_used_at: new Date().toISOString() } : {}),
   }, { onConflict: "owner_id" });
   // The trial exists even if the email provider is down. The sign-in page can send the link again.
   const mailed = await mailConfirmation(email, confirmLink);

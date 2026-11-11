@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { errMsg } from "../lib/errors";
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
@@ -6,7 +7,7 @@ import { useData } from "../lib/app";
 import type { Customer, Invoice, PayMethod } from "../lib/types";
 import { money } from "../lib/money";
 import { tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
-import { collectTapToPay } from "../lib/terminalPay";
+import { cancelTap, collectTapToPay, onReaderProgress, openAppSettings } from "../lib/terminalPay";
 
 /** Card payment: hosted checkout link + QR the customer can scan with their own phone. */
 export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
@@ -134,24 +135,43 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
   );
 }
 
-function TapPaySheet({ invoiceId, onClose, onPaid }: { invoiceId: string; onClose(): void; onPaid(): void }) {
+function TapPaySheet({ invoiceId, businessName, onClose, onPaid }: { invoiceId: string; businessName: string; onClose(): void; onPaid(): void }) {
   const [status, setStatus] = useState("Getting Tap to Pay ready...");
+  const [progress, setProgress] = useState<number | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const ios = Capacitor.getPlatform() === "ios";
+  const [accepted, setAccepted] = useState(() => { try { return localStorage.getItem("qd-tap-terms") === "1"; } catch { return false; } });
+  const [ready, setReady] = useState(!ios || accepted);
   const paid = useRef(onPaid);
   paid.current = onPaid;
   useEffect(() => {
+    if (!ready) return;
     let stop = false;
-    collectTapToPay(invoiceId, (message) => { if (!stop) setStatus(message); })
+    const unlisten = onReaderProgress((n) => { if (!stop) setProgress(n); });
+    collectTapToPay(invoiceId, businessName, (message) => { if (!stop) setStatus(message); })
       .then(() => { if (!stop) void paid.current(); })
       .catch((e) => { if (!stop) setErr(tapToPayMessage(e instanceof Error ? e.message : "Tap to Pay didn't go through.")); });
-    return () => { stop = true; };
-  }, [invoiceId]);
+    return () => { stop = true; unlisten(); void cancelTap(); };
+  }, [invoiceId, businessName, ready]);
+  function close() { void cancelTap(); onClose(); }
+  if (!ready) return (
+    <Sheet title="Tap to Pay on iPhone" onClose={close}>
+      <div className="stack">
+        <p style={{ margin: 0 }}>Tap to Pay on iPhone lets a customer pay by holding their card to the top of this phone. You do not need a card reader.</p>
+        <p className="small muted" style={{ margin: 0 }}>The first time, Apple downloads a small configuration. Keep the phone unlocked until it finishes. The name on the terms is {businessName || "your business"}.</p>
+        <label className="check-row"><input type="checkbox" checked={accepted} onChange={(e) => setAccepted(e.target.checked)} /> I am the account owner or a manager, and I accept the Tap to Pay terms.</label>
+        <button className="btn primary block" disabled={!accepted} onClick={() => { try { localStorage.setItem("qd-tap-terms", "1"); } catch { /* ignore */ } setReady(true); }}>Continue</button>
+      </div>
+    </Sheet>
+  );
   return (
-    <Sheet title="Tap to Pay" onClose={onClose}>
+    <Sheet title="Tap to Pay" onClose={close}>
       <div className="stack">
         {!err && <p style={{ margin: 0 }}>{status}</p>}
+        {progress != null && progress < 1 && <progress value={progress} max={1} style={{ width: "100%" }} />}
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
-        {err && <button className="btn block" onClick={onClose}>Use the QR code</button>}
+        {err && /settings/i.test(err) && <button className="btn block" onClick={openAppSettings}>Open Settings</button>}
+        {err && <button className="btn block" onClick={close}>Use the QR code</button>}
       </div>
     </Sheet>
   );
@@ -159,7 +179,7 @@ function TapPaySheet({ invoiceId, onClose, onPaid }: { invoiceId: string; onClos
 
 /** First step of taking payment on the spot: cash/check or card. */
 export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
-  const { store, refresh } = useData();
+  const { store, refresh, business } = useData();
   const toast = useToast();
   const offer = tapToPayOffer();
   const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card" | "tap">("pick");
@@ -191,7 +211,7 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
 
   if (step === "cash") return <ManualPaySheet invoice={{ ...invoice, status: "sent" }} balance={balance} onClose={onClose} />;
   if (step === "card") return <CardPaySheet invoice={{ ...invoice, status: "sent" }} customer={customer} balance={balance} onClose={onClose} />;
-  if (step === "tap") return <TapPaySheet invoiceId={invoice.id} onClose={() => setStep("card-how")} onPaid={async () => { await refresh(); toast("Payment received"); onClose(); }} />;
+  if (step === "tap") return <TapPaySheet invoiceId={invoice.id} businessName={business.name} onClose={() => setStep("card-how")} onPaid={async () => { await refresh(); toast("Payment received"); onClose(); }} />;
   if (step === "card-how") return (
     <Sheet title={`Card · ${money(balance)}`} onClose={onClose}>
       <div className="stack">

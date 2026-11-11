@@ -3,7 +3,7 @@
 // checkout.session.async_payment_succeeded, payment_intent.succeeded, account.updated.
 // Checkout and Tap to Pay both land here. There is no separate payment_intent handler today.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, env } from "../_shared/util.ts";
+import { admin, env, invoiceTotalCents } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
@@ -29,8 +29,19 @@ Deno.serve(async (req) => {
 
   async function recordCardPayment(ownerId: string, invoiceId: string, amountCents: number, paymentIntentId: string, receiptEmail?: string | null) {
     const { data: biz } = await db.from("business").select("stripe_account_id").eq("owner_id", ownerId).maybeSingle();
-    const { data: inv } = await db.from("invoices").select("id,customer_id,number").eq("id", invoiceId).eq("owner_id", ownerId).maybeSingle();
+    const { data: inv } = await db.from("invoices").select("id,customer_id,number,items,tax_rate").eq("id", invoiceId).eq("owner_id", ownerId).maybeSingle();
     if (!inv || !biz?.stripe_account_id || biz.stripe_account_id !== event.account) return false;
+    const { data: pays } = await db.from("payments").select("amount_cents,stripe_payment_intent").eq("invoice_id", inv.id);
+    const already = (pays ?? []).some((p: { stripe_payment_intent?: string }) => p.stripe_payment_intent === paymentIntentId);
+    const paid = (pays ?? []).reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
+    const total = invoiceTotalCents(inv.items ?? [], Number(inv.tax_rate ?? 0));
+    if (!already && paid + amountCents > total) {
+      console.error("card payment would exceed the invoice", invoiceId, amountCents, paid, total);
+      try {
+        await notifyAccount(db, ownerId, { title: "Card payment needs a look", body: `A card charge of $${(amountCents / 100).toFixed(2)} is more than invoice #${inv.number ?? ""} has left to pay.`, link: `/invoices/${inv.id}` });
+      } catch (e) { console.error(e); }
+      return false;
+    }
     const { data: inserted, error } = await db.from("payments").upsert(
       {
         owner_id: ownerId,

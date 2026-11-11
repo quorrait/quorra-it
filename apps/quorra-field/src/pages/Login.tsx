@@ -27,6 +27,19 @@ export default function Login() {
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(() => (wasKicked() ? "You have been logged out because this account signed in on another device." : null));
   const [resendBusy, setResendBusy] = useState(false);
+  const turnstileKey = import.meta.env?.VITE_TURNSTILE_SITE_KEY as string | undefined;
+  const [captcha, setCaptcha] = useState("");
+  useEffect(() => {
+    if (!turnstileKey) return;
+    const w = window as unknown as { onTurnstile?: (token: string) => void };
+    w.onTurnstile = (token) => setCaptcha(token);
+    if (document.querySelector("script[data-turnstile]")) return;
+    const s = document.createElement("script");
+    s.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+    s.async = true;
+    s.dataset.turnstile = "1";
+    document.head.appendChild(s);
+  }, [turnstileKey]);
 
   useEffect(() => {
     if (!code) return;
@@ -53,7 +66,7 @@ export default function Login() {
         return;
       }
       if (mode === "in") {
-        await auth.signIn(email, password);
+        await auth.signIn(email, password, captcha);
         try { sessionStorage.setItem("qd_alive", "1"); remember ? localStorage.removeItem("qd_no_remember") : localStorage.setItem("qd_no_remember", "1"); } catch { /* ignore */ }
         // Ask the browser to offer "save password" right now, not later when the screen changes.
         try { const PC = (window as unknown as { PasswordCredential?: new (d: { id: string; password: string; name?: string }) => Credential }).PasswordCredential; if (PC && navigator.credentials) await navigator.credentials.store(new PC({ id: email, password, name: email })); } catch { /* not supported */ }
@@ -154,12 +167,13 @@ export default function Login() {
         )}
 
         {mode === "in" && <label className="check-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember me on this device</label>}
+        {mode === "in" && turnstileKey && auth.mode !== "demo" && <div className="cf-turnstile" data-sitekey={turnstileKey} data-callback="onTurnstile" />}
         {mode === "in" && auth.mode !== "demo" && <button type="button" className="btn block" disabled={resendBusy} onClick={() => void resend()}>{resendBusy ? "Sending..." : "Resend confirmation email"}</button>}
         {mode === "forgot" && <button type="button" className="btn block" onClick={() => { setMode("in"); setErr(null); setInfo(null); }}>Back to sign in</button>}
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
 
-        <button className="btn primary block" disabled={busy || (mode === "up" && !invite)}>
+        <button className="btn primary block" disabled={busy || (mode === "up" && !invite) || (mode === "in" && Boolean(turnstileKey) && auth.mode !== "demo" && !captcha)}>
           {busy ? "One moment..." : mode === "forgot" ? "Email me a reset link" : mode === "in" ? (auth.mode === "demo" ? "Open the demo" : "Sign in") : "Create my login"}
         </button>
         {joining ? (
