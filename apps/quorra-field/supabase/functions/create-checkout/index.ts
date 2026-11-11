@@ -21,7 +21,15 @@ handler(async (req) => {
   const balance = invoiceTotalCents(inv.items, Number(inv.tax_rate)) - paid;
   if (balance <= 0) throw new HttpError(400, "Nothing left to pay");
 
-  const { data: cust } = await db.from("customers").select("name, email").eq("id", inv.customer_id).maybeSingle();
+  const { data: cust } = await db.from("customers").select("name, email, portal_token").eq("id", inv.customer_id).maybeSingle();
+  let token = cust?.portal_token as string | undefined;
+  if (!token) {
+    token = crypto.randomUUID().replace(/-/g, "");
+    await db.from("customers").update({ portal_token: token }).eq("id", inv.customer_id);
+  }
+  // Same public portal page portal-pay returns to. Never the signed-in app.
+  const api = `${env("SUPABASE_URL").replace(/\/$/, "")}/functions/v1`;
+  const portal = `${appUrl()}/portal?t=${encodeURIComponent(token)}&api=${encodeURIComponent(api)}`;
 
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   const meta = { invoice_id: inv.id, owner_id: ownerId };
@@ -41,8 +49,8 @@ handler(async (req) => {
       ],
       metadata: meta,
       payment_intent_data: { metadata: meta, description: `Invoice #${inv.number}` },
-      success_url: `${appUrl()}/invoices/${inv.id}?paid=1`,
-      cancel_url: `${appUrl()}/invoices/${inv.id}`,
+      success_url: `${portal}&paid=1`,
+      cancel_url: portal,
     },
     { stripeAccount: biz.stripe_account_id },
   );
