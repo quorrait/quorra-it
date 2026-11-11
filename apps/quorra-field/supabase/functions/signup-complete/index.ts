@@ -57,6 +57,7 @@ handler(async (req) => {
   const pmRaw = si?.payment_method;
   if (si?.status !== "succeeded" || !pmRaw) throw new HttpError(400, "Your card could not be verified. Please try another card.");
   const pm = typeof pmRaw === "string" ? await stripe.paymentMethods.retrieve(pmRaw) : pmRaw;
+  const fingerprint = pm.card?.fingerprint ?? null;
   const customer = String(s.customer);
   const db = admin();
 
@@ -85,7 +86,19 @@ handler(async (req) => {
   const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${yearly ? "_ANNUAL" : ""}`);
   // Monthly only. The coupon already exists in Stripe (STRIPE_PROMO_COUPON). Leave the secret empty to turn the offer off. Never create coupons here. Annual prices already include 10% off.
   const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
-  const params = { customer, items: [{ price: priceId, quantity: 1 }], trial_period_days: 14, default_payment_method: pm.id, metadata: { owner_id: ownerId }, ...(promo ? { discounts: [{ coupon: promo }] } : {}) };
+  let repeatCard = false;
+  if (fingerprint) {
+    const { data: seen } = await db.from("subscriptions").select("owner_id").eq("card_fingerprint", fingerprint).neq("owner_id", ownerId).limit(1);
+    repeatCard = Boolean(seen?.length);
+  }
+  const params = {
+    customer,
+    items: [{ price: priceId, quantity: 1 }],
+    ...(repeatCard ? {} : { trial_period_days: 14 }),
+    default_payment_method: pm.id,
+    metadata: { owner_id: ownerId },
+    ...(promo ? { discounts: [{ coupon: promo }] } : {}),
+  };
   let sub: Stripe.Subscription;
   try {
     sub = await stripe.subscriptions.create(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { ...params, automatic_tax: { enabled: true } } : params);
@@ -98,6 +111,8 @@ handler(async (req) => {
     billing_interval: item?.price?.recurring?.interval ?? "month", trialing: true,
     current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
+    card_fingerprint: fingerprint,
+    ...(repeatCard ? {} : { trial_used_at: new Date().toISOString() }),
   }, { onConflict: "owner_id" });
   // The trial exists even if the email provider is down. The sign-in page can send the link again.
   const mailed = await mailConfirmation(email, confirmLink);

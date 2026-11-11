@@ -1,10 +1,11 @@
 // Creates a Stripe Checkout page for an invoice's remaining balance, charged on the contractor's own Stripe account.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, appUrl, env, handler, HttpError, invoiceTotalCents, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, appUrl, assertBilling, env, handler, HttpError, invoiceTotalCents, json, requireUser, accountOwner } from "../_shared/util.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
+  await assertBilling(ownerId);
   const { invoice_id } = await req.json();
   if (!invoice_id) throw new HttpError(400, "invoice_id required");
 

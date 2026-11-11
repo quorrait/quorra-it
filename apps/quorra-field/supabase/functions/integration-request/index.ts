@@ -1,5 +1,5 @@
 // A signed-in owner asks for another integration; it is emailed to you. Leave Verify JWT ON.
-import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, accountOwner, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { supportEmail } from "../_shared/publicUrl.ts";
@@ -10,6 +10,7 @@ handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   const b = await req.json().catch(() => ({}));
   const app = clean(b.app, 120), what = clean(b.what, 2000);
   if (!app) throw new HttpError(400, "Tell us which app you want to connect.");

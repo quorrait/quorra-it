@@ -1,5 +1,5 @@
 // Intuit redirects the browser here after the contractor approves access. Deploy with --no-verify-jwt.
-import { admin, appUrl } from "../_shared/util.ts";
+import { admin, appUrl, billingActive } from "../_shared/util.ts";
 import { featureOn } from "../_shared/plan.ts";
 import { exchangeCode, qbo, verifyState } from "../_shared/qbo.ts";
 
@@ -14,6 +14,7 @@ Deno.serve(async (req) => {
     if (!code || !realm) return back("failed");
 
     const ownerId = await verifyState(url.searchParams.get("state"));
+    if (!(await billingActive(ownerId))) return back("plan");
     if (!(await featureOn(ownerId, "qbo"))) return back("plan");
     const t = await exchangeCode(code);
     const db = admin();

@@ -1,5 +1,5 @@
 // Saves why an owner is cancelling and emails it to you. Signed-in owners only (leave Verify JWT ON).
-import { admin, accountOwner, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { admin, accountOwner, assertBilling, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { supportEmail } from "../_shared/publicUrl.ts";
@@ -10,6 +10,7 @@ handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
   const owner = await accountOwner(user.id);
+  await assertBilling(owner);
   if (owner !== user.id) throw new HttpError(403, "Only the account owner can cancel");
   const b = await req.json().catch(() => ({}));
   const reason = clean(b.reason, 120);

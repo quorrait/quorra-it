@@ -1,6 +1,6 @@
 // Public endpoint behind the website lead form. Deploy with --no-verify-jwt.
 // A business is identified by its public lead_key (not secret, but unguessable) and the caller can only ever add a "new" lead.
-import { admin, handler, HttpError, json } from "../_shared/util.ts";
+import { admin, billingActive, handler, HttpError, json } from "../_shared/util.ts";
 import { notifyAccount } from "../_shared/alert.ts";
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
@@ -24,7 +24,7 @@ handler(async (req) => {
 
   const db = admin();
   const { data: biz } = await db.from("business").select("owner_id").eq("lead_key", key).maybeSingle();
-  if (!biz) throw new HttpError(404, "This form is not active");
+  if (!biz || !(await billingActive(biz.owner_id))) throw new HttpError(404, "This form is not active");
 
   // Basic flood control: at most 30 web leads per business per hour.
   const since = new Date(Date.now() - 3600_000).toISOString();

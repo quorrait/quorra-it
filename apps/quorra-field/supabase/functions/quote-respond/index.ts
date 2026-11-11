@@ -1,6 +1,6 @@
 // Public: the customer accepts or declines a quote, then picks a time from the open slots. Deploy with --no-verify-jwt.
 // Accept -> quote approved. Schedule -> a job is put on the calendar and the customer gets a confirmation text with a reschedule link.
-import { admin, appUrl, handler, HttpError, json } from "../_shared/util.ts";
+import { admin, appUrl, billingActive, handler, HttpError, json } from "../_shared/util.ts";
 import { allowedAppUrl, API_BASE } from "../_shared/safeUrl.ts";
 import { featureOn } from "../_shared/plan.ts";
 import { availableSlots, normHours } from "../_shared/schedule.ts";
@@ -19,6 +19,7 @@ handler(async (req) => {
   const db = admin();
   const { data: est } = await db.from("estimates").select("*").eq("public_token", t).maybeSingle();
   if (!est) throw new HttpError(404, "This quote link is not valid");
+  if (est.valid_until && new Date(est.valid_until).getTime() < Date.now()) throw new HttpError(409, "This quote has expired.");
   const { data: lead } = await db.from("leads").select("*").eq("estimate_id", est.id).eq("owner_id", est.owner_id).maybeSingle();
 
   if (action === "decline") {
@@ -47,6 +48,7 @@ handler(async (req) => {
   }
 
   // schedule (or reschedule). Accepting the quote is on every plan; picking a time is Essentials.
+  if (!(await billingActive(est.owner_id))) throw new HttpError(402, "Plan not active");
   if (!(await featureOn(est.owner_id, "booking"))) throw new HttpError(403, "Online booking is on the Essentials plan.");
   if (est.status !== "approved") throw new HttpError(409, "Please accept the quote first");
   const startMs = new Date(String(b.start)).getTime();
@@ -73,9 +75,17 @@ handler(async (req) => {
       description: "Booked online by the customer after accepting the quote.", status: "scheduled", start_at: start.toISOString(), end_at: end.toISOString(),
     }).select("id").single();
     if (error) throw error;
-    jobId = job.id as string;
-    await db.from("estimates").update({ job_id: jobId }).eq("id", est.id);
-    if (lead) await db.from("leads").update({ stage: "work_order", job_id: jobId }).eq("id", lead.id);
+    const { data: claimed, error: claimErr } = await db.from("estimates").update({ job_id: job.id }).eq("id", est.id).is("job_id", null).select("job_id").maybeSingle();
+    if (claimErr) throw claimErr;
+    if (!claimed) {
+      await db.from("jobs").delete().eq("id", job.id);
+      const { data: winner } = await db.from("estimates").select("job_id").eq("id", est.id).maybeSingle();
+      jobId = winner?.job_id as string | undefined;
+      if (!jobId) throw new HttpError(409, "This visit was just booked. Please refresh.");
+    } else {
+      jobId = job.id as string;
+      if (lead) await db.from("leads").update({ stage: "work_order", job_id: jobId }).eq("id", lead.id);
+    }
   }
 
   // Confirmation text (and email) with a link to change the time.

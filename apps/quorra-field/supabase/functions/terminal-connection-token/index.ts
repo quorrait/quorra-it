@@ -1,13 +1,14 @@
 // Connection token for Tap to Pay. Signed-in user only (Verify JWT ON).
 // The token and the location are created on the contractor's connected Stripe account (direct charges).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
-import { admin, env, handler, HttpError, json, requireUser, accountOwner } from "../_shared/util.ts";
+import { admin, assertBilling, env, handler, HttpError, json, requireUser, accountOwner } from "../_shared/util.ts";
 import { parseUsAddress } from "../_shared/usAddress.ts";
 
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
   const ownerId = await accountOwner(user.id);
+  await assertBilling(ownerId);
   const db = admin();
   const { data: biz } = await db.from("business").select("name, address, stripe_account_id, stripe_connected, terminal_location_id").eq("owner_id", ownerId).maybeSingle();
   if (!biz?.stripe_account_id || !biz.stripe_connected) throw new HttpError(400, "Connect Stripe in Settings first");
