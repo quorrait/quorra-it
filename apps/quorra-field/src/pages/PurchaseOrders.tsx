@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { lineTotal, money } from "../lib/money";
+import { errMsg } from "../lib/errors";
 import { fmtDate, fromDateInput, toDateInput } from "../lib/dates";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { LineItemsEditor, type Row, rowsToItems, toRow } from "../components/LineItems";
@@ -52,17 +53,19 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
         <button className="btn primary block" onClick={async () => {
           const items = rowsToItems(rows);
           if (!vendor.trim() || !items.length) return toast("Add a vendor and at least one item");
-          if (saveVendor && !vendors.some((v) => v.name.toLowerCase() === vendor.trim().toLowerCase())) {
-            try { await store.saveBusiness({ vendors: [...vendors, { name: vendor.trim() }] }); } catch { toast("PO saved, but the vendor list could not be updated"); }
-          }
-          await store.saveRow("purchase_orders", {
-            id: po?.id, number: po?.number ?? Math.max(5000, ...purchaseOrders.map((p) => p.number)) + 1, vendor: vendor.trim(),
-            job_id: jobId || null, status: po?.status ?? "draft", items, ordered_at: po?.ordered_at ?? new Date().toISOString(),
-            expected_at: exp ? fromDateInput(exp) : null, notes,
-          });
-          await refresh(); toast("Saved"); onClose();
+          try {
+            if (saveVendor && !vendors.some((v) => v.name.toLowerCase() === vendor.trim().toLowerCase())) {
+              try { await store.saveBusiness({ vendors: [...vendors, { name: vendor.trim() }] }); } catch { toast("PO saved, but the vendor list could not be updated"); }
+            }
+            await store.saveRow("purchase_orders", {
+              id: po?.id, number: po?.number ?? Math.max(5000, ...purchaseOrders.map((p) => p.number)) + 1, vendor: vendor.trim(),
+              job_id: jobId || null, status: po?.status ?? "draft", items, ordered_at: po?.ordered_at ?? new Date().toISOString(),
+              expected_at: exp ? fromDateInput(exp) : null, notes,
+            });
+            await refresh(); toast("Saved"); onClose();
+          } catch (e) { toast(errMsg(e, "Could not save the purchase order.")); }
         }}>Save purchase order</button>
-        {po && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this purchase order?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("purchase_orders", po.id); await refresh(); onClose(); } }}>Delete</button>}
+        {po && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this purchase order?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { try { await store.deleteRow("purchase_orders", po.id); await refresh(); onClose(); } catch (e) { toast(errMsg(e, "Could not delete the purchase order.")); } } }}>Delete</button>}
       </div>
     </Sheet>
   );
@@ -70,11 +73,12 @@ function POForm({ po, onClose }: { po?: PurchaseOrder; onClose(): void }) {
 
 export default function PurchaseOrders() {
   const { loading, purchaseOrders, jobs, store, refresh } = useData();
+  const toast = useToast();
   const [edit, setEdit] = useState<PurchaseOrder | "new" | null>(null);
   if (loading) return <Spinner />;
   const rows = [...purchaseOrders].sort((a, b) => b.number - a.number);
   const open = purchaseOrders.filter((p) => p.status === "ordered");
-  const setStatus = async (p: PurchaseOrder, status: POStatus) => { await store.saveRow("purchase_orders", { ...p, status }); await refresh(); };
+  const setStatus = async (p: PurchaseOrder, status: POStatus) => { try { await store.saveRow("purchase_orders", { ...p, status }); await refresh(); } catch (e) { toast(errMsg(e, "Could not update the purchase order.")); } };
   return (
     <div className="stack">
       <div className="page-head">

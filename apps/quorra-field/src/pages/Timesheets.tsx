@@ -64,13 +64,17 @@ export default function Timesheets() {
   const ms = (t: { start_at: string; end_at: string | null }) => (t.end_at ? new Date(t.end_at) : new Date()).getTime() - new Date(t.start_at).getTime();
 
   async function clockIn() {
-    await store.saveRow("time_entries", { member_id: me, job_id: jobId || null, start_at: new Date().toISOString(), end_at: null, note: "" });
-    await refresh(); toast("Clocked in");
+    try {
+      await store.saveRow("time_entries", { member_id: me, job_id: jobId || null, start_at: new Date().toISOString(), end_at: null, note: "" });
+      await refresh(); toast("Clocked in");
+    } catch (e) { toast(errMsg(e, "Could not clock in.")); }
   }
   async function clockOut() {
     if (!running) return;
-    await store.saveRow("time_entries", { ...running, end_at: new Date().toISOString() });
-    await refresh(); toast("Clocked out");
+    try {
+      await store.saveRow("time_entries", { ...running, end_at: new Date().toISOString() });
+      await refresh(); toast("Clocked out");
+    } catch (e) { toast(errMsg(e, "Could not clock out.")); }
   }
 
   const blank = (): Form => { const n = new Date(); const e = new Date(n.getTime()); n.setHours(8, 0, 0, 0); e.setHours(16, 0, 0, 0); return { member_id: me_(), job_id: "", start: toLocal(n.toISOString()), end: toLocal(e.toISOString()), ot: "0", note: "" }; };
@@ -107,7 +111,7 @@ export default function Timesheets() {
         toast("Time added");
       }
       await refresh(); setForm(null);
-    } catch (e) { toast(e instanceof Error ? e.message : "Could not save. Run the latest database update first."); }
+    } catch (e) { toast(errMsg(e, "Could not save. Run the latest database update first.")); }
     finally { setSaving(false); }
   }
 
@@ -168,7 +172,7 @@ export default function Timesheets() {
                 </div>
                 <div className="bold num">{dur(ms(t))}</div>
                 {canEdit && <button className="btn sm" onClick={() => setForm(edit(t))}>Edit</button>}
-                <button className="btn sm danger" onClick={async () => { await store.deleteRow("time_entries", t.id); await refresh(); }}>✕</button>
+                <button className="btn sm danger" onClick={async () => { try { await store.deleteRow("time_entries", t.id); await refresh(); } catch (e) { toast(errMsg(e, "Could not delete that time entry.")); } }}>✕</button>
                 {open === t.id && (
                   <div className="notice" style={{ flexBasis: "100%" }}>
                     {[...ed].reverse().map((e, i) => (
