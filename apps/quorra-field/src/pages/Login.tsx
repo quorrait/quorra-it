@@ -3,6 +3,7 @@ import { errMsg } from "../lib/errors";
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../lib/app";
+import { supabase } from "../lib/supabase";
 import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { isIosApp } from "../lib/iosPlan";
@@ -25,6 +26,7 @@ export default function Login() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(() => (wasKicked() ? "You have been logged out because this account signed in on another device." : null));
+  const [resendBusy, setResendBusy] = useState(false);
 
   useEffect(() => {
     if (!code) return;
@@ -67,6 +69,21 @@ export default function Login() {
     }
   }
 
+  async function resend() {
+    if (!supabase || !email.trim()) return setErr("Enter your email, then resend the confirmation.");
+    setResendBusy(true);
+    setErr(null);
+    try {
+      const { error } = await supabase.functions.invoke("signup-complete", { body: { resend: true, email: email.trim() } });
+      if (error) throw error;
+      setInfo("Check your email to confirm your account, then sign in with the same email.");
+    } catch (e) {
+      setErr(errMsg(e, "Could not resend the confirmation email. Try again in a few minutes."));
+    } finally {
+      setResendBusy(false);
+    }
+  }
+
   const joining = Boolean(code);
   return (
     <div className="auth">
@@ -100,6 +117,7 @@ export default function Login() {
         )}
 
         {mode === "in" && <label className="check-row"><input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> Remember me on this device</label>}
+        {mode === "in" && auth.mode !== "demo" && <button type="button" className="btn block" disabled={resendBusy} onClick={() => void resend()}>{resendBusy ? "Sending..." : "Resend confirmation email"}</button>}
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
 

@@ -3,7 +3,10 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
 import { passwordError } from "../_shared/safeUrl.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
+import { sendEmail } from "../_shared/notify.ts";
+import { emailHtml } from "../_shared/emailTemplate.ts";
+import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
+import { clientIp, rateLimit } from "../_shared/limit.ts";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -14,9 +17,36 @@ function planName(id?: string, fallback?: string): string {
   return "Basic";
 }
 
+const CONFIRM_REDIRECT = `${PUBLIC_APP_URL}/`;
+
+async function mailConfirmation(to: string, link: string) {
+  return sendEmail({
+    to,
+    subject: "Confirm your Quorra Dispatch email",
+    text: `Confirm your email to sign in to Quorra Dispatch:\n\n${link}\n\nYour 14-day trial is already set up. If you did not create this account, you can ignore this email.`,
+    html: emailHtml({
+      heading: "Confirm your email",
+      preheader: "Confirm your email to sign in. Your trial is ready.",
+      paragraphs: ["Your 14-day trial is already set up. Confirm your email, then sign in with the password you chose."],
+      button: { label: "Confirm my email", url: link },
+      fine: "If you did not create this account, you can ignore this email.",
+    }),
+  });
+}
+
 handler(async (req) => {
   const b = await req.json().catch(() => ({}));
   const email = String(b.email ?? "").trim().toLowerCase();
+  if (b.resend === true) {
+    await rateLimit("signup-resend", clientIp(req), 5, 60 * 60);
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      const db = admin();
+      const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email, options: { redirectTo: CONFIRM_REDIRECT } });
+      const link = data?.properties?.action_link;
+      if (!error && link) await mailConfirmation(email, link);
+    }
+    return json({ ok: true });
+  }
   const password = String(b.password ?? "");
   const pw = passwordError(password);
   if (pw) throw new HttpError(400, pw);
@@ -34,12 +64,16 @@ handler(async (req) => {
   const { data: used } = await db.from("subscriptions").select("owner_id").eq("stripe_customer_id", customer).maybeSingle();
   if (used) throw new HttpError(409, "This signup was already completed. Sign in instead.");
 
-  const { data: created, error: cErr } = await db.auth.admin.createUser({
-    email, password, email_confirm: false,
-    user_metadata: { business_name: s.metadata?.business ?? "", name: s.metadata?.name ?? "" },
+  // createUser does not send mail. generateLink both creates the unconfirmed login and returns the link we email ourselves.
+  const { data: linked, error: cErr } = await db.auth.admin.generateLink({
+    type: "signup",
+    email,
+    password,
+    options: { data: { business_name: s.metadata?.business ?? "", name: s.metadata?.name ?? "" }, redirectTo: CONFIRM_REDIRECT },
   });
-  if (cErr || !created.user) throw new HttpError(409, /already/i.test(cErr?.message ?? "") ? "That email already has a login. Sign in instead." : (cErr?.message ?? "Could not create the account"));
-  const ownerId = created.user.id;
+  const confirmLink = linked?.properties?.action_link;
+  if (cErr || !linked?.user || !confirmLink) throw new HttpError(409, /already/i.test(cErr?.message ?? "") ? "That email already has a login. Sign in instead." : (cErr?.message ?? "Could not create the account"));
+  const ownerId = linked.user.id;
 
   await stripe.customers.update(customer, {
     metadata: { owner_id: ownerId },
@@ -65,8 +99,8 @@ handler(async (req) => {
     current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
   }, { onConflict: "owner_id" });
-  // The project sends its own confirmation email. We do not mark the address confirmed here.
-  const pub = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), { auth: { persistSession: false } });
-  await pub.auth.resend({ type: "signup", email }).catch((e) => console.error("confirm email", e));
-  return json({ ok: true, needs_confirm: true });
+  // The trial exists even if the email provider is down. The sign-in page can send the link again.
+  const mailed = await mailConfirmation(email, confirmLink);
+  if (!mailed.sent) console.error("confirm email", mailed.reason);
+  return json({ ok: true, needs_confirm: true, email_sent: mailed.sent });
 });

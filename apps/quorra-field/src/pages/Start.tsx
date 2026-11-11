@@ -30,6 +30,7 @@ export default function Start() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
+  const [awaiting, setAwaiting] = useState<{ email: string; sent: boolean } | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -58,9 +59,9 @@ export default function Start() {
     setFinishing(true);
     setErr(null);
     try {
-      const { error } = await supabase.functions.invoke("signup-complete", { body: { session_id: card.session_id, email, password } });
+      const { data, error } = await supabase.functions.invoke("signup-complete", { body: { session_id: card.session_id, email, password } });
       if (error) { let m = error.message; try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
-      setInfo("Check your email to confirm your account, then sign in with the same email.");
+      setAwaiting({ email, sent: (data as { email_sent?: boolean } | null)?.email_sent !== false });
       setCard(null);
       setFinishing(false);
     } catch (e2) {
@@ -80,6 +81,23 @@ export default function Start() {
           </div>
           <BuyService />
           <button type="button" className="btn block" onClick={() => nav("/")}>Back to sign in</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (awaiting) {
+    return (
+      <div className="auth">
+        <div className="auth-card stack">
+          <div className="auth-head">
+            <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
+            <h1>Check your email to confirm</h1>
+            <p className="muted">{awaiting.sent
+              ? `We sent a confirmation link to ${awaiting.email}. Your 14-day trial is already set up. Open the link, then sign in with the password you chose.`
+              : `Your 14-day trial is set up, but we could not send the confirmation email to ${awaiting.email}. On the sign-in page, choose Resend confirmation email.`}</p>
+          </div>
+          <button type="button" className="btn primary block" onClick={() => nav("/")}>Go to sign in</button>
         </div>
       </div>
     );
