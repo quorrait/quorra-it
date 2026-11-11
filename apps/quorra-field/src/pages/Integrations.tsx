@@ -15,7 +15,6 @@ const ITEMS: Item[] = [
   { id: "cal", name: "Phone calendar", what: "See your jobs in Apple, Google or Outlook calendar.", color: "#4285f4", mark: "31", live: true, slug: "googlecalendar", cat: "Scheduling" },
   { id: "xero", name: "Xero", what: "Accounting sync for Xero users.", color: "#13b5ea", mark: "X", live: false, slug: "xero", cat: "Accounting" },
   { id: "zapier", name: "Zapier", what: "Connect Quorra Dispatch to thousands of other apps.", color: "#ff4a00", mark: "Z", live: false, slug: "zapier", cat: "Automation" },
-  { id: "plaid", name: "Plaid", what: "Show live bank balances and match deposits to invoices.", color: "#111111", mark: "Pl", live: false, slug: "plaid", cat: "Accounting" },
   { id: "gads", name: "Google Ads", what: "See which ads bring in leads and paid jobs.", color: "#4285f4", mark: "Ad", live: false, slug: "googleads", cat: "Marketing" },
   { id: "gbp", name: "Google Business Profile", what: "Ask for reviews and answer them from the app.", color: "#4285f4", mark: "G", live: false, slug: "google", cat: "Marketing" },
   { id: "gusto", name: "Gusto", what: "Send timesheets to payroll.", color: "#f45d48", mark: "g", live: false, slug: "gusto", cat: "Payroll" },
@@ -103,8 +102,6 @@ export default function Integrations() {
 
 function Logo({ item }: { item: Item }) {
   const [bad, setBad] = useState(!item.slug);
-  // Plaid's mark is not in the icon library we load from, so it is drawn here.
-  if (item.id === "plaid") return <svg width="36" height="36" viewBox="0 0 36 36" aria-label="Plaid" role="img" fill="#111"><g transform="rotate(45 18 18)"><rect x="4" y="4" width="8" height="8" /><rect x="14" y="4" width="8" height="8" /><rect x="24" y="4" width="8" height="8" /><rect x="4" y="14" width="8" height="8" /><rect x="24" y="14" width="8" height="8" /><rect x="4" y="24" width="8" height="8" /><rect x="14" y="24" width="8" height="8" /><rect x="24" y="24" width="8" height="8" /></g></svg>;
   if (bad) return <span style={{ color: item.color, fontWeight: 800, fontSize: 24 }}>{item.mark}</span>;
   return <img src={`https://cdn.simpleicons.org/${item.slug}`} alt={item.name} width={36} height={36} onError={() => setBad(true)} />;
 }
