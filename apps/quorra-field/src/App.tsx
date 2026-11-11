@@ -50,7 +50,7 @@ function Guard({ path, children }: { path: string; children: JSX.Element }) {
 function PlanGate({ feature, children }: { feature: GatedFeature; children: JSX.Element }) {
   const { allows, loading } = useData();
   if (loading || allows(feature)) return children;
-  return <UpgradePrompt feature={feature} />;
+  return <div className="upgrade-screen"><UpgradePrompt feature={feature} /></div>;
 }
 
 function Locked({ children }: { children: JSX.Element }) {
