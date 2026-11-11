@@ -5,7 +5,8 @@ import { Icon, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Customer, Invoice, PayMethod } from "../lib/types";
 import { money } from "../lib/money";
-import { TAP_TO_PAY_ENABLED } from "../lib/tapToPay";
+import { tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
+import { collectTapToPay } from "../lib/terminalPay";
 
 /** Card payment: hosted checkout link + QR the customer can scan with their own phone. */
 export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
@@ -133,11 +134,35 @@ export function ManualPaySheet({ invoice, balance, onClose }: { invoice: Invoice
   );
 }
 
+function TapPaySheet({ invoiceId, onClose, onPaid }: { invoiceId: string; onClose(): void; onPaid(): void }) {
+  const [status, setStatus] = useState("Getting Tap to Pay ready...");
+  const [err, setErr] = useState<string | null>(null);
+  const paid = useRef(onPaid);
+  paid.current = onPaid;
+  useEffect(() => {
+    let stop = false;
+    collectTapToPay(invoiceId, (message) => { if (!stop) setStatus(message); })
+      .then(() => { if (!stop) void paid.current(); })
+      .catch((e) => { if (!stop) setErr(tapToPayMessage(e instanceof Error ? e.message : "Tap to Pay didn't go through.")); });
+    return () => { stop = true; };
+  }, [invoiceId]);
+  return (
+    <Sheet title="Tap to Pay" onClose={onClose}>
+      <div className="stack">
+        {!err && <p style={{ margin: 0 }}>{status}</p>}
+        {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
+        {err && <button className="btn block" onClick={onClose}>Use the QR code</button>}
+      </div>
+    </Sheet>
+  );
+}
+
 /** First step of taking payment on the spot: cash/check or card. */
 export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
   const { store, refresh } = useData();
   const toast = useToast();
-  const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card">("pick");
+  const offer = tapToPayOffer();
+  const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card" | "tap">("pick");
   const [busy, setBusy] = useState(false);
 
   async function ensureSent(next: "cash" | "card-how") {
@@ -152,16 +177,28 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
     }
   }
 
+  async function chooseCard() {
+    setBusy(true);
+    try {
+      if (invoice.status === "draft") { await store.saveInvoice({ ...invoice, status: "sent" }); await refresh(); }
+      setStep(offer === "hidden" ? "card" : "card-how");
+    } catch (e) {
+      toast(errMsg(e, "Could not start payment"));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (step === "cash") return <ManualPaySheet invoice={{ ...invoice, status: "sent" }} balance={balance} onClose={onClose} />;
   if (step === "card") return <CardPaySheet invoice={{ ...invoice, status: "sent" }} customer={customer} balance={balance} onClose={onClose} />;
+  if (step === "tap") return <TapPaySheet invoiceId={invoice.id} onClose={() => setStep("card-how")} onPaid={async () => { await refresh(); toast("Payment received"); onClose(); }} />;
   if (step === "card-how") return (
     <Sheet title={`Card · ${money(balance)}`} onClose={onClose}>
       <div className="stack">
         <button className="btn primary block" style={{ minHeight: 64 }} onClick={() => setStep("card")}>{Icon.card} QR code</button>
         <p className="small muted" style={{ margin: 0 }}>Have the customer scan to pay.</p>
-        <button className="btn block" style={{ minHeight: 64 }} disabled={!TAP_TO_PAY_ENABLED} onClick={() => { if (!TAP_TO_PAY_ENABLED) return; }}>
-          {TAP_TO_PAY_ENABLED ? "Tap to Pay" : "Tap to Pay, coming soon"}
-        </button>
+        {offer === "ready" && <button className="btn block" style={{ minHeight: 64 }} onClick={() => setStep("tap")}>Tap to Pay</button>}
+        {offer === "soon" && <button className="btn block" style={{ minHeight: 64 }} disabled>Tap to Pay, coming soon</button>}
       </div>
     </Sheet>
   );
@@ -169,8 +206,8 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
     <Sheet title={`Take payment · ${money(balance)}`} onClose={onClose}>
       <div className="stack">
         <button className="btn good block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("cash")}>{Icon.check} Cash, check or other</button>
-        <button className="btn primary block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void ensureSent("card-how")}>{Icon.card} Card</button>
-        <p className="small muted" style={{ margin: 0 }}>Card: the customer scans a QR code on their own phone. Tap to Pay is not available yet.</p>
+        <button className="btn primary block" style={{ minHeight: 64 }} disabled={busy} onClick={() => void chooseCard()}>{Icon.card} Card</button>
+        <p className="small muted" style={{ margin: 0 }}>{offer === "hidden" ? "Card: the customer scans a QR code on their own phone." : "Card: the customer scans a QR code, or taps their card on this phone."}</p>
       </div>
     </Sheet>
   );
