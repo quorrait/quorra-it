@@ -8,6 +8,8 @@ import { emailHtml } from "../_shared/emailTemplate.ts";
 import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
 import { missingCheckoutSession } from "../_shared/stripeError.ts";
+import { monthlyPromoCoupon, normalizeTrialEmail } from "../_shared/trialOffer.ts";
+import { emailHasOtherSubscription, ensureTrialPromoSchedule } from "../_shared/trialSchedule.ts";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -92,34 +94,62 @@ handler(async (req) => {
   const yearly = s.metadata?.interval === "year";
   const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${yearly ? "_ANNUAL" : ""}`);
   // Monthly only. The coupon already exists in Stripe (STRIPE_PROMO_COUPON). Leave the secret empty to turn the offer off. Never create coupons here. Annual prices already include 10% off.
-  const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
-  let repeatCard = false;
-  if (fingerprint) {
-    const { data: seen } = await db.from("subscriptions").select("owner_id").eq("card_fingerprint", fingerprint).neq("owner_id", ownerId).limit(1);
-    repeatCard = Boolean(seen?.length);
+  const promo = monthlyPromoCoupon(yearly ? "year" : "month", Deno.env.get("STRIPE_PROMO_COUPON"));
+  const ownSubs = await stripe.subscriptions.list({ customer, status: "all", limit: 1 });
+  const priorStripe = ownSubs.data.length > 0 || await emailHasOtherSubscription(stripe, normalizeTrialEmail(email), customer);
+  const { data: claimed, error: claimErr } = await db.rpc("claim_trial", {
+    p_email: email, p_card: fingerprint, p_customer: customer,
+  });
+  if (claimErr) {
+    console.error(claimErr);
+    throw new HttpError(500, "Could not start the trial. Please try again.");
   }
+  // claim_trial records the email, card, and customer even when it returns false.
+  // A Stripe customer from a deleted account is not in that table until this check.
+  const grantTrial = claimed === true && !priorStripe;
   const params = {
     customer,
     items: [{ price: priceId, quantity: 1 }],
-    ...(repeatCard ? {} : { trial_period_days: 14 }),
+    ...(grantTrial ? { trial_period_days: 14 } : {}),
     default_payment_method: pm.id,
-    metadata: { owner_id: ownerId },
-    ...(promo ? { discounts: [{ coupon: promo }] } : {}),
+    metadata: {
+      owner_id: ownerId,
+      // The coupon is attached by the schedule below, so its 3 months start when the trial ends.
+      ...(grantTrial && promo ? { promo_schedule: "pending" } : {}),
+    },
+    // No trial: 50% off starts on the first invoice. A trial must not put the coupon on yet.
+    ...(!grantTrial && promo ? { discounts: [{ coupon: promo }] } : {}),
   };
   let sub: Stripe.Subscription;
   try {
-    sub = await stripe.subscriptions.create(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { ...params, automatic_tax: { enabled: true } } : params);
-  } catch {
-    sub = await stripe.subscriptions.create(params); // tax could not be worked out from the address; still start the trial
+    try {
+      sub = await stripe.subscriptions.create(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { ...params, automatic_tax: { enabled: true } } : params);
+    } catch {
+      sub = await stripe.subscriptions.create(params); // tax could not be worked out from the address; still start the plan
+    }
+  } catch (e) {
+    await db.rpc("release_trial_claim", { p_customer: customer });
+    throw e;
+  }
+  if (grantTrial) {
+    try {
+      sub = await ensureTrialPromoSchedule(stripe, sub, promo);
+    } catch (e) {
+      // The billing webhook retries while promo_schedule is still pending.
+      console.error("trial promo schedule", e);
+    }
   }
   const item = sub.items.data[0];
+  const periodEnd = sub.trial_end
+    ?? (item as unknown as { current_period_end?: number })?.current_period_end
+    ?? (sub as unknown as { current_period_end?: number }).current_period_end;
   await db.from("subscriptions").upsert({
     owner_id: ownerId, status: "active", plan: planName(item?.price?.id, plan), amount_cents: item?.price?.unit_amount ?? 30000,
-    billing_interval: item?.price?.recurring?.interval ?? "month", trialing: true,
-    current_period_end: sub.trial_end ? new Date(sub.trial_end * 1000).toISOString() : null,
+    billing_interval: item?.price?.recurring?.interval ?? "month", trialing: sub.status === "trialing",
+    current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
     card_fingerprint: fingerprint,
-    ...(repeatCard ? {} : { trial_used_at: new Date().toISOString() }),
+    trial_used_at: new Date().toISOString(),
   }, { onConflict: "owner_id" });
   // The trial exists even if the email provider is down. The sign-in page can send the link again.
   const mailed = await mailConfirmation(email, confirmLink);
