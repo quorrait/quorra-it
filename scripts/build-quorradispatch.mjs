@@ -45,7 +45,7 @@ function rewriteMarketing(html) {
     .replaceAll('href="/field/', 'href="/')
     .replace(/href="\/dispatch\//g, "href=\"/")
     .replaceAll('href="/terms.html"', 'href="https://www.quorrait.com/terms.html"')
-    .replaceAll('href="/privacy-policy.html"', 'href="https://www.quorrait.com/privacy-policy.html"')
+    .replaceAll('href="/privacy-policy.html"', 'href="/privacy/"')
     .replace(
       '<span>Quorra Dispatch by <a href="/">Quorra IT</a></span>',
       '<span>Quorra Dispatch by <a href="https://www.quorrait.com/">Quorra IT</a></span>',
@@ -66,18 +66,29 @@ for (const name of readdirSync(join(root, "dispatch"))) {
   slugs.push(name);
 }
 
-const today = new Date().toISOString().slice(0, 10);
+// lastmod is the date the page content last changed, not the build date.
+// 2026-11-12: homepage structured data, /about/, the Jobber page, and the privacy canonical.
+// Other marketing URLs keep 2026-11-11, the date already live before this change.
+const CONTENT_LASTMOD = {
+  "https://quorradispatch.com/": "2026-11-12",
+  "https://quorradispatch.com/about/": "2026-11-12",
+  "https://quorradispatch.com/jobber-alternative/": "2026-11-12",
+  "https://quorradispatch.com/privacy/": "2026-11-12",
+};
+const PRIOR_LASTMOD = "2026-11-11";
 const locs = ["https://quorradispatch.com/", ...slugs.sort().map((slug) => `https://quorradispatch.com/${slug}/`)];
-writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${locs.map((loc) => `  <url><loc>${loc}</loc><lastmod>${today}</lastmod></url>`).join("\n")}\n</urlset>\n`);
+writeFileSync(join(out, "sitemap.xml"), `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${locs.map((loc) => `  <url><loc>${loc}</loc><lastmod>${CONTENT_LASTMOD[loc] || PRIOR_LASTMOD}</lastmod></url>`).join("\n")}\n</urlset>\n`);
 writeFileSync(join(out, "robots.txt"), "User-agent: *\nAllow: /\nDisallow: /test/\n\nSitemap: https://quorradispatch.com/sitemap.xml\n");
 
-for (const file of ["reel.mp4", "reel.webm", "reel-poster.jpg"]) {
+for (const file of ["reel.mp4", "reel.webm", "reel-poster.jpg", "og.png"]) {
   cpSync(join(root, "dispatch", file), join(out, file));
 }
 cpSync(join(root, "dispatch/media"), join(out, "media"), { recursive: true });
 for (const file of ["favicon-32.png", "apple-touch-icon.png", "logo-mark-v2.png", "favicon.ico"]) {
   cpSync(join(appDir, "public", file), join(out, file));
 }
+// Square mark for Organization.logo. icon-512.png is the existing 512×512 Dispatch icon.
+cpSync(join(appDir, "public", "icon-512.png"), join(out, "logo.png"));
 
 // Pages rejects "/app/* /app/index.html 200" as an infinite loop, then (with no
 // root 404.html) serves the landing page for every path that is not a file.
@@ -88,6 +99,21 @@ cpSync(join(out, "app/index.html"), join(out, "app/404.html"));
 cpSync(join(out, "test/index.html"), join(out, "test/404.html"));
 cpSync(join(root, "scripts/quorradispatch-404.html"), join(out, "404.html"));
 cpSync(join(root, "scripts/quorradispatch-worker.js"), join(out, "_worker.js"));
+
+// Pages does not apply _headers to responses from _worker.js. The worker sets the same noindex.
+writeFileSync(join(out, "_headers"), [
+  "# Keep the pages.dev host and the thin /app shell out of search.",
+  "# /test/ stays Disallow in robots.txt and is not marked noindex here.",
+  "https://:project.pages.dev/*",
+  "  X-Robots-Tag: noindex",
+  "",
+  "https://:version.:project.pages.dev/*",
+  "  X-Robots-Tag: noindex",
+  "",
+  "/app/*",
+  "  X-Robots-Tag: noindex",
+  "",
+].join("\n"));
 
 writeFileSync(join(out, "_redirects"), [
   "# Exact paths before splats. SPA deep links are _worker.js, not a 200 rewrite:",
@@ -102,6 +128,7 @@ writeFileSync(join(out, "_redirects"), [
   "/app            /app/          301",
   "/test           /test/         301",
   "/privacy        /privacy/      301",
+  "/about          /about/        301",
   "/field-test/*   /test/:splat   301",
   "/field/*        /app/:splat    301",
   "",
