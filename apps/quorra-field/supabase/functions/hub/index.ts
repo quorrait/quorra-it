@@ -34,7 +34,7 @@ handler(async (req) => {
   if (b.action === "overview") {
     const [{ data: biz }, { data: subs }, { data: members }, { data: tix }, users] = await Promise.all([
       db.from("business").select("owner_id,name,phone,email"),
-      db.from("subscriptions").select("owner_id,status,plan,amount_cents,billing_interval,current_period_end,comped,cancel_at_period_end,past_due_since"),
+      db.from("subscriptions").select("owner_id,status,plan,amount_cents,billing_interval,current_period_end,comped,cancel_at_period_end,past_due_since,promo_fix_needed,promo_fix_detail"),
       db.from("account_members").select("owner_id"),
       db.from("support_tickets").select("id").eq("status", "open"),
       db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
@@ -46,7 +46,7 @@ handler(async (req) => {
     const rows = (biz ?? []).map((x) => {
       const s = sub.get(x.owner_id);
       const au = u.get(x.owner_id);
-      return { owner_id: x.owner_id, name: x.name, login: au?.email ?? x.email, phone: x.phone, created_at: au?.created_at ?? null, last_sign_in: au?.last_sign_in_at ?? null, plan: s?.plan ?? "-", status: s?.status ?? "none", access: accessOf(s), comped: Boolean(s?.comped), amount_cents: s?.amount_cents ?? 0, interval: s?.billing_interval ?? "month", period_end: s?.current_period_end ?? null, canceling: Boolean(s?.cancel_at_period_end), team: (team.get(x.owner_id) ?? 0) + 1 };
+      return { owner_id: x.owner_id, name: x.name, login: au?.email ?? x.email, phone: x.phone, created_at: au?.created_at ?? null, last_sign_in: au?.last_sign_in_at ?? null, plan: s?.plan ?? "-", status: s?.status ?? "none", access: accessOf(s), comped: Boolean(s?.comped), amount_cents: s?.amount_cents ?? 0, interval: s?.billing_interval ?? "month", period_end: s?.current_period_end ?? null, canceling: Boolean(s?.cancel_at_period_end), team: (team.get(x.owner_id) ?? 0) + 1, promo_fix: Boolean(s?.promo_fix_needed), promo_fix_detail: (s?.promo_fix_detail as string | null) ?? null };
     }).sort((a, c) => String(c.created_at).localeCompare(String(a.created_at)));
     return json({ rows, open_tickets: (tix ?? []).length });
   }

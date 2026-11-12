@@ -1,8 +1,13 @@
 // Stripe Connect webhook. Deploy with --no-verify-jwt (Stripe calls it, not a signed-in user).
-// Events to send (Events on Connected accounts): checkout.session.completed,
+// Connected accounts endpoint (keep this): checkout.session.completed,
 // checkout.session.async_payment_succeeded, payment_intent.succeeded, account.updated.
-// Checkout and Tap to Pay both land here. There is no separate payment_intent handler today.
+// account.updated still fires for v1 and v2 accounts on the Connected accounts scope.
+// v2 card-payment capability changes also fire
+// v2.core.account[configuration.merchant].capability_status_updated on a separate
+// "Your account" endpoint. Point that endpoint here and set STRIPE_CONNECT_V2_WEBHOOK_SECRET
+// to its signing secret. Checkout and Tap to Pay both land here.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
+import { cardPaymentsActive, retrieveV2CardPayments, V2_CARD_PAYMENTS_EVENT } from "../_shared/connectAccount.ts";
 import { admin, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { notifyAccount } from "../_shared/alert.ts";
@@ -12,14 +17,45 @@ import { getStyle } from "../_shared/templates.ts";
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
+type IncomingEvent = Stripe.Event & { related_object?: { id?: string } };
+
+async function readEvent(body: string, sig: string): Promise<IncomingEvent> {
+  const secrets = [env("STRIPE_WEBHOOK_SECRET")];
+  const v2Secret = Deno.env.get("STRIPE_CONNECT_V2_WEBHOOK_SECRET");
+  if (v2Secret) secrets.push(v2Secret);
+  let last: unknown;
+  for (const secret of secrets) {
+    try {
+      return await stripe.webhooks.constructEventAsync(body, sig, secret, undefined, cryptoProvider) as IncomingEvent;
+    } catch (e) {
+      last = e;
+    }
+  }
+  throw last;
+}
+
+/**
+ * v1 charges_enabled, or the v2 card_payments capability.
+ * Null means the v2 lookup failed and there is no v1 snapshot, so leave the stored flag alone.
+ */
+async function cardsActive(accountId: string, snapshot?: Stripe.Account): Promise<boolean | null> {
+  if (snapshot && cardPaymentsActive(snapshot)) return true;
+  const v2 = await retrieveV2CardPayments(env("STRIPE_SECRET_KEY"), accountId);
+  if (v2 === "retry") throw new Error("stripe v2 account status");
+  if (v2 === "active") return true;
+  if (snapshot) return cardPaymentsActive(snapshot);
+  if (v2 === "inactive") return false;
+  return null;
+}
+
 Deno.serve(async (req) => {
   const sig = req.headers.get("stripe-signature");
   if (!sig) return new Response("missing signature", { status: 400 });
   const body = await req.text();
 
-  let event: Stripe.Event;
+  let event: IncomingEvent;
   try {
-    event = await stripe.webhooks.constructEventAsync(body, sig, env("STRIPE_WEBHOOK_SECRET"), undefined, cryptoProvider);
+    event = await readEvent(body, sig);
   } catch (e) {
     console.error("bad signature", e);
     return new Response("invalid signature", { status: 400 });
@@ -100,9 +136,28 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (event.type === "account.updated" && event.account) {
-    const a = event.data.object as Stripe.Account;
-    await db.from("business").update({ stripe_connected: Boolean(a.charges_enabled) }).eq("stripe_account_id", event.account);
+  try {
+    if (event.type === "account.updated" && event.account) {
+      const a = event.data.object as Stripe.Account;
+      const on = await cardsActive(event.account, a);
+      if (on !== null) {
+        const { error } = await db.from("business").update({ stripe_connected: on }).eq("stripe_account_id", event.account);
+        if (error) throw error;
+      }
+    }
+    if (event.type === V2_CARD_PAYMENTS_EVENT) {
+      const accountId = event.related_object?.id || event.account;
+      if (accountId) {
+        const on = await cardsActive(accountId);
+        if (on !== null) {
+          const { error } = await db.from("business").update({ stripe_connected: on }).eq("stripe_account_id", accountId);
+          if (error) throw error;
+        }
+      }
+    }
+  } catch (e) {
+    console.error("account status", e);
+    return new Response("error", { status: 500 });
   }
 
   return new Response("ok");
