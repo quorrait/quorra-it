@@ -3,6 +3,8 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { activeLogins, downgradeLoginMessage } from "../_shared/plan.ts";
+import { monthlyPromoCoupon, prorationForPlanChange } from "../_shared/trialOffer.ts";
+import { replaceTrialPlan } from "../_shared/trialSchedule.ts";
 
 /** Launch coupons that apply to monthly prices only. Annual prices already include 10% off. */
 function promoCouponIds(): Set<string> {
@@ -85,34 +87,40 @@ handler(async (req) => {
     if (blocked) throw new HttpError(409, blocked);
     const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${b.interval === "year" ? "_ANNUAL" : ""}`);
     let cur = await loadSub(stripe, id);
-    // An earlier scheduled downgrade would block a direct change, so drop it first.
-    if (cur.schedule) { await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id); cur = await loadSub(stripe, id); }
     const item = cur.items.data[0];
     const yearly = (p: Stripe.Price) => (p.unit_amount ?? 0) * (p.recurring?.interval === "year" ? 1 : 12);
     const next = await stripe.prices.retrieve(priceId);
     if (next.id === item.price.id) return json({ ok: true, mode: "same" });
     const toYear = b.interval === "year";
-    const trialEnd = cur.trial_end;
-    if (cur.status === "trialing" && typeof trialEnd === "number" && trialEnd * 1000 > Date.now()) {
+    const change = prorationForPlanChange(cur.status, yearly(next) > yearly(item.price));
+    if (change === "none") {
       // Nothing has been paid. Switch the price now, do not invoice, and do not move the trial end.
-      // Passing discounts again is required: a price swap otherwise drops them. Annual drops the monthly coupon.
+      // always_invoice is never used here: a trial upgrade used to create a past_due invoice.
+      const promo = monthlyPromoCoupon(toYear ? "year" : "month", Deno.env.get("STRIPE_PROMO_COUPON"));
+      if (typeof cur.trial_end === "number" && cur.trial_end * 1000 > Date.now()) {
+        await replaceTrialPlan(stripe, cur, priceId, toYear ? "year" : "month", promo);
+        return json({ ok: true, mode: "trial_plan_change", trial_end: cur.trial_end });
+      }
+      if (cur.schedule) {
+        await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id);
+        cur = await loadSub(stripe, id);
+      }
       const discounts = discountUpdate(cur, toYear);
-      const updated = await stripe.subscriptions.update(id, {
-        items: [{ id: item.id, price: priceId }],
+      await stripe.subscriptions.update(id, {
+        items: [{ id: cur.items.data[0].id, price: priceId }],
         proration_behavior: "none",
-        trial_end: trialEnd,
         cancel_at_period_end: false,
         ...discounts,
       });
-      if (updated.trial_end !== trialEnd) {
-        await stripe.subscriptions.update(id, { trial_end: trialEnd, proration_behavior: "none", ...discounts });
-      }
-      return json({ ok: true, mode: "trial_plan_change", trial_end: trialEnd });
+      return json({ ok: true, mode: "trial_plan_change", trial_end: cur.trial_end ?? null });
     }
-    if (yearly(next) > yearly(item.price)) {
+    // An earlier scheduled downgrade would block a direct change, so drop it first.
+    if (cur.schedule) { await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id); cur = await loadSub(stripe, id); }
+    const currentItem = cur.items.data[0];
+    if (change === "always_invoice") {
       // Paid upgrade: switch now and charge the prorated difference for the rest of the period.
       await stripe.subscriptions.update(id, {
-        items: [{ id: item.id, price: priceId }],
+        items: [{ id: currentItem.id, price: priceId }],
         proration_behavior: "always_invoice",
         cancel_at_period_end: false,
         ...discountUpdate(cur, toYear),
@@ -122,11 +130,11 @@ handler(async (req) => {
     // Downgrade: no refund, the new plan starts at the next billing date. The current phase keeps its discount; an annual phase does not keep the monthly coupon.
     const sch = await stripe.subscriptionSchedules.create({ from_subscription: id });
     const ph = sch.phases[0];
-    const onYearNow = item.price.recurring?.interval === "year";
+    const onYearNow = currentItem.price.recurring?.interval === "year";
     await stripe.subscriptionSchedules.update(sch.id, {
       end_behavior: "release",
       phases: [
-        { items: [{ price: item.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date, discounts: keptDiscounts(cur as SubWithDiscounts, onYearNow) },
+        { items: [{ price: currentItem.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date, discounts: keptDiscounts(cur as SubWithDiscounts, onYearNow) },
         { items: [{ price: priceId, quantity: 1 }], discounts: keptDiscounts(cur as SubWithDiscounts, toYear) },
       ],
     });

@@ -5,6 +5,8 @@ import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { monthlyPromoCoupon } from "../_shared/trialOffer.ts";
+import { ensureTrialPromoSchedule } from "../_shared/trialSchedule.ts";
 
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -56,6 +58,61 @@ async function save(sub: Stripe.Subscription) {
   if (error) throw error;
 }
 
+async function cardFingerprint(sub: Stripe.Subscription): Promise<string | null> {
+  const pm = sub.default_payment_method;
+  const pmId = typeof pm === "string" ? pm : pm?.id;
+  if (!pmId) return null;
+  try {
+    const method = await stripe.paymentMethods.retrieve(pmId);
+    return method.card?.fingerprint ?? null;
+  } catch (e) {
+    console.error("trial card", e);
+    return null;
+  }
+}
+
+/** A card that already trialed on another customer does not get a second free trial. */
+async function stopRepeatTrial(sub: Stripe.Subscription): Promise<Stripe.Subscription> {
+  if (sub.status !== "trialing") return sub;
+  const fingerprint = await cardFingerprint(sub);
+  if (!fingerprint) return sub;
+  const customer = String(sub.customer);
+  const { data, error } = await admin().from("trial_ledger").select("stripe_customer_id").eq("kind", "card").eq("value", fingerprint).maybeSingle();
+  if (error) { console.error(error); return sub; }
+  const owner = data?.stripe_customer_id as string | undefined;
+  if (!owner || owner === customer) return sub;
+  return stripe.subscriptions.update(sub.id, { trial_end: "now", proration_behavior: "none" });
+}
+
+async function rememberTrial(sub: Stripe.Subscription): Promise<void> {
+  const customer = String(sub.customer);
+  let email = "";
+  try {
+    const person = await stripe.customers.retrieve(customer);
+    if (!person.deleted) email = person.email ?? "";
+  } catch (e) {
+    console.error("trial customer", e);
+  }
+  const { error } = await admin().rpc("claim_trial", {
+    p_email: email, p_card: await cardFingerprint(sub), p_customer: customer,
+  });
+  if (error) console.error("trial ledger", error);
+}
+
+/** New trials (promo_schedule=pending) get the post-trial discount. Existing subscriptions are not rewritten. */
+async function prepareSubscription(sub: Stripe.Subscription): Promise<Stripe.Subscription> {
+  try { sub = await stopRepeatTrial(sub); } catch (e) { console.error("repeat trial", e); }
+  const price = sub.items.data[0]?.price;
+  const interval = price?.recurring?.interval === "year" ? "year" : "month";
+  try {
+    sub = await ensureTrialPromoSchedule(stripe, sub, monthlyPromoCoupon(interval, Deno.env.get("STRIPE_PROMO_COUPON")));
+  } catch (e) {
+    console.error("trial promo schedule", e);
+  }
+  try { await rememberTrial(sub); } catch (e) { console.error("trial ledger", e); }
+  return sub;
+}
+
 /** A second Stripe subscription must not replace the one the customer is still on. */
 async function isStaleSecondSub(live: Stripe.Subscription): Promise<boolean> {
   const db = admin();
@@ -94,10 +151,10 @@ Deno.serve(async (req) => {
     console.log(event.type);
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
-      if (s.mode === "subscription" && s.subscription) await save(await stripe.subscriptions.retrieve(String(s.subscription)));
+      if (s.mode === "subscription" && s.subscription) await save(await prepareSubscription(await stripe.subscriptions.retrieve(String(s.subscription))));
     } else if (event.type.startsWith("customer.subscription.")) {
       const incoming = event.data.object as Stripe.Subscription;
-      const live = await stripe.subscriptions.retrieve(incoming.id);
+      const live = await prepareSubscription(await stripe.subscriptions.retrieve(incoming.id));
       console.log(`${event.type} sub=${live.id} event_status=${incoming.status} live_status=${live.status}`);
       if (!(await isStaleSecondSub(live))) await save(live);
     } else if (event.type === "invoice.paid") {

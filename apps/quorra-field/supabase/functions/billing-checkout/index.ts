@@ -3,6 +3,8 @@
 // Optional: STRIPE_PROMO_COUPON (monthly only; leave unset to turn the launch offer off).
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, admin, appUrl, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
+import { monthlyPromoCoupon, normalizeTrialEmail } from "../_shared/trialOffer.ts";
+import { emailHasOtherSubscription } from "../_shared/trialSchedule.ts";
 
 handler(async (req) => {
   const user = await requireUser(req);
@@ -36,10 +38,15 @@ handler(async (req) => {
 
   // Annual prices already include 10% off. The launch coupon is monthly only, and only while the secret is set.
   // Do not also set allow_promotion_codes: Stripe rejects a session that has both.
-  const promo = yearly ? "" : (Deno.env.get("STRIPE_PROMO_COUPON") ?? "").trim();
+  const promo = monthlyPromoCoupon(yearly ? "year" : "month", Deno.env.get("STRIPE_PROMO_COUPON"));
   const prior = await stripe.subscriptions.list({ customer, status: "all", limit: 1 });
   const { data: trialRow } = await db.from("subscriptions").select("trial_used_at").eq("owner_id", user.id).maybeSingle();
-  const grantTrial = prior.data.length === 0 && !trialRow?.trial_used_at;
+  const { data: used, error: usedErr } = await db.rpc("trial_is_used", {
+    p_email: normalizeTrialEmail(user.email ?? ""), p_card: null, p_customer: customer,
+  });
+  if (usedErr) { console.error(usedErr); throw new HttpError(500, "Could not start checkout. Please try again."); }
+  const sameEmail = await emailHasOtherSubscription(stripe, normalizeTrialEmail(user.email ?? ""), customer);
+  const grantTrial = prior.data.length === 0 && !trialRow?.trial_used_at && used !== true && !sameEmail;
   const base = {
     mode: "subscription" as const,
     customer,
@@ -48,8 +55,13 @@ handler(async (req) => {
     metadata: { owner_id: user.id },
     subscription_data: {
       ...(grantTrial ? { trial_period_days: 14 } : {}),
-      metadata: { owner_id: user.id },
-      ...(promo ? { discounts: [{ coupon: promo }] } : {}),
+      metadata: {
+        owner_id: user.id,
+        // Pending tells the billing webhook to start the 50% window at trial end, not during the trial.
+        ...(grantTrial && promo ? { promo_schedule: "pending" } : {}),
+      },
+      // A trial must not carry the coupon yet. Without a trial, 50% off starts on the first invoice.
+      ...(!grantTrial && promo ? { discounts: [{ coupon: promo }] } : {}),
     },
     // Set the secret STRIPE_AUTOMATIC_TAX to "true" once Stripe Tax is set up (head office address, registrations, SaaS tax code on the products).
     ...(Deno.env.get("STRIPE_AUTOMATIC_TAX") === "true" ? { automatic_tax: { enabled: true }, billing_address_collection: "required" as const, customer_update: { address: "auto" as const } } : {}),
