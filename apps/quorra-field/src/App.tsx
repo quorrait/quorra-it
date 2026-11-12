@@ -38,6 +38,7 @@ import Join from "./pages/Join";
 import Settings, { More } from "./pages/Settings";
 import Integrations from "./pages/Integrations";
 import Support from "./pages/Support";
+import ExportData from "./pages/ExportData";
 import Hub from "./pages/Hub";
 
 function BillingPlansRedirect() {
@@ -144,6 +145,7 @@ function Gate() {
           <Route path="support" element={<Support />} />
           <Route path="integrations" element={<Guard path="/integrations"><Integrations /></Guard>} />
           <Route path="billing" element={<Guard path="/billing"><Billing /></Guard>} />
+          <Route path="export" element={<ExportData />} />
           <Route path="join" element={<Join />} />
           <Route path="more" element={<More />} />
           <Route path="*" element={<Navigate to="/" replace />} />
