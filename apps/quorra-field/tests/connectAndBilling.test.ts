@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 import {
+  businessStripeAccountUpdate,
   cardPaymentsActive,
+  connectIdempotencyKey,
   messageFromStripeBody,
   standardConnectedAccountBody,
   standardStyleMismatch,
@@ -12,11 +14,13 @@ import {
   authUserIsMissing,
   isGoneAccountWrite,
   promoFailureDetail,
+  promoFixAfterRepeatTrial,
   promoFixPatch,
+  REPEAT_TRIAL_PROMO_DETAIL,
   retryOnce,
   subscriptionDeletedIsDone,
 } from "../supabase/functions/_shared/promoRecovery.ts";
-import { stripeFailure } from "../supabase/functions/_shared/stripeError.ts";
+import { staleConnectedAccount, STRIPE_ACCOUNT_CLIENT_MESSAGE, stripeFailure } from "../supabase/functions/_shared/stripeError.ts";
 
 const v1Rejection = "Stripe no longer recommends Accounts v1 for new Connect integrations. Use the Accounts v2 API instead.";
 
@@ -65,6 +69,82 @@ test("Stripe's own error is the message the caller sees", () => {
   assert.equal(api.status, 400);
   assert.equal(api.message, v1Rejection);
   assert.equal(messageFromStripeBody({}, 500).status, 502);
+  const declined = stripeFailure({
+    type: "StripeCardError",
+    statusCode: 402,
+    message: "Your card was declined.",
+    raw: { message: "Your card was declined." },
+  });
+  assert.equal(declined?.status, 402);
+  assert.equal(declined?.message, "Your card was declined.");
+});
+
+const keyLeak = "The provided key 'sk_test_*********************************************************************************************abcd' does not have access to account 'acct_123' (or that account does not exist). Application access may have been revoked.";
+
+test("a key fragment or an account-access error is not returned to the browser", () => {
+  const denied = stripeFailure({
+    type: "StripeInvalidRequestError",
+    code: "account_invalid",
+    statusCode: 403,
+    message: keyLeak,
+    raw: { message: keyLeak, code: "account_invalid" },
+  });
+  assert.equal(denied?.status, 403);
+  assert.equal(denied?.message, STRIPE_ACCOUNT_CLIENT_MESSAGE);
+  assert.equal(denied?.message.includes("sk_"), false);
+  assert.equal(denied?.message.includes("acct_"), false);
+
+  const masked = stripeFailure({
+    type: "StripePermissionError",
+    statusCode: 403,
+    message: "The provided key 'sk_…wxyz' does not have access to account 'acct_live'.",
+    raw: { message: "The provided key 'sk_…wxyz' does not have access to account 'acct_live'." },
+  });
+  assert.equal(masked?.message, STRIPE_ACCOUNT_CLIENT_MESSAGE);
+
+  const missing = stripeFailure({
+    type: "StripeInvalidRequestError",
+    statusCode: 404,
+    message: "No such account: 'acct_123'",
+    raw: { code: "resource_missing", message: "No such account: 'acct_123'" },
+  });
+  assert.equal(missing?.message, STRIPE_ACCOUNT_CLIENT_MESSAGE);
+  assert.equal(messageFromStripeBody({ error: { message: keyLeak } }, 403).message, STRIPE_ACCOUNT_CLIENT_MESSAGE);
+});
+
+test("a missing or inaccessible connected account is replaced, and the old idempotency key is not reused", () => {
+  assert.equal(staleConnectedAccount({ code: "account_invalid", message: keyLeak, raw: { message: keyLeak } }), true);
+  assert.equal(staleConnectedAccount({ code: "resource_missing", message: "No such account: 'acct_123'" }), true);
+  assert.equal(staleConnectedAccount({ raw: { code: "resource_missing", message: "No such checkout.session: cs_missing" } }), false);
+  assert.equal(staleConnectedAccount({ type: "StripeCardError", message: "Your card was declined." }), false);
+  assert.equal(staleConnectedAccount(new Error("network down")), false);
+  assert.equal(staleConnectedAccount(null), false);
+
+  assert.equal(connectIdempotencyKey("owner-1", null), "connect-owner-1");
+  assert.equal(connectIdempotencyKey("owner-1", "acct_old"), "connect-owner-1-replace-acct_old");
+  assert.deepEqual(businessStripeAccountUpdate("acct_new", false), { stripe_account_id: "acct_new" });
+  assert.deepEqual(businessStripeAccountUpdate("acct_new", true), {
+    stripe_account_id: "acct_new",
+    stripe_connected: false,
+    terminal_location_id: null,
+  });
+});
+
+test("a repeat trial that ends before the promo is scheduled is flagged and not repriced", () => {
+  const open = { wasTrialing: true, promoSchedule: "pending", statusAfter: "active", promoScheduleAfter: "pending", fix: null };
+  assert.deepEqual(promoFixAfterRepeatTrial(open), { needed: true, detail: REPEAT_TRIAL_PROMO_DETAIL });
+  assert.equal(promoFixAfterRepeatTrial({ ...open, statusAfter: "past_due" })?.detail, REPEAT_TRIAL_PROMO_DETAIL);
+  assert.equal(promoFixAfterRepeatTrial({ ...open, wasTrialing: false }), null);
+  assert.equal(promoFixAfterRepeatTrial({ ...open, promoSchedule: "ready" }), null);
+  assert.equal(promoFixAfterRepeatTrial({ ...open, statusAfter: "trialing" }), null);
+  assert.equal(promoFixAfterRepeatTrial({ ...open, promoScheduleAfter: "ready" }), null);
+  const stripeFix = { needed: true, detail: "No such coupon: DISPATCH_LAUNCH_50_3MO" };
+  assert.deepEqual(promoFixAfterRepeatTrial({ ...open, fix: stripeFix }), stripeFix);
+  assert.deepEqual(promoFixAfterRepeatTrial({ ...open, statusAfter: "trialing", fix: { needed: false, detail: "" } }), { needed: false, detail: "" });
+  assert.deepEqual(promoFixPatch({ needed: true, detail: REPEAT_TRIAL_PROMO_DETAIL }), {
+    promo_fix_needed: true,
+    promo_fix_detail: REPEAT_TRIAL_PROMO_DETAIL,
+  });
 });
 
 test("invoice checkout stays a direct charge on the contractor account with no application fee", () => {

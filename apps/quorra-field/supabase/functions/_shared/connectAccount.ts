@@ -1,3 +1,5 @@
+import { clientStripeMessage } from "./stripeError.ts";
+
 /**
  * Standard-style connected accounts on Accounts v2.
  * Stripe rejects Accounts v1 `type: "standard"`. The v2 equivalent that keeps
@@ -96,8 +98,28 @@ export function standardStyleMismatch(account: CardPaymentsAccount): string | nu
 
 export function messageFromStripeBody(body: unknown, status: number): { status: number; message: string } {
   const record = body && typeof body === "object" ? body as { error?: { message?: string }; message?: string } : {};
-  const message = (record.error?.message || record.message || `Stripe request failed (${status})`).trim();
+  const message = clientStripeMessage(record.error?.message || record.message || `Stripe request failed (${status})`);
   return { status: status >= 400 && status < 500 ? status : 502, message };
+}
+
+/**
+ * First create uses a stable key so a double submit does not open two accounts.
+ * Replacing a stale id must use a different key: Stripe would otherwise replay
+ * the original create for 24 hours and hand back the account we cannot access.
+ */
+export function connectIdempotencyKey(ownerId: string, replacingAccountId: string | null): string {
+  if (replacingAccountId) return `connect-${ownerId}-replace-${replacingAccountId}`;
+  return `connect-${ownerId}`;
+}
+
+/** Columns written on business when a connected account id is saved. */
+export function businessStripeAccountUpdate(accountId: string, replacingStale: boolean): {
+  stripe_account_id: string;
+  stripe_connected?: false;
+  terminal_location_id?: null;
+} {
+  if (!replacingStale) return { stripe_account_id: accountId };
+  return { stripe_account_id: accountId, stripe_connected: false, terminal_location_id: null };
 }
 
 export async function stripeV2(
