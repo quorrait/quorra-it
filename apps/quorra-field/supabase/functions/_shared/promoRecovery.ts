@@ -21,6 +21,28 @@ export function promoFailureDetail(error: unknown): string {
   return message.replace(/\s+/g, " ").trim().slice(0, 500);
 }
 
+/** Hub copy when a repeat card ended the trial before the launch promo could be scheduled. */
+export const REPEAT_TRIAL_PROMO_DETAIL = "repeat trial: trial ended early, promo not applied";
+
+/**
+ * stopRepeatTrial ends the free days before the post-trial schedule exists.
+ * Checkout still gives this coupon to someone who is refused a trial up front,
+ * so a repeat card is not "no promo". The price is left unchanged. The flag is
+ * how the Hub sees the miss. A fix already returned by the schedule writer wins.
+ */
+export function promoFixAfterRepeatTrial(input: {
+  wasTrialing: boolean;
+  promoSchedule: string | null | undefined;
+  statusAfter: string;
+  promoScheduleAfter: string | null | undefined;
+  fix: { needed: boolean; detail: string } | null;
+}): { needed: boolean; detail: string } | null {
+  if (input.fix) return input.fix;
+  if (!input.wasTrialing || input.promoSchedule !== "pending") return null;
+  if (input.statusAfter === "trialing" || input.promoScheduleAfter === "ready") return null;
+  return { needed: true, detail: REPEAT_TRIAL_PROMO_DETAIL };
+}
+
 /** Columns written on subscriptions. Null means "leave the existing flag alone". */
 export function promoFixPatch(fix: { needed: boolean; detail: string } | null): { promo_fix_needed: boolean; promo_fix_detail: string | null } | null {
   if (!fix) return null;

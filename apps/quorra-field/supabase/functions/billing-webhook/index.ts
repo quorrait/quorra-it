@@ -5,7 +5,7 @@ import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
-import { authUserIsMissing, isGoneAccountWrite, promoFixPatch, subscriptionDeletedIsDone } from "../_shared/promoRecovery.ts";
+import { authUserIsMissing, isGoneAccountWrite, promoFixAfterRepeatTrial, promoFixPatch, REPEAT_TRIAL_PROMO_DETAIL, subscriptionDeletedIsDone } from "../_shared/promoRecovery.ts";
 import { monthlyPromoCoupon } from "../_shared/trialOffer.ts";
 import { ensureTrialPromoWithRetry, type PromoFix } from "../_shared/trialSchedule.ts";
 
@@ -103,13 +103,23 @@ async function rememberTrial(sub: Stripe.Subscription): Promise<void> {
 
 /** New trials (promo_schedule=pending) get the post-trial discount. Existing subscriptions are not rewritten. */
 async function prepareSubscription(sub: Stripe.Subscription): Promise<{ subscription: Stripe.Subscription; fix: PromoFix | null }> {
+  const wasTrialing = sub.status === "trialing";
+  const promoSchedule = sub.metadata?.promo_schedule;
   try { sub = await stopRepeatTrial(sub); } catch (e) { console.error("repeat trial", e); }
   const price = sub.items.data[0]?.price;
   const interval = price?.recurring?.interval === "year" ? "year" : "month";
   const applied = await ensureTrialPromoWithRetry(stripe, sub, monthlyPromoCoupon(interval, Deno.env.get("STRIPE_PROMO_COUPON")));
   sub = applied.subscription;
   try { await rememberTrial(sub); } catch (e) { console.error("trial ledger", e); }
-  return { subscription: sub, fix: applied.fix };
+  const fix = promoFixAfterRepeatTrial({
+    wasTrialing,
+    promoSchedule,
+    statusAfter: sub.status,
+    promoScheduleAfter: sub.metadata?.promo_schedule,
+    fix: applied.fix,
+  });
+  if (fix?.detail === REPEAT_TRIAL_PROMO_DETAIL) console.error(REPEAT_TRIAL_PROMO_DETAIL, sub.id);
+  return { subscription: sub, fix };
 }
 
 /** delete-account removes the login (and the business cascades) before this event arrives. */
