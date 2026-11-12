@@ -274,6 +274,7 @@ export interface Subscription {
   current_period_end: string | null;
   cancel_at_period_end: boolean;
   comped: boolean;
+  past_due_since?: string | null;
   trialing?: boolean; // still in the 14-day free trial
 }
 

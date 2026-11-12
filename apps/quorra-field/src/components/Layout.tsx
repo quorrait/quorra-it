@@ -1,6 +1,6 @@
 import { useHubAdmin } from "../lib/hub";
 import Tour from "./Tour";
-import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate, Link } from "react-router-dom";
 import { useEffect } from "react";
 import { applyStatusBar } from "../lib/native";
 import { Icon, useConfirm } from "./ui";
@@ -10,6 +10,7 @@ import { canSaveUnsaved, clearUnsaved, hasUnsaved, saveUnsaved } from "../lib/un
 import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { useData, useAuth } from "../lib/app";
+import { graceDaysLeft, reviewerEndsAt } from "../lib/billingPhase";
 import type { Feature } from "../lib/access";
 import type { GatedFeature } from "../lib/plans";
 import type { ReactNode } from "react";
@@ -45,12 +46,13 @@ export const GROUPS: { title: string; links: NavItem[] }[] = [
     { f: "settings", to: "/integrations", label: "Integrations", icon: Icon.plug, end: false },
     { f: "settings", to: "/settings", label: "Settings", icon: Icon.gear, end: false },
     { f: "billing", to: "/billing", label: "Billing", icon: Icon.card, end: false },
+    { to: "/export", label: "Export", icon: Icon.send, end: false },
     { to: "/support", label: "Support", icon: Icon.send, end: false },
   ] },
 ];
 
 export default function Layout() {
-  const { store, business, error, can, allows, me, viewAs, team, leads, locked, loading } = useData();
+  const { store, business, error, can, allows, me, viewAs, team, leads, locked, loading, phase, subscription } = useData();
   const { signOut } = useAuth();
   const nav = useNavigate();
   const ask = useConfirm();
@@ -125,6 +127,8 @@ export default function Layout() {
           <NotificationBell />
         </header>
         <main className="main">
+          {phase === "grace" && <div className="error-banner">Payment failed. You have {graceDaysLeft(subscription?.past_due_since ?? null)} days of full access left, then 30 days to view and export, then the account is deleted. <Link to="/billing">Update billing</Link>.</div>}
+          {phase === "reviewer" && <div className="error-banner">You can view and export your data until {reviewerEndsAt(subscription?.past_due_since ?? null).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. Then the account and its data will be deleted. Pay to restore full access. <Link to="/billing">Update billing</Link> · <Link to="/export">Export</Link>.</div>}
           {error && <div className="error-banner">{error}</div>}
           <Outlet />
           <Tour />

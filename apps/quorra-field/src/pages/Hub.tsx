@@ -4,7 +4,7 @@ import { errMsg } from "../lib/errors";
 import { supabase } from "../lib/supabase";
 import { useHubAdmin } from "../lib/hub";
 
-interface Row { owner_id: string; name: string; login: string; phone: string; created_at: string | null; last_sign_in: string | null; plan: string; status: string; comped: boolean; amount_cents: number; interval: string; period_end: string | null; canceling: boolean; team: number }
+interface Row { owner_id: string; name: string; login: string; phone: string; created_at: string | null; last_sign_in: string | null; plan: string; status: string; access?: string; comped: boolean; amount_cents: number; interval: string; period_end: string | null; canceling: boolean; team: number }
 interface Ticket { id: string; business_name: string; user_email: string; category: string; subject: string; message: string; status: string; created_at: string }
 const d = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-");
 const money = (c: number) => `$${(c / 100).toFixed(0)}`;
@@ -68,7 +68,7 @@ export default function Hub() {
         <input className="input" placeholder="Search business, email or plan" value={q} onChange={(e) => setQ(e.target.value)} />
         {list.map((r) => (
           <div key={r.owner_id} className="card stack">
-            <div className="row between wrap"><b>{r.name}</b><span className={`badge ${r.status === "active" ? "good" : r.status === "past_due" ? "bad" : ""}`}>{r.comped ? "Free" : r.status}{r.canceling ? ", canceling" : ""}</span></div>
+            <div className="row between wrap"><b>{r.name}</b><span className={`badge ${r.access === "grace" || r.access === "reviewer" || r.access === "closed" || r.status === "past_due" ? "bad" : r.status === "active" ? "good" : ""}`}>{r.comped ? "Free" : (r.access || r.status)}{r.canceling && r.access === "active, canceling" ? "" : r.canceling ? ", canceling" : ""}</span></div>
             <div className="small muted">{r.login} · {r.phone || "no phone"}</div>
             <div className="small">{r.plan}{r.comped ? "" : ` · ${money(r.amount_cents)}/${r.interval === "year" ? "yr" : "mo"}`} · {r.team} login{r.team === 1 ? "" : "s"} · joined {d(r.created_at)} · last seen {d(r.last_sign_in)}{r.period_end ? ` · renews ${d(r.period_end)}` : ""}</div>
             <div><button className="btn sm" disabled={busy === r.owner_id} onClick={() => void signInAs(r)}>{busy === r.owner_id ? "One moment..." : "Sign in as this user"}</button></div>

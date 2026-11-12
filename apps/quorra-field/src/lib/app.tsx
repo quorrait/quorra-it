@@ -12,6 +12,7 @@ import { createSupabaseStore } from "./supabaseStore";
 import { demoMode, hasSupabase, supabase } from "./supabase";
 import { demoPlanPreview } from "./demoMode";
 import { planAllows, planLabel, resolvePlanId, seatLimit, type GatedFeature, type PlanId } from "./plans";
+import { billingPhase, type BillingPhase } from "./billingPhase";
 import { PUBLIC_APP_URL } from "./publicUrl";
 import { passwordError } from "./safeUrl";
 
@@ -172,6 +173,7 @@ export const useAuth = () => {
 interface DataCtx {
   me: { id: string | null; name: string; email: string; role: Role; isOwner: boolean };
   subscription: Subscription | null;
+  phase: BillingPhase;
   locked: boolean;
   planId: PlanId;
   allows(f: GatedFeature): boolean;
@@ -357,8 +359,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const fromEmail = (email ?? "").split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) || "You";
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
   const me = { id: meMember?.id ?? null, name: meMember?.name ?? (authName || fromEmail), email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
-  const subOk = !hasSupabase || Boolean(subscription && (subscription.comped || subscription.status === "active" || subscription.status === "past_due"));
-  const locked = !subOk;
+  const phase: BillingPhase = !hasSupabase ? "ok" : billingPhase(subscription);
+  const locked = phase === "lapsed" || phase === "closed";
   const preview = demoMode ? demoPlanPreview() : null;
   const planId: PlanId = preview ?? serverPlan ?? resolvePlanId(subscription?.plan, { demo: demoMode, comped: Boolean(subscription?.comped), staff: platformStaff });
   const allows = (f: GatedFeature) => planAllows(planId, f);
@@ -408,6 +410,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     () => ({
       me,
       subscription,
+      phase,
       locked,
       planId,
       allows,
@@ -439,7 +442,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       },
       customerById: (id) => customers.find((c) => c.id === id),
     }),
-    [store, subscription, locked, planId, activeLogins, loginFlags, demoOff, setLoginActive, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
+    [store, subscription, phase, locked, planId, activeLogins, loginFlags, demoOff, setLoginActive, loading, error, business, customers, jobs, invoices, payments, priceItems, estimates, leads, plans, team, timeEntries, purchaseOrders, docTemplates, refresh, me.id, me.role, me.name, visibleJobs],
   );
 
   if (loginOff) {

@@ -4,6 +4,19 @@ import { admin, appUrl, env, handler, HttpError, json, requireUser } from "../_s
 import { allowedAppUrl } from "../_shared/safeUrl.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4";
 
+const DAY = 86400000;
+function accessOf(s: { status?: string; comped?: boolean; past_due_since?: string | null; cancel_at_period_end?: boolean } | undefined): string {
+  if (!s) return "none";
+  if (s.comped) return "free";
+  if (s.status === "active") return s.cancel_at_period_end ? "active, canceling" : "active";
+  if (s.status !== "past_due") return s.status ?? "none";
+  const since = s.past_due_since ? new Date(s.past_due_since).getTime() : Date.now();
+  const days = (Date.now() - since) / DAY;
+  if (days < 7) return "grace";
+  if (days < 37) return "reviewer";
+  return "closed";
+}
+
 handler(async (req) => {
   if (req.method !== "POST") throw new HttpError(405, "POST only");
   const user = await requireUser(req);
@@ -21,7 +34,7 @@ handler(async (req) => {
   if (b.action === "overview") {
     const [{ data: biz }, { data: subs }, { data: members }, { data: tix }, users] = await Promise.all([
       db.from("business").select("owner_id,name,phone,email"),
-      db.from("subscriptions").select("owner_id,status,plan,amount_cents,billing_interval,current_period_end,comped,cancel_at_period_end"),
+      db.from("subscriptions").select("owner_id,status,plan,amount_cents,billing_interval,current_period_end,comped,cancel_at_period_end,past_due_since"),
       db.from("account_members").select("owner_id"),
       db.from("support_tickets").select("id").eq("status", "open"),
       db.auth.admin.listUsers({ page: 1, perPage: 1000 }),
@@ -33,7 +46,7 @@ handler(async (req) => {
     const rows = (biz ?? []).map((x) => {
       const s = sub.get(x.owner_id);
       const au = u.get(x.owner_id);
-      return { owner_id: x.owner_id, name: x.name, login: au?.email ?? x.email, phone: x.phone, created_at: au?.created_at ?? null, last_sign_in: au?.last_sign_in_at ?? null, plan: s?.plan ?? "-", status: s?.status ?? "none", comped: Boolean(s?.comped), amount_cents: s?.amount_cents ?? 0, interval: s?.billing_interval ?? "month", period_end: s?.current_period_end ?? null, canceling: Boolean(s?.cancel_at_period_end), team: (team.get(x.owner_id) ?? 0) + 1 };
+      return { owner_id: x.owner_id, name: x.name, login: au?.email ?? x.email, phone: x.phone, created_at: au?.created_at ?? null, last_sign_in: au?.last_sign_in_at ?? null, plan: s?.plan ?? "-", status: s?.status ?? "none", access: accessOf(s), comped: Boolean(s?.comped), amount_cents: s?.amount_cents ?? 0, interval: s?.billing_interval ?? "month", period_end: s?.current_period_end ?? null, canceling: Boolean(s?.cancel_at_period_end), team: (team.get(x.owner_id) ?? 0) + 1 };
     }).sort((a, c) => String(c.created_at).localeCompare(String(a.created_at)));
     return json({ rows, open_tickets: (tix ?? []).length });
   }
