@@ -16,6 +16,10 @@ workflows:
       node: 20
       xcode: latest
       cocoapods: default
+      # Uploaded Codemagic identities, applied by `xcode-project use-profiles`.
+      # This does not run `app-store-connect fetch-signing-files --create`.
+      # Regenerate the App Store profile after Tap to Pay is on the App ID and
+      # replace the uploaded profile named quorra_dispatch_app_store before a signed build will succeed.
       ios_signing:
         provisioning_profiles:
           - quorra_dispatch_app_store
@@ -56,6 +60,7 @@ workflows:
       - $CM_BUILD_DIR/apps/quorra-field/ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
     publishing:
+      # Uploads the build and submits it to TestFlight. Does not set submit_to_app_store, so it does not send the app to App Store review.
       app_store_connect:
         auth: integration
         submit_to_testflight: true

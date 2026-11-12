@@ -1,3 +1,4 @@
+import { Capacitor } from "@capacitor/core";
 import { errMsg } from "../lib/errors";
 import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
@@ -5,7 +6,7 @@ import { Icon, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Customer, Invoice, PayMethod } from "../lib/types";
 import { money } from "../lib/money";
-import { tapToPayBlocker, tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
+import { iosSupportsTapToPay, iosVersionFromUserAgent, tapToPayBlocker, tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
 import { collectTapToPay } from "../lib/terminalPay";
 import { TapToPayOnboarding, tapToPayReviewed } from "./TapToPayOnboarding";
 
@@ -193,7 +194,11 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
   function openTap() {
     const block = tapToPayBlocker({ stripeConnected: business.stripe_connected, address: business.address });
     if (block) { toast(block); return; }
-    if (offer === "soon" || !tapToPayReviewed()) { setStep("ios"); return; }
+    if (!tapToPayReviewed()) { setStep("ios"); return; }
+    if (Capacitor.getPlatform() === "ios" && !iosSupportsTapToPay(iosVersionFromUserAgent(navigator.userAgent))) {
+      toast("This phone can't take Tap to Pay.");
+      return;
+    }
     setStep("tap");
   }
 
@@ -216,7 +221,6 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
         <button className="btn primary block" style={{ minHeight: 64 }} onClick={() => setStep("card")}>{Icon.card} QR code</button>
         <p className="small muted" style={{ margin: 0 }}>Have the customer scan to pay.</p>
         {offer === "ready" && <button className="btn block" style={{ minHeight: 64 }} onClick={openTap}>Tap to Pay</button>}
-        {offer === "soon" && <button className="btn block" style={{ minHeight: 64 }} onClick={() => setStep("ios")}>Tap to Pay on iPhone</button>}
       </div>
     </Sheet>
   );
