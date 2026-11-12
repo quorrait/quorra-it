@@ -2,7 +2,7 @@ export type BillingPhase = "ok" | "grace" | "reviewer" | "closed" | "lapsed";
 
 const DAY = 86400000;
 
-/** Same windows as billing_phase() in 0048_unpaid_lifecycle.sql. Canceled is never reviewer. */
+/** Same windows as billing_phase() in 0049_unpaid_lifecycle.sql. Canceled is never reviewer. */
 export function billingPhase(sub: { status?: string | null; comped?: boolean | null; past_due_since?: string | null } | null, now = Date.now()): BillingPhase {
   if (!sub) return "lapsed";
   if (sub.comped) return "ok";
