@@ -5,8 +5,9 @@ import { Icon, Sheet, useToast } from "./ui";
 import { useData } from "../lib/app";
 import type { Customer, Invoice, PayMethod } from "../lib/types";
 import { money } from "../lib/money";
-import { tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
+import { tapToPayBlocker, tapToPayMessage, tapToPayOffer } from "../lib/tapToPay";
 import { collectTapToPay } from "../lib/terminalPay";
+import { TapToPayOnboarding, tapToPayReviewed } from "./TapToPayOnboarding";
 
 /** Card payment: hosted checkout link + QR the customer can scan with their own phone. */
 export function CardPaySheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
@@ -159,10 +160,10 @@ function TapPaySheet({ invoiceId, onClose, onPaid }: { invoiceId: string; onClos
 
 /** First step of taking payment on the spot: cash/check or card. */
 export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invoice: Invoice; customer?: Customer; balance: number; onClose(): void }) {
-  const { store, refresh } = useData();
+  const { store, refresh, business } = useData();
   const toast = useToast();
   const offer = tapToPayOffer();
-  const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card" | "tap">("pick");
+  const [step, setStep] = useState<"pick" | "cash" | "card-how" | "card" | "tap" | "ios">("pick");
   const [busy, setBusy] = useState(false);
 
   async function ensureSent(next: "cash" | "card-how") {
@@ -189,6 +190,23 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
     }
   }
 
+  function openTap() {
+    const block = tapToPayBlocker({ stripeConnected: business.stripe_connected, address: business.address });
+    if (block) { toast(block); return; }
+    if (offer === "soon" || !tapToPayReviewed()) { setStep("ios"); return; }
+    setStep("tap");
+  }
+
+  if (step === "ios") return (
+    <Sheet title="Tap to Pay on iPhone" onClose={() => setStep("card-how")}>
+      <TapToPayOnboarding
+        stripeConnected={Boolean(business.stripe_connected)}
+        address={business.address}
+        canTakePayment={offer === "ready"}
+        onStart={() => setStep("tap")}
+      />
+    </Sheet>
+  );
   if (step === "cash") return <ManualPaySheet invoice={{ ...invoice, status: "sent" }} balance={balance} onClose={onClose} />;
   if (step === "card") return <CardPaySheet invoice={{ ...invoice, status: "sent" }} customer={customer} balance={balance} onClose={onClose} />;
   if (step === "tap") return <TapPaySheet invoiceId={invoice.id} onClose={() => setStep("card-how")} onPaid={async () => { await refresh(); toast("Payment received"); onClose(); }} />;
@@ -197,8 +215,8 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
       <div className="stack">
         <button className="btn primary block" style={{ minHeight: 64 }} onClick={() => setStep("card")}>{Icon.card} QR code</button>
         <p className="small muted" style={{ margin: 0 }}>Have the customer scan to pay.</p>
-        {offer === "ready" && <button className="btn block" style={{ minHeight: 64 }} onClick={() => setStep("tap")}>Tap to Pay</button>}
-        {offer === "soon" && <button className="btn block" style={{ minHeight: 64 }} disabled>Tap to Pay, coming soon</button>}
+        {offer === "ready" && <button className="btn block" style={{ minHeight: 64 }} onClick={openTap}>Tap to Pay</button>}
+        {offer === "soon" && <button className="btn block" style={{ minHeight: 64 }} onClick={() => setStep("ios")}>Tap to Pay on iPhone</button>}
       </div>
     </Sheet>
   );

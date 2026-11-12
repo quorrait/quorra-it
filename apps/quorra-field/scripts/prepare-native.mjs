@@ -36,6 +36,12 @@ const LAUNCH = `<?xml version="1.0" encoding="UTF-8"?>
 </document>
 `;
 
+function upsertPlistString(xml, key, value) {
+  const pattern = new RegExp(`(<key>${key}</key>\\s*<string>)[^<]*(</string>)`);
+  if (pattern.test(xml)) return xml.replace(pattern, `$1${value}$2`);
+  return xml.replace("</dict>\n</plist>", `\t<key>${key}</key>\n\t<string>${value}</string>\n</dict>\n</plist>`);
+}
+
 function patch(path, fn) {
   if (!existsSync(path)) {
     console.log(`skip missing ${path}`);
@@ -58,9 +64,8 @@ if (runIos) {
       } else {
         next = next.replace("</dict>\n</plist>", "\t<key>CFBundleDisplayName</key>\n\t<string>Dispatch</string>\n</dict>\n</plist>");
       }
-      if (!next.includes("<key>NSLocationWhenInUseUsageDescription</key>")) {
-        next = next.replace("</dict>\n</plist>", "\t<key>NSLocationWhenInUseUsageDescription</key>\n\t<string>Dispatch uses your location to check you in at job sites.</string>\n</dict>\n</plist>");
-      }
+      next = upsertPlistString(next, "NSLocationWhenInUseUsageDescription", "Dispatch uses your location to check you in at job sites and to take a card payment with Tap to Pay on iPhone.");
+      next = upsertPlistString(next, "NFCReaderUsageDescription", "Dispatch uses NFC so a customer can tap a card on this iPhone.");
       const iphoneOrient = `\t<key>UISupportedInterfaceOrientations</key>
 \t<array>
 \t\t<string>UIInterfaceOrientationPortrait</string>
