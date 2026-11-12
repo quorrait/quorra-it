@@ -7,6 +7,17 @@ const sb = () => {
   return supabase;
 };
 
+let writesBlocked = false;
+
+/** Reviewer mode can read and export. Saves go through here, so the screen matches the database. */
+export function setStoreWritesBlocked(blocked: boolean) {
+  writesBlocked = blocked;
+}
+
+function guardWrite() {
+  if (writesBlocked) throw new Error("This account is view-only until billing is updated. You can still export your data.");
+}
+
 async function list<T>(table: string, orderBy: string, ascending = false): Promise<T[]> {
   const { data, error } = await sb().from(table).select("*").order(orderBy, { ascending });
   if (error) throw error;
@@ -57,6 +68,7 @@ export function createSupabaseStore(): Store {
       return upsert<Business>("business", { name, phone, email: u.user?.email ?? email, tax_rate });
     },
     async saveBusiness(patch) {
+      guardWrite();
       const current = await this.getBusiness();
       // Connection flags are only ever changed by the server-side functions.
       const { qbo_connected: _q, qbo_company: _c, stripe_connected: _s, ...safe } = patch;
@@ -72,10 +84,11 @@ export function createSupabaseStore(): Store {
     },
 
     listCustomers: () => list<Customer>("customers", "name", true),
-    saveCustomer: (c: New<Customer>) => upsert<Customer>("customers", c),
+    saveCustomer: (c: New<Customer>) => { guardWrite(); return upsert<Customer>("customers", c); },
 
     listJobs: () => list<Job>("jobs", "start_at", true),
     async saveJob(j: New<Job>) {
+      guardWrite();
       let prev = "";
       if (j.id) {
         const { data } = await sb().from("jobs").select("assigned_to").eq("id", j.id).maybeSingle();
@@ -89,24 +102,28 @@ export function createSupabaseStore(): Store {
       return saved;
     },
     async deleteJob(id) {
+      guardWrite();
       const { error } = await sb().from("jobs").delete().eq("id", id);
       if (error) throw error;
     },
 
     async deleteCustomer(id) {
+      guardWrite();
       const { error } = await sb().from("customers").delete().eq("id", id);
       if (error) throw error;
     },
     async deleteInvoice(id) {
+      guardWrite();
       const { error } = await sb().from("invoices").delete().eq("id", id);
       if (error) throw error;
     },
     listInvoices: () => list<Invoice>("invoices", "number", false),
-    saveInvoice: (i: New<Invoice>) => upsert<Invoice>("invoices", i),
+    saveInvoice: (i: New<Invoice>) => { guardWrite(); return upsert<Invoice>("invoices", i); },
 
     listPayments: () => list<Payment>("payments", "paid_at", false),
     // Manual payments (cash/check). Card payments are recorded by the Stripe webhook.
     async recordPayment(p) {
+      guardWrite();
       const { data, error } = await sb().rpc("record_payment", {
         p_invoice_id: p.invoice_id,
         p_amount_cents: p.amount_cents,
@@ -121,30 +138,35 @@ export function createSupabaseStore(): Store {
       if (error) throw error;
       return (data ?? []) as Collections[K][];
     },
-    saveRow: <K extends CollectionName>(name: K, row: New<Collections[K]>) => upsert<Collections[K]>(name, row),
+    saveRow: <K extends CollectionName>(name: K, row: New<Collections[K]>) => { guardWrite(); return upsert<Collections[K]>(name, row); },
     async deleteRow(name, id) {
+      guardWrite();
       const { error } = await sb().from(name).delete().eq("id", id);
       if (error) throw error;
     },
 
     async createPayLink(invoiceId) {
+      guardWrite();
       const { url } = await invoke<{ url: string }>("create-checkout", { invoice_id: invoiceId, origin: location.origin });
       return { url, demo: false };
     },
 
     async qboConnect() {
+      guardWrite();
       const { url } = await invoke<{ url: string }>("qbo-auth-url", { origin: location.origin });
       location.href = url;
     },
     async qboDisconnect() {
+      guardWrite();
       const { error } = await sb().rpc("disconnect_qbo");
       if (error) throw error;
     },
     qboAccounts: async () => (await invoke<{ accounts: { id: string; name: string; type: "bank" | "undeposited" }[] }>("qbo-accounts", {})).accounts,
-    qboImport: () => invoke<{ customers: number; invoices: number; payments: number }>("qbo-import", {}),
-    qboSyncInvoice: (invoiceId, opts) => invoke<{ qbo_id: string }>("qbo-sync-invoice", { invoice_id: invoiceId, action: opts?.action ?? "sync", hash: opts?.hash }),
+    qboImport: () => { guardWrite(); return invoke<{ customers: number; invoices: number; payments: number }>("qbo-import", {}); },
+    qboSyncInvoice: (invoiceId, opts) => { guardWrite(); return invoke<{ qbo_id: string }>("qbo-sync-invoice", { invoice_id: invoiceId, action: opts?.action ?? "sync", hash: opts?.hash }); },
 
     async stripeConnect() {
+      guardWrite();
       const { url } = await invoke<{ url: string }>("stripe-connect-link", { origin: location.origin });
       location.href = url;
     },

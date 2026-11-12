@@ -8,7 +8,7 @@ import { acceptInvite, pendingInviteCode, rememberInvite } from "./team";
 import type { Store } from "./store";
 import { canAccess, type Feature, type RoleAccess } from "./access";
 import { createDemoStore, resetDemoData } from "./demoStore";
-import { createSupabaseStore } from "./supabaseStore";
+import { createSupabaseStore, setStoreWritesBlocked } from "./supabaseStore";
 import { demoMode, hasSupabase, supabase } from "./supabase";
 import { demoPlanPreview } from "./demoMode";
 import { planAllows, planLabel, resolvePlanId, seatLimit, type GatedFeature, type PlanId } from "./plans";
@@ -360,6 +360,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const role = (meMember?.role ?? (isStaff ? myRole ?? "Technician" : "Owner")) as Role;
   const me = { id: meMember?.id ?? null, name: meMember?.name ?? (authName || fromEmail), email: email ?? "", role, isOwner: role === "Owner" || (!isStaff && hasSupabase) };
   const phase: BillingPhase = !hasSupabase ? "ok" : billingPhase(subscription);
+  if (hasSupabase) setStoreWritesBlocked(phase === "reviewer");
   const locked = phase === "lapsed" || phase === "closed";
   const preview = demoMode ? demoPlanPreview() : null;
   const planId: PlanId = preview ?? serverPlan ?? resolvePlanId(subscription?.plan, { demo: demoMode, comped: Boolean(subscription?.comped), staff: platformStaff });

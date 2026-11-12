@@ -70,6 +70,24 @@ export function remainingLabel(ms: number): string {
   return `${hourLabel} and ${minuteLabel}`;
 }
 
+const RESET_WINDOW_MS = 60 * 60 * 1000;
+
+/**
+ * A locked email cannot open a new session, except through a password reset
+ * or email confirmation link sent in the last hour. The database trigger uses
+ * the same window.
+ */
+export function sessionAllowedWhileLocked(input: {
+  lockedUntil: string | null;
+  now: number;
+  recoverySentAt: string | null;
+  confirmationSentAt: string | null;
+}): boolean {
+  if (!input.lockedUntil || new Date(input.lockedUntil).getTime() <= input.now) return true;
+  const recent = (iso: string | null) => iso != null && new Date(iso).getTime() > input.now - RESET_WINDOW_MS;
+  return recent(input.recoverySentAt) || recent(input.confirmationSentAt);
+}
+
 export function lockMessage(lockedUntil: string, now: number): string {
   const ms = new Date(lockedUntil).getTime() - now;
   return `Too many failed attempts. Try again in ${remainingLabel(ms)} or reset your password.`;

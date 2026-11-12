@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { decayed, freshAttempt, lockMessage, onFailure, type AttemptState } from "../supabase/functions/_shared/loginLock.ts";
+import { decayed, freshAttempt, lockMessage, onFailure, sessionAllowedWhileLocked, type AttemptState } from "../supabase/functions/_shared/loginLock.ts";
 
 const MIN = 60 * 1000;
 const HOUR = 60 * MIN;
@@ -66,6 +66,16 @@ test("a day with no failures drops the lock back to 15 minutes", () => {
   const again = fail(row, quiet + 2);
   assert.equal(again.state.lock_count, 1);
   assert.equal(new Date(again.state.locked_until!).getTime() - (quiet + 2), 15 * MIN);
+});
+
+test("a locked email can still open the session from a recent reset or confirmation link", () => {
+  const now = Date.parse("2026-11-12T12:00:00Z");
+  const lockedUntil = new Date(now + HOUR).toISOString();
+  assert.equal(sessionAllowedWhileLocked({ lockedUntil, now, recoverySentAt: null, confirmationSentAt: null }), false);
+  assert.equal(sessionAllowedWhileLocked({ lockedUntil: new Date(now - 1000).toISOString(), now, recoverySentAt: null, confirmationSentAt: null }), true);
+  assert.equal(sessionAllowedWhileLocked({ lockedUntil, now, recoverySentAt: new Date(now - 30 * MIN).toISOString(), confirmationSentAt: null }), true);
+  assert.equal(sessionAllowedWhileLocked({ lockedUntil, now, recoverySentAt: new Date(now - 2 * HOUR).toISOString(), confirmationSentAt: null }), false);
+  assert.equal(sessionAllowedWhileLocked({ lockedUntil, now, recoverySentAt: null, confirmationSentAt: new Date(now - 5 * MIN).toISOString() }), true);
 });
 
 test("the message uses hours when more than an hour is left", () => {
