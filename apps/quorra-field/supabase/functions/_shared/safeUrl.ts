@@ -23,3 +23,15 @@ export function passwordError(password: string): string | null {
   if (password.length < MIN_PASSWORD) return `Password must be at least ${MIN_PASSWORD} characters.`;
   return null;
 }
+
+/** Where Checkout sends the customer. A missing or rejected return address still keeps their portal token. */
+export function portalPayReturn(returnTo: unknown, appBase: string, token: string): string {
+  if (typeof returnTo === "string" && allowedAppUrl(returnTo, appBase)) return returnTo;
+  return `${appBase}/portal.html?t=${encodeURIComponent(String(token))}`;
+}
+
+/** Stripe success_url. A return address that already has a query string keeps it, then paid=1. */
+export function checkoutPaidUrl(back: string): string {
+  if (!back) return "https://stripe.com";
+  return `${back}${back.includes("?") ? "&" : "?"}paid=1`;
+}

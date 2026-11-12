@@ -1,7 +1,7 @@
 // Public: starts a card payment for one of the customer's invoices, identified by their portal token. Deploy with --no-verify-jwt.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, appUrl, env, handler, HttpError, invoiceTotalCents, json } from "../_shared/util.ts";
-import { allowedAppUrl } from "../_shared/safeUrl.ts";
+import { checkoutPaidUrl, portalPayReturn } from "../_shared/safeUrl.ts";
 
 handler(async (req) => {
   const { t, invoice_id, return_to } = await req.json().catch(() => ({}));
@@ -18,7 +18,7 @@ handler(async (req) => {
   const paid = (pays ?? []).reduce((s: number, p: { amount_cents: number }) => s + p.amount_cents, 0);
   const balance = invoiceTotalCents(inv.items, Number(inv.tax_rate)) - paid;
   if (balance <= 0) throw new HttpError(400, "Nothing left to pay");
-  const back = typeof return_to === "string" && allowedAppUrl(return_to, appUrl()) ? return_to : `${appUrl()}/portal.html`;
+  const back = portalPayReturn(return_to, appUrl(), String(t));
   const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
   const meta = { invoice_id: inv.id, owner_id: cust.owner_id };
   const session = await stripe.checkout.sessions.create(
@@ -28,7 +28,7 @@ handler(async (req) => {
       line_items: [{ quantity: 1, price_data: { currency: "usd", unit_amount: balance, product_data: { name: `Invoice #${inv.number} · ${biz.name}` } } }],
       metadata: meta,
       payment_intent_data: { metadata: meta, description: `Invoice #${inv.number}` },
-      success_url: back ? `${back}${back.includes("?") ? "&" : "?"}paid=1` : "https://stripe.com",
+      success_url: checkoutPaidUrl(back),
       cancel_url: back || "https://stripe.com",
     },
     { stripeAccount: biz.stripe_account_id },
