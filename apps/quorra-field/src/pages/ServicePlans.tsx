@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useData } from "../lib/app";
 import { money, moneyShort } from "../lib/money";
+import { errMsg } from "../lib/errors";
 import { fmtDate, fromDateInput, addDays } from "../lib/dates";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { centsToStr, strToCents } from "../components/LineItems";
@@ -36,10 +37,12 @@ function PlanForm({ plan, onClose }: { plan?: ServicePlan; onClose(): void }) {
         <Field label="Notes"><textarea className="textarea" value={f.notes} onChange={set("notes")} /></Field>
         <button className="btn primary block" onClick={async () => {
           if (!f.customer_id || !f.name.trim()) return toast("Pick a customer and name the plan");
-          await store.saveRow("service_plans", { id: plan?.id, customer_id: f.customer_id, name: f.name.trim(), visit_title: f.visit_title || f.name, price_cents: strToCents(f.price), interval_months: Number(f.interval), next_visit: f.next_visit, status: plan?.status ?? "active", notes: f.notes });
-          await refresh(); toast("Plan saved"); onClose();
+          try {
+            await store.saveRow("service_plans", { id: plan?.id, customer_id: f.customer_id, name: f.name.trim(), visit_title: f.visit_title || f.name, price_cents: strToCents(f.price), interval_months: Number(f.interval), next_visit: f.next_visit, status: plan?.status ?? "active", notes: f.notes });
+            await refresh(); toast("Plan saved"); onClose();
+          } catch (e) { toast(errMsg(e, "Could not save the plan.")); }
         }}>Save plan</button>
-        {plan && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this plan?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { await store.deleteRow("service_plans", plan.id); await refresh(); onClose(); } }}>Delete</button>}
+        {plan && <button className="btn danger block" onClick={async () => { if (await ask({ title: "Delete this plan?", message: "This cannot be undone.", confirmLabel: "Delete", danger: true })) { try { await store.deleteRow("service_plans", plan.id); await refresh(); onClose(); } catch (e) { toast(errMsg(e, "Could not delete the plan.")); } } }}>Delete</button>}
       </div>
     </Sheet>
   );
@@ -67,19 +70,23 @@ export default function ServicePlans() {
   }
 
   async function generate(list: ServicePlan[]) {
-    for (const p of list) await schedule(p);
-    await refresh();
-    toast(`${list.length} visit${list.length === 1 ? "" : "s"} scheduled`);
+    try {
+      for (const p of list) await schedule(p);
+      await refresh();
+      toast(`${list.length} visit${list.length === 1 ? "" : "s"} scheduled`);
+    } catch (e) { toast(errMsg(e, "Could not schedule the visit.")); }
   }
 
   async function bill(p: ServicePlan) {
-    const inv = await store.saveInvoice({
-      number: Math.max(1000, ...invoices.map((i) => i.number)) + 1, customer_id: p.customer_id, job_id: null, status: "draft",
-      items: [{ description: `${p.name} visit`, qty: 1, unit_cents: p.price_cents }], tax_rate: 0,
-      issued_at: new Date().toISOString(), due_at: new Date(Date.now() + 14 * 86400_000).toISOString(), qbo_id: null,
-    });
-    await refresh();
-    toast(`Draft invoice #${inv.number} created`);
+    try {
+      const inv = await store.saveInvoice({
+        number: Math.max(1000, ...invoices.map((i) => i.number)) + 1, customer_id: p.customer_id, job_id: null, status: "draft",
+        items: [{ description: `${p.name} visit`, qty: 1, unit_cents: p.price_cents }], tax_rate: 0,
+        issued_at: new Date().toISOString(), due_at: new Date(Date.now() + 14 * 86400_000).toISOString(), qbo_id: null,
+      });
+      await refresh();
+      toast(`Draft invoice #${inv.number} created`);
+    } catch (e) { toast(errMsg(e, "Could not create the invoice.")); }
   }
 
   return (
@@ -111,7 +118,7 @@ export default function ServicePlans() {
                 <div className="row wrap" style={{ marginTop: 8 }}>
                   {p.status === "active" && <button className="btn sm" onClick={async (e) => { e.stopPropagation(); await generate([p]); }}>Schedule visit</button>}
                   <button className="btn sm" onClick={async (e) => { e.stopPropagation(); await bill(p); }}>Bill visit</button>
-                  <button className="btn sm" onClick={async (e) => { e.stopPropagation(); await store.saveRow("service_plans", { ...p, status: p.status === "active" ? "paused" : "active" }); await refresh(); }}>{p.status === "active" ? "Pause" : "Resume"}</button>
+                  <button className="btn sm" onClick={async (e) => { e.stopPropagation(); try { await store.saveRow("service_plans", { ...p, status: p.status === "active" ? "paused" : "active" }); await refresh(); } catch (err) { toast(errMsg(err, "Could not update the plan.")); } }}>{p.status === "active" ? "Pause" : "Resume"}</button>
                 </div>
               </div>
               <div className="right bold num">{money(p.price_cents)}</div>
