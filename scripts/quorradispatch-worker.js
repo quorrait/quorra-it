@@ -28,11 +28,34 @@ export function isAppPath(pathname) {
   return pathname === "/app" || pathname.startsWith("/app/") || pathname === "/test" || pathname.startsWith("/test/");
 }
 
-/** HSTS and nosniff on every response. The app CSP only on /app and /test. */
-export function applySecurityHeaders(response, pathname) {
+function requestHost(requestUrl) {
+  if (!requestUrl) return "";
+  if (typeof requestUrl === "string") {
+    try {
+      return new URL(requestUrl).hostname.toLowerCase();
+    } catch {
+      return "";
+    }
+  }
+  if (typeof requestUrl.hostname === "string") return requestUrl.hostname.toLowerCase();
+  return "";
+}
+
+/** /app is a thin shell. *.pages.dev is the duplicate host.
+ *  /test/ stays Disallow in robots.txt and is not marked noindex on the public domain. */
+export function shouldNoindex(pathname, requestUrl) {
+  if (pathname === "/app" || pathname.startsWith("/app/")) return true;
+  return requestHost(requestUrl).endsWith(".pages.dev");
+}
+
+/** HSTS and nosniff on every response. The app CSP only on /app and /test.
+ *  Pages does not apply _headers to responses this worker returns, so the
+ *  noindex rules in the root _headers file are repeated here. */
+export function applySecurityHeaders(response, pathname, requestUrl) {
   const headers = new Headers(response.headers);
   headers.set("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
   headers.set("X-Content-Type-Options", "nosniff");
+  if (shouldNoindex(pathname, requestUrl)) headers.set("X-Robots-Tag", "noindex");
   if (isAppPath(pathname)) {
     headers.set("Content-Security-Policy", APP_CSP);
     headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
@@ -49,13 +72,13 @@ export default {
     const asset = await env.ASSETS.fetch(request);
     const spa = isAppPath(path);
     const looksLikeFile = /\.[a-z0-9]+$/i.test(path);
-    if (asset.status !== 404 || !spa || looksLikeFile) return applySecurityHeaders(asset, path);
+    if (asset.status !== 404 || !spa || looksLikeFile) return applySecurityHeaders(asset, path, url);
 
     const htmlUrl = new URL(path.replace(/\/$/, "") + ".html", url.origin);
     const html = await env.ASSETS.fetch(htmlUrl);
     if (html.status === 200) {
-      return applySecurityHeaders(new Response(html.body, { status: 200, headers: html.headers }), path);
+      return applySecurityHeaders(new Response(html.body, { status: 200, headers: html.headers }), path, url);
     }
-    return applySecurityHeaders(new Response(asset.body, { status: 200, headers: asset.headers }), path);
+    return applySecurityHeaders(new Response(asset.body, { status: 200, headers: asset.headers }), path, url);
   },
 };

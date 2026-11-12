@@ -8,16 +8,64 @@
 <link rel="canonical" href="https://quorradispatch.com/">
 <meta property="og:title" content="Quorra Dispatch">
 <meta property="og:description" content="From first call to paid, on one screen. Software for home and field service businesses.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Quorra Dispatch">
+<meta property="og:url" content="https://quorradispatch.com/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Quorra Dispatch">
 <meta name="twitter:description" content="From first call to paid, on one screen. Software for home and field service businesses.">
 <meta property="og:image" content="https://quorradispatch.com/reel-poster.jpg">
 <meta name="theme-color" content="#0B2545">
-<link rel="icon" href="/field/favicon-32.png">
-<link rel="apple-touch-icon" href="/field/apple-touch-icon.png">
+<link rel="icon" href="/favicon.ico">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,500..900&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://quorradispatch.com/#org",
+      "name": "Quorra IT LLC",
+      "url": "https://www.quorrait.com/",
+      "logo": "https://quorradispatch.com/logo.png",
+      "email": "support@quorrait.com",
+      "brand": { "@id": "https://quorradispatch.com/#app" },
+      "sameAs": ["https://www.quorrait.com/"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://quorradispatch.com/#website",
+      "url": "https://quorradispatch.com/",
+      "name": "Quorra Dispatch",
+      "alternateName": ["Quorra Dispatch app"],
+      "publisher": { "@id": "https://quorradispatch.com/#org" },
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://quorradispatch.com/#app",
+      "name": "Quorra Dispatch",
+      "url": "https://quorradispatch.com/",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "iOS, Android, Web",
+      "description": "Phone-first app for home and field service businesses: quote, schedule, send the crew and collect payment, with card payments going to your own Stripe account.",
+      "publisher": { "@id": "https://quorradispatch.com/#org" },
+      "offers": [
+        { "@type": "Offer", "name": "Basic", "description": "1 login", "price": "80", "priceCurrency": "USD",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "80", "priceCurrency": "USD", "unitText": "MONTH" } },
+        { "@type": "Offer", "name": "Essentials", "description": "Up to 5 logins", "price": "190", "priceCurrency": "USD",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "190", "priceCurrency": "USD", "unitText": "MONTH" } },
+        { "@type": "Offer", "name": "Enterprise", "description": "Up to 15 logins", "price": "300", "priceCurrency": "USD",
+          "priceSpecification": { "@type": "UnitPriceSpecification", "price": "300", "priceCurrency": "USD", "unitText": "MONTH" } }
+      ]
+    }
+  ]
+}
+</script>
 <style>
 :root {
   --navy: #0B2545;
@@ -371,9 +419,9 @@ footer .more { width: 100%; display: flex; flex-wrap: wrap; gap: 8px 22px; paddi
   <div class="wrap">
     <div class="more"><a href="/dispatch/hvac-software/">HVAC</a><a href="/dispatch/plumbing-software/">Plumbing</a><a href="/dispatch/electrical-software/">Electrical</a><a href="/dispatch/roofing-software/">Roofing</a><a href="/dispatch/landscaping-software/">Landscaping</a><a href="/dispatch/general-contractors-software/">General contractors</a><a href="/dispatch/jobber-alternative/">Jobber alternative</a><a href="/dispatch/housecall-pro-alternative/">Housecall Pro alternative</a><a href="/dispatch/servicetitan-alternative/">ServiceTitan alternative</a><a href="/dispatch/fieldpulse-alternative/">FieldPulse alternative</a></div>
     <span>Quorra Dispatch by <a href="/">Quorra IT</a></span>
+    <a href="/dispatch/about/">About</a>
     <a href="/terms.html">Terms</a>
-    <a href="/dispatch/privacy/">Dispatch privacy</a>
-    <a href="/privacy-policy.html">Privacy</a>
+    <a href="/dispatch/privacy/">Privacy</a>
     <a href="mailto:support@quorrait.com">support@quorrait.com</a>
     <span class="r">&copy; 2026 Quorra IT LLC</span>
   </div>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { applySecurityHeaders, isAppPath } from "../../../scripts/quorradispatch-worker.js";
+import { applySecurityHeaders, isAppPath, shouldNoindex } from "../../../scripts/quorradispatch-worker.js";
 import { missingCheckoutSession } from "../supabase/functions/_shared/stripeError.ts";
 
 function headersFor(path: string) {
@@ -31,6 +31,23 @@ test("the app and the test copy get the CSP, and the landing page does not", () 
     assert.equal(headers.get("X-Content-Type-Options"), "nosniff");
     assert.match(headers.get("Strict-Transport-Security") ?? "", /includeSubDomains/);
   }
+});
+
+test("noindex covers /app and pages.dev, and leaves /test and the public site alone", () => {
+  assert.equal(shouldNoindex("/app/", "https://quorradispatch.com/app/"), true);
+  assert.equal(shouldNoindex("/app/plans", "https://quorradispatch.com/app/plans"), true);
+  assert.equal(shouldNoindex("/app", "https://quorradispatch.com/app"), true);
+  assert.equal(headersFor("/app/").get("X-Robots-Tag"), "noindex");
+
+  assert.equal(shouldNoindex("/", "https://quorradispatch.pages.dev/"), true);
+  assert.equal(shouldNoindex("/jobber-alternative/", "https://abc123.quorradispatch.pages.dev/jobber-alternative/"), true);
+  assert.equal(shouldNoindex("/test/", "https://quorradispatch.pages.dev/test/"), true);
+
+  assert.equal(shouldNoindex("/test/", "https://quorradispatch.com/test/"), false);
+  assert.equal(shouldNoindex("/", "https://quorradispatch.com/"), false);
+  assert.equal(shouldNoindex("/privacy/", "https://www.quorradispatch.com/privacy/"), false);
+  assert.equal(headersFor("/test/").get("X-Robots-Tag"), null);
+  assert.equal(headersFor("/").get("X-Robots-Tag"), null);
 });
 
 test("an unknown checkout session is the Stripe missing-resource error", () => {
