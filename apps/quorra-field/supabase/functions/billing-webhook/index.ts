@@ -5,8 +5,9 @@ import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
+import { authUserIsMissing, isGoneAccountWrite, promoFixPatch, subscriptionDeletedIsDone } from "../_shared/promoRecovery.ts";
 import { monthlyPromoCoupon } from "../_shared/trialOffer.ts";
-import { ensureTrialPromoSchedule } from "../_shared/trialSchedule.ts";
+import { ensureTrialPromoWithRetry, type PromoFix } from "../_shared/trialSchedule.ts";
 
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
@@ -21,7 +22,7 @@ function planName(price?: Stripe.Price | null): string {
   return "Basic";
 }
 
-async function save(sub: Stripe.Subscription) {
+async function save(sub: Stripe.Subscription, promoFix?: PromoFix | null) {
   const db = admin();
   let ownerId = sub.metadata?.owner_id;
   if (!ownerId) {
@@ -54,6 +55,7 @@ async function save(sub: Stripe.Subscription) {
     stripe_customer_id: String(sub.customer),
     stripe_subscription_id: sub.id,
     updated_at: new Date().toISOString(),
+    ...(promoFixPatch(promoFix ?? null) ?? {}),
   }, { onConflict: "owner_id" });
   if (error) throw error;
 }
@@ -100,17 +102,40 @@ async function rememberTrial(sub: Stripe.Subscription): Promise<void> {
 }
 
 /** New trials (promo_schedule=pending) get the post-trial discount. Existing subscriptions are not rewritten. */
-async function prepareSubscription(sub: Stripe.Subscription): Promise<Stripe.Subscription> {
+async function prepareSubscription(sub: Stripe.Subscription): Promise<{ subscription: Stripe.Subscription; fix: PromoFix | null }> {
   try { sub = await stopRepeatTrial(sub); } catch (e) { console.error("repeat trial", e); }
   const price = sub.items.data[0]?.price;
   const interval = price?.recurring?.interval === "year" ? "year" : "month";
-  try {
-    sub = await ensureTrialPromoSchedule(stripe, sub, monthlyPromoCoupon(interval, Deno.env.get("STRIPE_PROMO_COUPON")));
-  } catch (e) {
-    console.error("trial promo schedule", e);
-  }
+  const applied = await ensureTrialPromoWithRetry(stripe, sub, monthlyPromoCoupon(interval, Deno.env.get("STRIPE_PROMO_COUPON")));
+  sub = applied.subscription;
   try { await rememberTrial(sub); } catch (e) { console.error("trial ledger", e); }
-  return sub;
+  return { subscription: sub, fix: applied.fix };
+}
+
+/** delete-account removes the login (and the business cascades) before this event arrives. */
+async function deletedAccountIsDone(sub: Stripe.Subscription): Promise<boolean> {
+  const db = admin();
+  let ownerId = sub.metadata?.owner_id;
+  if (!ownerId) {
+    const { data, error } = await db.from("subscriptions").select("owner_id").eq("stripe_customer_id", String(sub.customer)).maybeSingle();
+    if (error) throw error;
+    ownerId = data?.owner_id as string | undefined;
+  }
+  if (!ownerId) return true;
+  const userRes = await db.auth.admin.getUserById(ownerId);
+  if (userRes.error && !authUserIsMissing(userRes.error)) throw userRes.error;
+  const userMissing = Boolean(userRes.error) || !userRes.data?.user;
+  const [biz, row] = await Promise.all([
+    db.from("business").select("owner_id").eq("owner_id", ownerId).maybeSingle(),
+    db.from("subscriptions").select("owner_id").eq("owner_id", ownerId).maybeSingle(),
+  ]);
+  if (biz.error) throw biz.error;
+  if (row.error) throw row.error;
+  return subscriptionDeletedIsDone({
+    userMissing,
+    businessMissing: !biz.data,
+    subscriptionPresent: Boolean(row.data),
+  });
 }
 
 /** A second Stripe subscription must not replace the one the customer is still on. */
@@ -151,12 +176,19 @@ Deno.serve(async (req) => {
     console.log(event.type);
     if (event.type === "checkout.session.completed") {
       const s = event.data.object as Stripe.Checkout.Session;
-      if (s.mode === "subscription" && s.subscription) await save(await prepareSubscription(await stripe.subscriptions.retrieve(String(s.subscription))));
+      if (s.mode === "subscription" && s.subscription) {
+        const prepared = await prepareSubscription(await stripe.subscriptions.retrieve(String(s.subscription)));
+        await save(prepared.subscription, prepared.fix);
+      }
     } else if (event.type.startsWith("customer.subscription.")) {
       const incoming = event.data.object as Stripe.Subscription;
-      const live = await prepareSubscription(await stripe.subscriptions.retrieve(incoming.id));
+      const prepared = await prepareSubscription(await stripe.subscriptions.retrieve(incoming.id));
+      const live = prepared.subscription;
       console.log(`${event.type} sub=${live.id} event_status=${incoming.status} live_status=${live.status}`);
-      if (!(await isStaleSecondSub(live))) await save(live);
+      // The company is already gone. Ack the event so Stripe does not retry it for days.
+      if (event.type === "customer.subscription.deleted" && await deletedAccountIsDone(live)) {
+        console.log(`subscription.deleted for ${live.id} already gone`);
+      } else if (!(await isStaleSecondSub(live))) await save(live, prepared.fix);
     } else if (event.type === "invoice.paid") {
       // Our own branded receipt. In Stripe, turn off "Successful payments" customer emails so they do not get two.
       const inv = event.data.object as Stripe.Invoice;
@@ -178,7 +210,10 @@ Deno.serve(async (req) => {
     }
   } catch (e) {
     console.error(e);
-    return new Response("error", { status: 500 }); // Stripe retries
+    // A missing login or business fails the foreign key. That delete is finished.
+    // Anything else (a dropped connection, a lock) is still retried.
+    if (isGoneAccountWrite(e)) return new Response("ok");
+    return new Response("error", { status: 500 });
   }
   return new Response("ok");
 });

@@ -9,7 +9,8 @@ import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
 import { missingCheckoutSession } from "../_shared/stripeError.ts";
 import { monthlyPromoCoupon, normalizeTrialEmail } from "../_shared/trialOffer.ts";
-import { emailHasOtherSubscription, ensureTrialPromoSchedule } from "../_shared/trialSchedule.ts";
+import { promoFixPatch } from "../_shared/promoRecovery.ts";
+import { emailHasOtherSubscription, ensureTrialPromoWithRetry } from "../_shared/trialSchedule.ts";
 
 function planName(id?: string, fallback?: string): string {
   for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
@@ -131,13 +132,13 @@ handler(async (req) => {
     await db.rpc("release_trial_claim", { p_customer: customer });
     throw e;
   }
+  let promoFix: { needed: boolean; detail: string } | null = null;
   if (grantTrial) {
-    try {
-      sub = await ensureTrialPromoSchedule(stripe, sub, promo);
-    } catch (e) {
-      // The billing webhook retries while promo_schedule is still pending.
-      console.error("trial promo schedule", e);
-    }
+    // One retry, then a flag on the subscription. The billing webhook tries again
+    // while promo_schedule is still pending, and the Hub shows the flag if it stays failed.
+    const applied = await ensureTrialPromoWithRetry(stripe, sub, promo);
+    sub = applied.subscription;
+    promoFix = applied.fix;
   }
   const item = sub.items.data[0];
   const periodEnd = sub.trial_end
@@ -150,6 +151,7 @@ handler(async (req) => {
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
     card_fingerprint: fingerprint,
     trial_used_at: new Date().toISOString(),
+    ...(promoFixPatch(promoFix) ?? {}),
   }, { onConflict: "owner_id" });
   // The trial exists even if the email provider is down. The sign-in page can send the link again.
   const mailed = await mailConfirmation(email, confirmLink);

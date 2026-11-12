@@ -4,7 +4,7 @@ import { errMsg } from "../lib/errors";
 import { supabase } from "../lib/supabase";
 import { useHubAdmin } from "../lib/hub";
 
-interface Row { owner_id: string; name: string; login: string; phone: string; created_at: string | null; last_sign_in: string | null; plan: string; status: string; access?: string; comped: boolean; amount_cents: number; interval: string; period_end: string | null; canceling: boolean; team: number }
+interface Row { owner_id: string; name: string; login: string; phone: string; created_at: string | null; last_sign_in: string | null; plan: string; status: string; access?: string; comped: boolean; amount_cents: number; interval: string; period_end: string | null; canceling: boolean; team: number; promo_fix?: boolean; promo_fix_detail?: string | null }
 interface Ticket { id: string; business_name: string; user_email: string; category: string; subject: string; message: string; status: string; created_at: string }
 const d = (s: string | null) => (s ? new Date(s).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "-");
 const money = (c: number) => `$${(c / 100).toFixed(0)}`;
@@ -36,8 +36,8 @@ export default function Hub() {
   }
   useEffect(() => { if (admin) void load(); }, [admin]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const list = useMemo(() => rows.filter((r) => !q || `${r.name} ${r.login} ${r.plan}`.toLowerCase().includes(q.toLowerCase())), [rows, q]);
-  const stats = useMemo(() => ({ total: rows.length, active: rows.filter((r) => r.status === "active").length, comped: rows.filter((r) => r.comped).length, pastDue: rows.filter((r) => r.status === "past_due").length }), [rows]);
+  const list = useMemo(() => rows.filter((r) => !q || `${r.name} ${r.login} ${r.plan} ${r.promo_fix ? "promo" : ""}`.toLowerCase().includes(q.toLowerCase())), [rows, q]);
+  const stats = useMemo(() => ({ total: rows.length, active: rows.filter((r) => r.status === "active").length, comped: rows.filter((r) => r.comped).length, pastDue: rows.filter((r) => r.status === "past_due").length, promo: rows.filter((r) => r.promo_fix).length }), [rows]);
 
   async function signInAs(r: Row) {
     setBusy(r.owner_id);
@@ -61,6 +61,7 @@ export default function Hub() {
         <div className="card"><div className="small muted">Paying or trialing</div><b style={{ fontSize: 24 }}>{stats.active}</b></div>
         <div className="card"><div className="small muted">Free (comped)</div><b style={{ fontSize: 24 }}>{stats.comped}</b></div>
         <div className="card"><div className="small muted">Open support requests</div><b style={{ fontSize: 24 }}>{open}</b></div>
+        <div className="card"><div className="small muted">Launch promos to fix</div><b style={{ fontSize: 24 }}>{stats.promo}</b></div>
       </div>
       <div className="chips"><button className={`chip${tab === "biz" ? " on" : ""}`} onClick={() => setTab("biz")}>Businesses</button><button className={`chip${tab === "support" ? " on" : ""}`} onClick={() => setTab("support")}>Support{open ? ` (${open})` : ""}</button></div>
 
@@ -69,6 +70,8 @@ export default function Hub() {
         {list.map((r) => (
           <div key={r.owner_id} className="card stack">
             <div className="row between wrap"><b>{r.name}</b><span className={`badge ${r.access === "grace" || r.access === "reviewer" || r.access === "closed" || r.status === "past_due" ? "bad" : r.status === "active" ? "good" : ""}`}>{r.comped ? "Free" : (r.access || r.status)}{r.canceling && r.access === "active, canceling" ? "" : r.canceling ? ", canceling" : ""}</span></div>
+            {r.promo_fix && <div className="badge bad" style={{ alignSelf: "flex-start" }}>Launch promo needs a fix</div>}
+            {r.promo_fix && r.promo_fix_detail && <div className="small">{r.promo_fix_detail}</div>}
             <div className="small muted">{r.login} · {r.phone || "no phone"}</div>
             <div className="small">{r.plan}{r.comped ? "" : ` · ${money(r.amount_cents)}/${r.interval === "year" ? "yr" : "mo"}`} · {r.team} login{r.team === 1 ? "" : "s"} · joined {d(r.created_at)} · last seen {d(r.last_sign_in)}{r.period_end ? ` · renews ${d(r.period_end)}` : ""}</div>
             <div><button className="btn sm" disabled={busy === r.owner_id} onClick={() => void signInAs(r)}>{busy === r.owner_id ? "One moment..." : "Sign in as this user"}</button></div>

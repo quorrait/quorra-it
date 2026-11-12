@@ -1,4 +1,5 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
+import { promoFailureDetail, retryOnce } from "./promoRecovery.ts";
 import { stripeSchedulePhases, trialPromoPhases, type TrialPhase } from "./trialOffer.ts";
 
 type Phase = Stripe.SubscriptionScheduleUpdateParams.Phase;
@@ -79,4 +80,33 @@ export async function ensureTrialPromoSchedule(stripe: Stripe, sub: Stripe.Subsc
     sub.trial_end,
   );
   return stripe.subscriptions.update(updated.id, { metadata: { ...updated.metadata, promo_schedule: "ready" } });
+}
+
+export interface PromoFix {
+  /** False clears a previous flag after the schedule was saved. */
+  needed: boolean;
+  detail: string;
+}
+
+/**
+ * Write the post-trial promo. On failure, try once more. If that also fails,
+ * leave promo_schedule pending and return a flag so the Hub can show it.
+ * A subscription that is not waiting on the promo is left unchanged.
+ */
+export async function ensureTrialPromoWithRetry(
+  stripe: Stripe,
+  sub: Stripe.Subscription,
+  promoCoupon: string,
+): Promise<{ subscription: Stripe.Subscription; fix: PromoFix | null }> {
+  if (sub.metadata?.promo_schedule !== "pending") return { subscription: sub, fix: null };
+  if (sub.status !== "trialing" || typeof sub.trial_end !== "number") return { subscription: sub, fix: null };
+  const result = await retryOnce(() => ensureTrialPromoSchedule(stripe, sub, promoCoupon));
+  if (!result.ok) {
+    console.error("trial promo schedule", result.error);
+    return { subscription: sub, fix: { needed: true, detail: promoFailureDetail(result.error) } };
+  }
+  if (result.value.metadata?.promo_schedule === "ready") {
+    return { subscription: result.value, fix: { needed: false, detail: "" } };
+  }
+  return { subscription: result.value, fix: null };
 }

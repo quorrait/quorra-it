@@ -25,5 +25,9 @@ $$);
 ## 5. Stripe
 Webhook endpoints: `stripe-webhook` (customer card payments) and `billing-webhook` (plan signups; events customer.subscription.*, checkout.session.completed). Create the three plan prices and put their IDs in the secrets above. Plan signups then flow Billing > Checkout > webhook > subscription active.
 
+Connected accounts endpoint for `stripe-webhook` (Events from: Connected accounts): `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `payment_intent.succeeded`, `account.updated`. Keep `account.updated` so existing v1 accounts, and v2 accounts, still set Connected.
+
+Add a second endpoint on the same `stripe-webhook` URL with Events from: Your account, event `v2.core.account[configuration.merchant].capability_status_updated`. Put that endpoint's signing secret in `STRIPE_CONNECT_V2_WEBHOOK_SECRET`. v2 capability events cannot be added to the Connected accounts endpoint. Apply migration `0052` before deploying `billing-webhook`, `signup-complete`, and `hub`.
+
 ## Limits
 Tap to Pay and Square swipe need a native app / Square account; the web app uses Stripe checkout (QR, link, Apple/Google Pay). Google Calendar's phone app cannot subscribe from a link; Apple Calendar can (webcal).
