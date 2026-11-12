@@ -67,12 +67,14 @@ for (const name of readdirSync(join(root, "dispatch"))) {
 }
 
 // lastmod is the date the page content last changed, not the build date.
-// 2026-11-12: homepage structured data, /about/, the Jobber page, and the privacy canonical.
-// Other marketing URLs keep 2026-11-11, the date already live before this change.
+// 2026-11-12: homepage structured data, /about/, the three comparison pages, and the privacy canonical.
+// Other marketing URLs keep 2026-11-11.
 const CONTENT_LASTMOD = {
   "https://quorradispatch.com/": "2026-11-12",
   "https://quorradispatch.com/about/": "2026-11-12",
   "https://quorradispatch.com/jobber-alternative/": "2026-11-12",
+  "https://quorradispatch.com/housecall-pro-alternative/": "2026-11-12",
+  "https://quorradispatch.com/servicetitan-alternative/": "2026-11-12",
   "https://quorradispatch.com/privacy/": "2026-11-12",
 };
 const PRIOR_LASTMOD = "2026-11-11";

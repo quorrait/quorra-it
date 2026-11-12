@@ -53,7 +53,9 @@
         .q-section-head .q-eyebrow{padding-top:14px;}
         .q-section-title{font-weight:500;font-size:clamp(40px,5vw,60px);line-height:1.02;letter-spacing:-.03em;margin:0;color:var(--q-accent);text-align:center;}
         .q-apps-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;}
-        .q-app-card{display:flex;flex-direction:column;align-items:center;gap:24px;width:320px;padding:44px 32px 36px;background:var(--q-card);border:1px solid var(--q-rule);border-radius:20px;text-align:center;transition:border-color .25s,transform .25s,box-shadow .25s;}
+        .q-app-card{position:relative;display:flex;flex-direction:column;align-items:center;gap:24px;width:320px;padding:44px 32px 36px;background:var(--q-card);border:1px solid var(--q-rule);border-radius:20px;text-align:center;transition:border-color .25s,transform .25s,box-shadow .25s;}
+        .q-app-name a{color:inherit;}
+        .q-app-name a::after{content:"";position:absolute;inset:0;}
         .q-app-card:hover{border-color:var(--q-accent);transform:translateY(-4px);box-shadow:0 24px 48px -24px rgba(28,170,222,.35);}
         .q-app-logo{width:160px;height:160px;border-radius:36px;object-fit:cover;display:block;box-shadow:0 12px 32px -12px rgba(0,0,0,.6);}
         .q-app-name .q-app-blue{color:var(--q-accent);}
@@ -252,6 +254,7 @@
 
         const APPS = [
             {name:"TrueFlow",blue:"True",desc:"Meter data and consumption insights for water utilities.",logo:"trueflow/favicon-192.png?v=2",url:"https://trueflowsoftware.com"},
+            {name:"Quorra Dispatch",blue:"Quorra",desc:"Field-service software for quoting, scheduling, dispatching, and getting paid into your own Stripe.",logo:"field/logo-mark-v2.png",url:"https://quorradispatch.com/",exactLink:true},
         ];
 
         function Apps() {
@@ -261,14 +264,27 @@
                         <h2 className="q-section-title">Our Apps</h2>
                     </div>
                     <div className="q-apps-grid">
-                        {APPS.map((a) => (
-                            <a key={a.name} href={a.url} target="_blank" rel="noopener" className="q-app-card" aria-label={`${a.name} — visit ${a.url.replace("https://","")}`}>
-                                <img src={a.logo} alt={`${a.name} logo`} className="q-app-logo" />
-                                <h3 className="q-app-name">{a.blue ? <React.Fragment><span className="q-app-blue">{a.blue}</span>{a.name.slice(a.blue.length)}</React.Fragment> : a.name}</h3>
-                                <p className="q-app-desc">{a.desc}</p>
-                                <span className="q-app-visit">Visit site ↗</span>
-                            </a>
-                        ))}
+                        {APPS.map((a) => {
+                            const name = a.blue ? <React.Fragment><span className="q-app-blue">{a.blue}</span>{a.name.slice(a.blue.length)}</React.Fragment> : a.name;
+                            if (a.exactLink) {
+                                return (
+                                    <article key={a.name} className="q-app-card">
+                                        <img src={a.logo} alt="" className="q-app-logo" />
+                                        <h3 className="q-app-name"><a href={a.url}>{name}</a></h3>
+                                        <p className="q-app-desc">{a.desc}</p>
+                                        <span className="q-app-visit">Visit site ↗</span>
+                                    </article>
+                                );
+                            }
+                            return (
+                                <a key={a.name} href={a.url} target="_blank" rel="noopener" className="q-app-card" aria-label={`${a.name} — visit ${a.url.replace("https://","")}`}>
+                                    <img src={a.logo} alt={`${a.name} logo`} className="q-app-logo" />
+                                    <h3 className="q-app-name">{name}</h3>
+                                    <p className="q-app-desc">{a.desc}</p>
+                                    <span className="q-app-visit">Visit site ↗</span>
+                                </a>
+                            );
+                        })}
                     </div>
                 </section>
             );
