@@ -14,10 +14,24 @@ async function callTerminal<T>(fn: string, body: object): Promise<T> {
   return data as T;
 }
 
+/** Stripe Terminal asks for location before the reader can start. */
+export function requestTapToPayLocation(): Promise<void> {
+  if (typeof navigator === "undefined" || !navigator.geolocation) return Promise.resolve();
+  return new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(
+      () => resolve(),
+      () => reject(new Error("Allow location access so Tap to Pay can start, then try again.")),
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60_000 },
+    );
+  });
+}
+
 /** Discover the phone's Tap to Pay reader, take the invoice amount, then disconnect. */
 export async function collectTapToPay(invoiceId: string, onStatus?: (message: string) => void): Promise<void> {
   if (demoMode || !supabase) throw new Error("Tap to Pay needs a live Stripe account. Use the QR code in the demo.");
   const say = (m: string) => onStatus?.(m);
+  say("Allow location if your phone asks.");
+  await requestTapToPayLocation();
   const tokenWait = StripeTerminal.addListener(TerminalEventsEnum.RequestedConnectionToken, async () => {
     const fresh = await callTerminal<{ secret: string }>("terminal-connection-token", {});
     await StripeTerminal.setConnectionToken({ token: fresh.secret });

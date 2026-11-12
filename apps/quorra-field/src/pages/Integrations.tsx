@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { Capacitor } from "@capacitor/core";
 import { qboPending } from "../lib/qboSync";
 import { useData } from "../lib/app";
 import { Field, Icon, Sheet, useToast } from "../components/ui";
@@ -6,6 +7,7 @@ import { hasSupabase, supabase } from "../lib/supabase";
 import CalendarSync from "../components/CalendarSync";
 import { errMsg } from "../lib/errors";
 import UpgradePrompt from "../components/UpgradePrompt";
+import { TapToPayOnboarding } from "../components/TapToPayOnboarding";
 
 interface Item { id: string; name: string; what: string; color: string; mark: string; live: boolean; slug?: string; cat: string }
 
@@ -29,6 +31,7 @@ export default function Integrations() {
   const toast = useToast();
   const [open, setOpen] = useState<Item | null>(null);
   const [ask, setAsk] = useState(false);
+  const [tap, setTap] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   async function run(key: string, fn: () => Promise<void>, done?: string) {
@@ -42,6 +45,7 @@ export default function Integrations() {
     <div className="stack">
       <p className="small muted">Customers pay invoices by card or Apple and Google Pay, and the money goes straight to your own Stripe account.</p>
       {business.stripe_connected ? <div className="badge good" style={{ alignSelf: "flex-start" }}>Connected</div> : <button className="btn dark" disabled={busy === "stripe"} onClick={() => run("stripe", () => store.stripeConnect())}>{Icon.card} Connect Stripe</button>}
+      {Capacitor.getPlatform() === "ios" && <button className="btn block" type="button" onClick={() => setTap(true)}>Set up Tap to Pay on iPhone</button>}
     </div>
   );
   if (open?.id === "qbo" && !allows("qbo")) body = <UpgradePrompt feature="qbo" title="QuickBooks Online" />;
@@ -95,6 +99,7 @@ export default function Integrations() {
       <div className="int-grid">{soon.map(card)}</div>
       <button className="btn block" style={{ minHeight: 48 }} onClick={() => setAsk(true)}>Request another integration</button>
       {open && body && <Sheet title={open.name} onClose={() => setOpen(null)}>{body}</Sheet>}
+      {tap && <Sheet title="Tap to Pay on iPhone" onClose={() => setTap(false)}><TapToPayOnboarding stripeConnected={Boolean(business.stripe_connected)} address={business.address} canTakePayment={false} onStart={() => setTap(false)} /></Sheet>}
       {ask && <RequestSheet onClose={() => setAsk(false)} />}
     </div>
   );
