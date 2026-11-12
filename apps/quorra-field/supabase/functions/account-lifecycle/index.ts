@@ -10,7 +10,7 @@ import { supportEmail } from "../_shared/publicUrl.ts";
 
 const DAY = 86400000;
 const REVIEW_EMAIL = "appreview@quorrait.com";
-const TABLES = ["qbo_connections", "payments", "time_entries", "purchase_orders", "service_plans", "estimates", "invoices", "jobs", "leads", "doc_templates", "price_items", "notifications", "message_log", "customers", "team_members", "invites", "account_members", "cancel_requests", "business", "subscriptions"];
+const TABLES = ["qbo_connections", "payments", "time_entries", "purchase_orders", "service_plans", "estimates", "invoices", "jobs", "leads", "doc_templates", "price_items", "notifications", "message_log", "customers", "team_members", "invites", "account_members", "cancel_requests", "business"];
 
 handler(async (req) => {
   const secret = Deno.env.get("CRON_SECRET");
@@ -31,17 +31,13 @@ handler(async (req) => {
     const ends = new Date(since + 37 * DAY).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
     if (day < 7) {
       const left = 7 - day;
-      if (await once(db, owner, "grace", today)) {
-        await mail(who.email, "Payment failed for Quorra Dispatch", `We could not take the payment for your Quorra Dispatch plan. You have ${left} day${left === 1 ? "" : "s"} of full access left. After that you can view and export your data for 30 days, and then the account and its data are deleted.\n\nUpdate the card: ${billing}`);
-        mailed++;
-      }
+      if (await sendNotice(db, owner, "grace", today, who.email, "Payment failed for Quorra Dispatch", `We could not take the payment for your Quorra Dispatch plan. You have ${left} day${left === 1 ? "" : "s"} of full access left. After that you can view and export your data for 30 days, and then the account and its data are deleted.\n\nUpdate the card: ${billing}`, true)) mailed++;
     } else if (day < 37) {
       const reviewerDay = day - 6;
-      const kind = reviewerDay === 1 ? "reviewer-1" : reviewerDay === 15 ? "reviewer-15" : reviewerDay === 27 ? "reviewer-27" : "";
-      if (kind && await once(db, owner, kind, today)) {
-        const soon = reviewerDay === 27 ? ` This is a few days before deletion on ${ends}.` : "";
-        await mail(who.email, "View and export your Quorra Dispatch data", `Your payment is still unpaid, so the account is view and export only until ${ends}. Then the account and its data will be deleted.${soon}\n\nPay to restore full access: ${billing}`);
-        mailed++;
+      const due = [reviewerDay >= 1 ? "reviewer-1" : "", reviewerDay >= 15 ? "reviewer-15" : "", reviewerDay >= 27 ? "reviewer-27" : ""].filter(Boolean);
+      for (const kind of due) {
+        const soon = kind === "reviewer-27" ? ` This is a few days before deletion on ${ends}.` : "";
+        if (await sendNotice(db, owner, kind, today, who.email, "View and export your Quorra Dispatch data", `Your payment is still unpaid, so the account is view and export only until ${ends}. Then the account and its data will be deleted.${soon}\n\nPay to restore full access: ${billing}`, false)) mailed++;
       }
     } else if (await removeAccount(db, owner)) {
       deleted++;
@@ -62,16 +58,18 @@ async function accountOf(db: ReturnType<typeof admin>, owner: string): Promise<{
   return { email, name, skip: false };
 }
 
-async function once(db: ReturnType<typeof admin>, owner: string, kind: string, today: string): Promise<boolean> {
-  if (kind !== "grace") {
-    const { data } = await db.from("account_notices").select("owner_id").eq("owner_id", owner).eq("kind", kind).limit(1);
-    if (data?.length) return false;
-  }
-  const { error } = await db.from("account_notices").insert({ owner_id: owner, kind, sent_on: today });
-  return !error;
+/** Grace is one row per calendar day. Reviewer notices are one row per kind. */
+async function noticeSent(db: ReturnType<typeof admin>, owner: string, kind: string, today: string | null): Promise<boolean> {
+  let q = db.from("account_notices").select("owner_id").eq("owner_id", owner).eq("kind", kind);
+  if (today) q = q.eq("sent_on", today);
+  const { data, error } = await q.limit(1);
+  if (error) { console.error("notice lookup", owner, kind, error.message); return true; }
+  return Boolean(data?.length);
 }
 
-async function mail(to: string, subject: string, text: string) {
+/** Send first. The notice is written only after the email succeeds, so a failed send is retried. */
+async function sendNotice(db: ReturnType<typeof admin>, owner: string, kind: string, today: string, to: string, subject: string, text: string, daily: boolean): Promise<boolean> {
+  if (await noticeSent(db, owner, kind, daily ? today : null)) return false;
   const result = await sendEmail({
     to,
     replyTo: supportEmail(),
@@ -80,13 +78,19 @@ async function mail(to: string, subject: string, text: string) {
     text,
     html: emailHtml({ heading: subject, paragraphs: text.split(/\n\n/), fine: `Questions? Email ${supportEmail()}.` }),
   });
-  if (!result.sent) throw new HttpError(500, result.reason ?? "Could not send email");
+  if (!result.sent) { console.error("notice email", owner, kind, result.reason); return false; }
+  const { error } = await db.from("account_notices").insert({ owner_id: owner, kind, sent_on: today });
+  if (error) console.error("notice record", owner, kind, error.message);
+  return true;
 }
 
-/** True when this run finished a delete. False when it was already finished. Throws if a delete fails, so the next day retries. */
+/** True when this run finished a delete. False when it was already finished. Throws if a delete fails before the log is written, so the next day still sees past_due and retries. */
 async function removeAccount(db: ReturnType<typeof admin>, owner: string): Promise<boolean> {
   const { data: already } = await db.from("account_deletions").select("owner_id").eq("owner_id", owner).maybeSingle();
-  if (already) return false;
+  if (already) {
+    await deleteAuthUsers(db, await userIds(db, owner), false);
+    return false;
+  }
 
   const { data: user } = await db.auth.admin.getUserById(owner);
   const email = user?.user?.email ?? "";
@@ -95,8 +99,7 @@ async function removeAccount(db: ReturnType<typeof admin>, owner: string): Promi
   const { data: sub } = await db.from("subscriptions").select("stripe_customer_id, stripe_subscription_id").eq("owner_id", owner).maybeSingle();
   const stripeCustomerId = (sub?.stripe_customer_id as string | null) ?? null;
   const stripeSubscriptionId = (sub?.stripe_subscription_id as string | null) ?? null;
-  const { data: members } = await db.from("account_members").select("user_id").eq("owner_id", owner);
-  const ids = [...new Set([owner, ...(members ?? []).map((m: { user_id: string }) => m.user_id).filter(Boolean)])];
+  const ids = await userIds(db, owner);
 
   if (ids.length) {
     const { error: sessions } = await db.from("user_sessions").delete().in("user_id", ids);
@@ -108,12 +111,10 @@ async function removeAccount(db: ReturnType<typeof admin>, owner: string): Promi
     const { error } = await db.from(table).delete().eq("owner_id", owner);
     if (error) throw new HttpError(500, `${table}: ${error.message}`);
   }
-  for (const id of ids) {
-    const { error } = await db.auth.admin.deleteUser(id);
-    if (error && !userAlreadyGone(error.message)) throw new HttpError(500, `user ${id}: ${error.message}`);
-  }
+  await deleteAuthUsers(db, ids.filter((id) => id !== owner), true);
 
-  // Platform Quorra Dispatch subscription only. Do not cancel a Stripe Connect account,
+  // Platform Quorra Dispatch subscription only. The subscriptions row stays until the deletion is logged,
+  // so a failure here still leaves status past_due for the next run. Do not cancel a Stripe Connect account,
   // and do not call the TrueFlow ("Quorra") account or the plan-billing webhook.
   if (stripeSubscriptionId) {
     try {
@@ -140,7 +141,25 @@ async function removeAccount(db: ReturnType<typeof admin>, owner: string): Promi
     html: emailHtml({ heading: "Quorra Dispatch account deleted today", paragraphs: ["Your payment is still unpaid. Today we deleted the Quorra Dispatch account and its data.", "This does not apply to a plan you canceled while it was paid."], fine: `Questions? Email ${supportEmail()}.` }),
   });
   if (!sent.sent) console.error("deletion email", owner, sent.reason);
+  const { error: subGone } = await db.from("subscriptions").delete().eq("owner_id", owner);
+  if (subGone) console.error("subscriptions", owner, subGone.message);
+  await deleteAuthUsers(db, [owner], true);
   return true;
+}
+
+async function userIds(db: ReturnType<typeof admin>, owner: string): Promise<string[]> {
+  const { data: members } = await db.from("account_members").select("user_id").eq("owner_id", owner);
+  return [...new Set([owner, ...(members ?? []).map((m: { user_id: string }) => m.user_id).filter(Boolean)])];
+}
+
+async function deleteAuthUsers(db: ReturnType<typeof admin>, ids: string[], strict: boolean) {
+  for (const id of ids) {
+    const { error } = await db.auth.admin.deleteUser(id);
+    if (error && !userAlreadyGone(error.message)) {
+      if (strict) throw new HttpError(500, `user ${id}: ${error.message}`);
+      console.error("leftover user", id, error.message);
+    }
+  }
 }
 
 function userAlreadyGone(message: string): boolean {
