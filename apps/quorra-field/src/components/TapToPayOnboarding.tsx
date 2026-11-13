@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Icon } from "./ui";
 import { parseUsAddress } from "../lib/usAddress";
-import { TAP_TO_PAY_IOS_ENABLED, iosSupportsTapToPay, iosVersionFromUserAgent } from "../lib/tapToPay";
+import { iosSupportsTapToPay, iosVersionFromUserAgent } from "../lib/tapToPay";
 import { requestTapToPayLocation } from "../lib/terminalPay";
 
 const REVIEWED_KEY = "qd-tap-to-pay-reviewed";
@@ -16,7 +16,7 @@ function rememberReviewed() {
 
 /**
  * In-app education and readiness for Tap to Pay on iPhone.
- * Apple's entitlement is not requested from here, and payment stays off until TAP_TO_PAY_IOS_ENABLED.
+ * Payment stays off until the checklist passes: iPhone XS or newer, iOS 16.4 or later, Stripe, address, and location.
  */
 export function TapToPayOnboarding({
   stripeConnected,
@@ -105,21 +105,16 @@ export function TapToPayOnboarding({
       )}
       {step === 3 && (
         <>
-          <h2 style={{ fontSize: 20 }}>{TAP_TO_PAY_IOS_ENABLED ? "Ready to take a payment" : "Waiting on Apple"}</h2>
-          {!TAP_TO_PAY_IOS_ENABLED && (
-            <div className="notice">
-              This build does not include Apple's Tap to Pay entitlement yet, so the iPhone cannot take a tap. These screens are here for you to review. After Apple approves it, a new build of Dispatch turns payment on. This screen does not submit that request.
-            </div>
-          )}
-          {TAP_TO_PAY_IOS_ENABLED && !ready && <div className="notice">Finish the checklist on the previous step before taking a payment.</div>}
-          {TAP_TO_PAY_IOS_ENABLED && ready && canTakePayment && <p className="muted" style={{ margin: 0 }}>This iPhone can take Tap to Pay on iPhone for the invoice you have open.</p>}
+          <h2 style={{ fontSize: 20 }}>Ready to take a payment</h2>
+          {!ready && <div className="notice">Finish the checklist on the previous step before taking a payment.</div>}
+          {ready && canTakePayment && <p className="muted" style={{ margin: 0 }}>This iPhone can take Tap to Pay on iPhone for the invoice you have open.</p>}
           <p className="small muted" style={{ margin: 0 }}>Questions: support@quorrait.com</p>
         </>
       )}
       <div className="row" style={{ gap: 8 }}>
         {step > 0 && <button className="btn" type="button" onClick={() => setStep((n) => n - 1)}>Back</button>}
         {step < 3 && <button className="btn primary grow" type="button" onClick={() => setStep((n) => n + 1)}>Next</button>}
-        {step === 3 && TAP_TO_PAY_IOS_ENABLED && canTakePayment && (
+        {step === 3 && canTakePayment && (
           <button className="btn primary grow" type="button" disabled={!ready} onClick={() => { rememberReviewed(); onStart(); }}>{Icon.card} Take the payment</button>
         )}
       </div>

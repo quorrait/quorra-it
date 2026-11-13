@@ -64,6 +64,7 @@ if (runIos) {
       } else {
         next = next.replace("</dict>\n</plist>", "\t<key>CFBundleDisplayName</key>\n\t<string>Dispatch</string>\n</dict>\n</plist>");
       }
+      // Written into the generated Info.plist. There is no Info.plist in the repo; Capacitor creates the iOS project on the build machine.
       next = upsertPlistString(next, "NSLocationWhenInUseUsageDescription", "Dispatch uses your location to check you in at job sites and to take a card payment with Tap to Pay on iPhone.");
       next = upsertPlistString(next, "NFCReaderUsageDescription", "Dispatch uses NFC so a customer can tap a card on this iPhone.");
       const iphoneOrient = `\t<key>UISupportedInterfaceOrientations</key>
@@ -104,23 +105,27 @@ if (runIos) {
 <dict>
 	<key>aps-environment</key>
 	<string>production</string>
+	<key>com.apple.developer.proximity-reader.payment.acceptance</key>
+	<true/>
 </dict>
 </plist>
 `);
     console.log(`updated ${entitlements}`);
     patch(join(ios, "App/App.xcodeproj/project.pbxproj"), (text) => {
       let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;");
-      if (!next.includes("CODE_SIGN_ENTITLEMENTS")) {
-        next = next.replace(
-          /PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;/g,
-          "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;",
-        );
-      }
+      // The App target's Debug and Release configs both set this bundle id. Point each one at the entitlements file.
       next = next.replace(/PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;[\s\S]*?\n\t\t\t\};/g, (block) => {
-        if (block.includes("TARGETED_DEVICE_FAMILY")) {
-          return block.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, 'TARGETED_DEVICE_FAMILY = "1,2";');
+        let updated = block;
+        if (!updated.includes("CODE_SIGN_ENTITLEMENTS")) {
+          updated = updated.replace(
+            "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;",
+            "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;",
+          );
         }
-        return block.replace(/\n\t\t\t\};$/, '\n\t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";\n\t\t\t};');
+        if (updated.includes("TARGETED_DEVICE_FAMILY")) {
+          return updated.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, 'TARGETED_DEVICE_FAMILY = "1,2";');
+        }
+        return updated.replace(/\n\t\t\t\};$/, '\n\t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";\n\t\t\t};');
       });
       return next;
     });

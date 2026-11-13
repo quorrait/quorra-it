@@ -1,19 +1,12 @@
 import { Capacitor } from "@capacitor/core";
 import { parseUsAddress } from "./usAddress";
 
-/**
- * Flip this after Apple grants com.apple.developer.proximity-reader.payment.acceptance
- * and that entitlement is on the signed iOS build. Until then iOS shows "coming soon".
- */
-export const TAP_TO_PAY_IOS_ENABLED = false;
+export type TapToPayOffer = "hidden" | "ready";
 
-export type TapToPayOffer = "hidden" | "soon" | "ready";
-
-/** Web never offers Tap to Pay. Android does. iOS waits on the flag above. */
+/** Web never offers Tap to Pay. The iOS and Android apps do. */
 export function tapToPayOffer(platform = Capacitor.getPlatform(), native = Capacitor.isNativePlatform()): TapToPayOffer {
   if (!native || platform === "web") return "hidden";
-  if (platform === "ios") return TAP_TO_PAY_IOS_ENABLED ? "ready" : "soon";
-  if (platform === "android") return "ready";
+  if (platform === "ios" || platform === "android") return "ready";
   return "hidden";
 }
 

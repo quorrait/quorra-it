@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { iosSupportsTapToPay, iosVersionFromUserAgent, tapToPayBlocker, tapToPayMessage, tapToPayOffer, TAP_TO_PAY_IOS_ENABLED } from "../src/lib/tapToPay.ts";
+import { iosSupportsTapToPay, iosVersionFromUserAgent, tapToPayBlocker, tapToPayMessage, tapToPayOffer } from "../src/lib/tapToPay.ts";
 import { parseUsAddress } from "../src/lib/usAddress.ts";
 
-test("Tap to Pay is offered only on native Android, and iOS stays off until the flag flips", () => {
-  assert.equal(TAP_TO_PAY_IOS_ENABLED, false);
+test("Tap to Pay is offered on the native iOS and Android apps", () => {
   assert.equal(tapToPayOffer("web", false), "hidden");
   assert.equal(tapToPayOffer("web", true), "hidden");
   assert.equal(tapToPayOffer("android", true), "ready");
-  assert.equal(tapToPayOffer("ios", true), "soon");
+  assert.equal(tapToPayOffer("ios", true), "ready");
   assert.equal(tapToPayOffer("android", false), "hidden");
+  assert.equal(tapToPayOffer("ios", false), "hidden");
 });
 
 test("Tap to Pay errors are plain language", () => {
