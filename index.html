@@ -257,7 +257,7 @@
 
         const APPS = [
             {name:"TrueFlow",blue:"True",desc:"Meter data and consumption insights for water utilities.",logo:"trueflow/favicon-192.png?v=2",url:"https://trueflowsoftware.com"},
-            {name:"Quorra Dispatch",blue:"Quorra",desc:"Field-service software for quoting, scheduling, dispatching, and getting paid into your own Stripe.",logo:"field/logo-mark-v3.png",url:"https://quorradispatch.com/",exactLink:true},
+            {name:"Quorra Dispatch",blue:"Quorra",desc:"Field-service software for quoting, scheduling, dispatching, and getting paid into your own Stripe.",logo:"apps/quorra-field/public/icon-512.png",url:"https://quorradispatch.com/",exactLink:true},
         ];
 
         function Apps() {
@@ -272,7 +272,7 @@
                             if (a.exactLink) {
                                 return (
                                     <article key={a.name} className="q-app-card">
-                                        <img src={a.logo} alt="" className="q-app-logo" />
+                                        <img src={a.logo} alt={`${a.name} logo`} className="q-app-logo" />
                                         <h3 className="q-app-name"><a href={a.url}>{name}</a></h3>
                                         <p className="q-app-desc">{a.desc}</p>
                                         <span className="q-app-visit">Visit site ↗</span>
