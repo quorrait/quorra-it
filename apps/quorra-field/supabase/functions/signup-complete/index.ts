@@ -1,5 +1,6 @@
-// Step 2 of signup: the card was verified, so now create the login, the business and the 14-day trial. Public (Verify JWT OFF).
+// Step 2 of signup: the card was verified, so now create the login, the business and the trial. Public (Verify JWT OFF).
 // Secrets: STRIPE_SECRET_KEY, STRIPE_PRICE_* , optional STRIPE_AUTOMATIC_TAX.
+// A partner deal code on the Checkout Session selects its own price and trial length. See _shared/deals.ts.
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
 import { passwordError } from "../_shared/safeUrl.ts";
@@ -8,30 +9,23 @@ import { emailHtml } from "../_shared/emailTemplate.ts";
 import { PUBLIC_APP_URL } from "../_shared/publicUrl.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
 import { missingCheckoutSession } from "../_shared/stripeError.ts";
-import { monthlyPromoCoupon, normalizeTrialEmail } from "../_shared/trialOffer.ts";
+import { normalizeTrialEmail } from "../_shared/trialOffer.ts";
 import { promoFixPatch } from "../_shared/promoRecovery.ts";
 import { emailHasOtherSubscription, ensureTrialPromoWithRetry } from "../_shared/trialSchedule.ts";
-
-function planName(id?: string, fallback?: string): string {
-  for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
-    if (id && (id === Deno.env.get(`STRIPE_PRICE_${key}`) || id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
-  }
-  const picked = (fallback ?? "").toLowerCase();
-  if (picked === "basic" || picked === "essentials" || picked === "enterprise") return picked.charAt(0).toUpperCase() + picked.slice(1);
-  return "Basic";
-}
+import { checkoutTerms, confirmationTrialLine, lookupDeal, planNameForPrice, subscriptionDiscounts, subscriptionMetadata, trialDaysFromMetadata } from "../_shared/deals.ts";
 
 const CONFIRM_REDIRECT = `${PUBLIC_APP_URL}/`;
 
-async function mailConfirmation(to: string, link: string) {
+async function mailConfirmation(to: string, link: string, trialDays: number) {
+  const trialLine = confirmationTrialLine(trialDays);
   return sendEmail({
     to,
     subject: "Confirm your Quorra Dispatch email",
-    text: `Confirm your email to sign in to Quorra Dispatch:\n\n${link}\n\nYour 14-day trial is already set up. If you did not create this account, you can ignore this email.`,
+    text: `Confirm your email to sign in to Quorra Dispatch:\n\n${link}\n\n${trialLine} If you did not create this account, you can ignore this email.`,
     html: emailHtml({
       heading: "Confirm your email",
-      preheader: "Confirm your email to sign in. Your trial is ready.",
-      paragraphs: ["Your 14-day trial is already set up. Confirm your email, then sign in with the password you chose."],
+      preheader: trialDays > 0 ? "Confirm your email to sign in. Your trial is ready." : "Confirm your email to sign in.",
+      paragraphs: [`${trialLine} Confirm your email, then sign in with the password you chose.`],
       button: { label: "Confirm my email", url: link },
       fine: "If you did not create this account, you can ignore this email.",
     }),
@@ -47,7 +41,7 @@ handler(async (req) => {
       const db = admin();
       const { data, error } = await db.auth.admin.generateLink({ type: "magiclink", email, options: { redirectTo: CONFIRM_REDIRECT } });
       const link = data?.properties?.action_link;
-      if (!error && link) await mailConfirmation(email, link);
+      if (!error && link) await mailConfirmation(email, link, trialDaysFromMetadata(data?.user?.user_metadata));
     }
     return json({ ok: true });
   }
@@ -92,10 +86,7 @@ handler(async (req) => {
     ...(pm.billing_details?.address?.country ? { address: pm.billing_details.address as Stripe.AddressParam } : {}),
   });
   const plan = s.metadata?.plan ?? "essentials";
-  const yearly = s.metadata?.interval === "year";
-  const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${yearly ? "_ANNUAL" : ""}`);
-  // Monthly only. The coupon already exists in Stripe (STRIPE_PROMO_COUPON). Leave the secret empty to turn the offer off. Never create coupons here. Annual prices already include 10% off.
-  const promo = monthlyPromoCoupon(yearly ? "year" : "month", Deno.env.get("STRIPE_PROMO_COUPON"));
+  const interval = s.metadata?.interval === "year" ? "year" : "month";
   const ownSubs = await stripe.subscriptions.list({ customer, status: "all", limit: 1 });
   const priorStripe = ownSubs.data.length > 0 || await emailHasOtherSubscription(stripe, normalizeTrialEmail(email), customer);
   const { data: claimed, error: claimErr } = await db.rpc("claim_trial", {
@@ -108,18 +99,20 @@ handler(async (req) => {
   // claim_trial records the email, card, and customer even when it returns false.
   // A Stripe customer from a deleted account is not in that table until this check.
   const grantTrial = claimed === true && !priorStripe;
+  // Deal prices live in deals.ts. A normal signup still reads STRIPE_PRICE_<PLAN>. An unknown code is not a deal.
+  const knownDeal = lookupDeal(s.metadata?.deal);
+  const standardPriceId = knownDeal ? "" : env(`STRIPE_PRICE_${plan.toUpperCase()}${interval === "year" ? "_ANNUAL" : ""}`);
+  const terms = checkoutTerms({
+    dealCode: s.metadata?.deal, interval, standardPriceId, promoSecret: Deno.env.get("STRIPE_PROMO_COUPON"), grantTrial,
+  });
+  const discounts = subscriptionDiscounts(terms);
   const params = {
     customer,
-    items: [{ price: priceId, quantity: 1 }],
-    ...(grantTrial ? { trial_period_days: 14 } : {}),
+    items: [{ price: terms.priceId, quantity: 1 }],
+    ...(terms.trialDays > 0 ? { trial_period_days: terms.trialDays } : {}),
     default_payment_method: pm.id,
-    metadata: {
-      owner_id: ownerId,
-      // The coupon is attached by the schedule below, so its 3 months start when the trial ends.
-      ...(grantTrial && promo ? { promo_schedule: "pending" } : {}),
-    },
-    // No trial: 50% off starts on the first invoice. A trial must not put the coupon on yet.
-    ...(!grantTrial && promo ? { discounts: [{ coupon: promo }] } : {}),
+    metadata: subscriptionMetadata(ownerId, terms),
+    ...(discounts ? { discounts } : {}),
   };
   let sub: Stripe.Subscription;
   try {
@@ -136,7 +129,7 @@ handler(async (req) => {
   if (grantTrial) {
     // One retry, then a flag on the subscription. The billing webhook tries again
     // while promo_schedule is still pending, and the Hub shows the flag if it stays failed.
-    const applied = await ensureTrialPromoWithRetry(stripe, sub, promo);
+    const applied = await ensureTrialPromoWithRetry(stripe, sub, terms.promoCoupon);
     sub = applied.subscription;
     promoFix = applied.fix;
   }
@@ -145,7 +138,7 @@ handler(async (req) => {
     ?? (item as unknown as { current_period_end?: number })?.current_period_end
     ?? (sub as unknown as { current_period_end?: number }).current_period_end;
   await db.from("subscriptions").upsert({
-    owner_id: ownerId, status: "active", plan: planName(item?.price?.id, plan), amount_cents: item?.price?.unit_amount ?? 30000,
+    owner_id: ownerId, status: "active", plan: planNameForPrice(item?.price?.id, { envPrice: (name) => Deno.env.get(name), fallbackPlan: plan }), amount_cents: item?.price?.unit_amount ?? 30000,
     billing_interval: item?.price?.recurring?.interval ?? "month", trialing: sub.status === "trialing",
     current_period_end: periodEnd ? new Date(periodEnd * 1000).toISOString() : null,
     cancel_at_period_end: false, stripe_customer_id: customer, stripe_subscription_id: sub.id, updated_at: new Date().toISOString(),
@@ -154,7 +147,12 @@ handler(async (req) => {
     ...(promoFixPatch(promoFix) ?? {}),
   }, { onConflict: "owner_id" });
   // The trial exists even if the email provider is down. The sign-in page can send the link again.
-  const mailed = await mailConfirmation(email, confirmLink);
+  try {
+    await db.auth.admin.updateUserById(ownerId, { user_metadata: { ...linked.user.user_metadata, trial_days: terms.trialDays } });
+  } catch (e) {
+    console.error("trial days", e);
+  }
+  const mailed = await mailConfirmation(email, confirmLink, terms.trialDays);
   if (!mailed.sent) console.error("confirm email", mailed.reason);
-  return json({ ok: true, needs_confirm: true, email_sent: mailed.sent });
+  return json({ ok: true, needs_confirm: true, email_sent: mailed.sent, trial_days: terms.trialDays });
 });

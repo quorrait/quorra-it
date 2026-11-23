@@ -6,6 +6,7 @@ import { hasSupabase, supabase } from "../lib/supabase";
 import { PLANS, ANNUAL_DISCOUNT, annualCents } from "../lib/plans";
 import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
+import { dealOfferLabel, lookupDeal } from "../../supabase/functions/_shared/deals";
 import { Field, PasswordInput } from "../components/ui";
 import EmbeddedStripe from "../components/EmbeddedStripe";
 import BuyService from "../components/BuyService";
@@ -18,8 +19,11 @@ export default function Start() {
   const auth = useAuth();
   const nav = useNavigate();
   const [params] = useSearchParams();
+  const deal = lookupDeal(params.get("deal"));
   const interval = params.get("interval") === "year" ? "year" : "month";
-  const plan = PLANS.find((p) => p.id === params.get("plan")) ?? PLANS[1];
+  const plan = deal ? (PLANS.find((p) => p.id === deal.plan) ?? PLANS[1]) : (PLANS.find((p) => p.id === params.get("plan")) ?? PLANS[1]);
+  const trialDays = deal?.trialDays ?? TRIAL_DAYS;
+  const chargeCents = deal ? deal.amountCents[interval] : (interval === "year" ? annualCents(plan) : plan.price_cents);
   const [yourName, setYourName] = useState("");
   const [biz, setBiz] = useState("");
   const [card, setCard] = useState<{ client_secret: string; publishable_key: string; session_id: string } | null>(null);
@@ -30,7 +34,7 @@ export default function Start() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [awaiting, setAwaiting] = useState<{ email: string; sent: boolean } | null>(null);
+  const [awaiting, setAwaiting] = useState<{ email: string; sent: boolean; trialDays: number } | null>(null);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -44,7 +48,7 @@ export default function Start() {
     try {
       if (!hasSupabase || !supabase) { await auth.signUp(email, password, biz.trim()); return; }
       // The account is only created after the card is verified, so unpaid signups never exist.
-      const { data, error } = await supabase.functions.invoke("signup-checkout", { body: { email, name: yourName.trim(), business: biz.trim(), plan: plan.id, interval } });
+      const { data, error } = await supabase.functions.invoke("signup-checkout", { body: { email, name: yourName.trim(), business: biz.trim(), plan: plan.id, interval, ...(deal ? { deal: deal.code } : {}) } });
       if (error) { let m = error.message; try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
       setCard(data as { client_secret: string; publishable_key: string; session_id: string });
     } catch (e2) {
@@ -61,7 +65,8 @@ export default function Start() {
     try {
       const { data, error } = await supabase.functions.invoke("signup-complete", { body: { session_id: card.session_id, email, password } });
       if (error) { let m = error.message; try { const ctx = (error as { context?: Response }).context; if (ctx) m = (await ctx.json()).error ?? m; } catch { /* ignore */ } throw new Error(m); }
-      setAwaiting({ email, sent: (data as { email_sent?: boolean } | null)?.email_sent !== false });
+      const done = data as { email_sent?: boolean; trial_days?: number } | null;
+      setAwaiting({ email, sent: done?.email_sent !== false, trialDays: typeof done?.trial_days === "number" ? done.trial_days : trialDays });
       setCard(null);
       setFinishing(false);
     } catch (e2) {
@@ -93,9 +98,13 @@ export default function Start() {
           <div className="auth-head">
             <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
             <h1>Check your email to confirm</h1>
-            <p className="muted">{awaiting.sent
-              ? `We sent a confirmation link to ${awaiting.email}. Your 14-day trial is already set up. Open the link, then sign in with the password you chose.`
-              : `Your 14-day trial is set up, but we could not send the confirmation email to ${awaiting.email}. On the sign-in page, choose Resend confirmation email.`}</p>
+            <p className="muted">{awaiting.trialDays > 0
+              ? (awaiting.sent
+                ? `We sent a confirmation link to ${awaiting.email}. Your ${awaiting.trialDays}-day trial is already set up. Open the link, then sign in with the password you chose.`
+                : `Your ${awaiting.trialDays}-day trial is set up, but we could not send the confirmation email to ${awaiting.email}. On the sign-in page, choose Resend confirmation email.`)
+              : (awaiting.sent
+                ? `We sent a confirmation link to ${awaiting.email}. Open the link, then sign in with the password you chose.`
+                : `We could not send the confirmation email to ${awaiting.email}. On the sign-in page, choose Resend confirmation email.`)}</p>
           </div>
           <button type="button" className="btn primary block" onClick={() => nav("/")}>Go to sign in</button>
         </div>
@@ -110,14 +119,16 @@ export default function Start() {
           {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
           <div className="auth-head">
             <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
-            <h1>Start your {TRIAL_DAYS}-day free trial</h1>
+            <h1>Start your {trialDays}-day free trial</h1>
           </div>
           <div className="card stack" style={{ gap: 8 }}>
             <div className="row between"><span className="muted">Plan</span><b>{plan.name}</b></div>
-            <div className="row between"><span className="muted">Free trial</span><b>{TRIAL_DAYS} days</b></div>
-            {interval !== "year" && <div className="row between"><span className="muted">Launch offer</span><b>50% off your first 3 months</b></div>}
-            <div className="row between"><span className="muted">First charge</span><b>{new Date(Date.now() + TRIAL_DAYS * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</b></div>
-            <div className="row between"><span className="muted">Then</span><b>{money(interval === "year" ? annualCents(plan) : plan.price_cents)} per {interval === "year" ? "year" : "month"}</b></div>
+            <div className="row between"><span className="muted">Free trial</span><b>{trialDays} days</b></div>
+            {deal
+              ? <div className="row between"><span className="muted">Offer</span><b>{dealOfferLabel(deal, interval)}</b></div>
+              : interval !== "year" && <div className="row between"><span className="muted">Launch offer</span><b>50% off your first 3 months</b></div>}
+            <div className="row between"><span className="muted">First charge</span><b>{new Date(Date.now() + trialDays * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</b></div>
+            <div className="row between"><span className="muted">Then</span><b>{money(chargeCents)} per {interval === "year" ? "year" : "month"}</b></div>
             <div className="row between" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 8 }}><b>Due today</b><b style={{ color: "#16a34a" }}>$0.00</b></div>
           </div>
           <p className="small muted" style={{ margin: 0 }}>Your card is verified now, but nothing is charged until the trial ends. Cancel any time before then. Your account is created once the card is verified.</p>
@@ -136,7 +147,10 @@ export default function Start() {
         <div className="auth-head">
           <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
           <h1>Create your account</h1>
-          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {interval === "year" ? `${money(annualCents(plan)).replace(".00", "")} per year (${ANNUAL_DISCOUNT}% off)` : `${money(plan.price_cents).replace(".00", "")} per month`} after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and your account is created once it is verified. Nothing is charged until the trial ends. Cancel any time before then.</p>
+          <p className="muted">{deal
+            ? <>You are signing up for the <b>{plan.name}</b> plan. {dealOfferLabel(deal, interval)}. You add a card on the next step, and your account is created once it is verified. Nothing is charged until the trial ends. Cancel any time before then.</>
+            : <>You are signing up for the <b>{plan.name}</b> plan, {interval === "year" ? `${money(annualCents(plan)).replace(".00", "")} per year (${ANNUAL_DISCOUNT}% off)` : `${money(plan.price_cents).replace(".00", "")} per month`} after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and your account is created once it is verified. Nothing is charged until the trial ends. Cancel any time before then.</>
+          }</p>
         </div>
         {!hasSupabase && <div className="notice">Demo mode: no payment is taken.</div>}
         <Field label="Your name"><input className="input" autoComplete="name" value={yourName} onChange={(e) => setYourName(e.target.value)} placeholder="Jane Smith" required={hasSupabase} /></Field>

@@ -3,8 +3,9 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { accountOwner, billingOwner, admin, env, handler, HttpError, json, requireUser } from "../_shared/util.ts";
 import { activeLogins, downgradeLoginMessage } from "../_shared/plan.ts";
-import { monthlyPromoCoupon, prorationForPlanChange } from "../_shared/trialOffer.ts";
+import { prorationForPlanChange } from "../_shared/trialOffer.ts";
 import { replaceTrialPlan } from "../_shared/trialSchedule.ts";
+import { dealMetadataPatch, dropLaunchPromo, lookupDeal, planChangePrice, type Interval, type PlanChangePrice } from "../_shared/deals.ts";
 
 /** Launch coupons that apply to monthly prices only. Annual prices already include 10% off. */
 function promoCouponIds(): Set<string> {
@@ -27,7 +28,7 @@ function couponIdOf(d: Stripe.Discount | string): string | undefined {
 }
 
 /** Discounts to send back on a price swap. Reusing the discount id keeps the original window. Never adds a coupon. */
-function keptDiscounts(sub: SubWithDiscounts, yearly: boolean): DiscountRef[] {
+function keptDiscounts(sub: SubWithDiscounts, dropLaunch: boolean): DiscountRef[] {
   const promos = promoCouponIds();
   const raw = [sub.discount, ...(sub.discounts ?? [])].filter((d): d is Stripe.Discount | string => Boolean(d));
   const seen = new Set<string>();
@@ -35,7 +36,7 @@ function keptDiscounts(sub: SubWithDiscounts, yearly: boolean): DiscountRef[] {
   for (const d of raw) {
     const id = typeof d === "string" ? d : d.id;
     const couponId = couponIdOf(d);
-    if (yearly && couponId && promos.has(couponId)) continue;
+    if (dropLaunch && couponId && promos.has(couponId)) continue;
     if (!id || seen.has(id)) continue;
     seen.add(id);
     kept.push({ discount: id });
@@ -43,9 +44,14 @@ function keptDiscounts(sub: SubWithDiscounts, yearly: boolean): DiscountRef[] {
   return kept;
 }
 
-function discountUpdate(sub: Stripe.Subscription, yearly: boolean): { discounts: DiscountRef[] | "" } {
-  const discounts = keptDiscounts(sub as SubWithDiscounts, yearly);
+function discountUpdate(sub: Stripe.Subscription, dropLaunch: boolean): { discounts: DiscountRef[] | "" } {
+  const discounts = keptDiscounts(sub as SubWithDiscounts, dropLaunch);
   return { discounts: discounts.length ? discounts : "" };
+}
+
+function dealMeta(existingDeal: string | undefined, choice: PlanChangePrice): { metadata: Record<string, string> } | Record<string, never> {
+  const patch = dealMetadataPatch(choice.keepDeal, choice.dealCode, existingDeal);
+  return patch ? { metadata: patch } : {};
 }
 
 async function loadSub(stripe: Stripe, id: string): Promise<Stripe.Subscription> {
@@ -85,45 +91,59 @@ handler(async (req) => {
     if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
     const blocked = downgradeLoginMessage(await activeLogins(owner), plan);
     if (blocked) throw new HttpError(409, blocked);
-    const priceId = env(`STRIPE_PRICE_${plan.toUpperCase()}${b.interval === "year" ? "_ANNUAL" : ""}`);
     let cur = await loadSub(stripe, id);
+    const toYear = b.interval === "year";
+    const interval: Interval = toYear ? "year" : "month";
+    const existingDeal = typeof cur.metadata?.deal === "string" ? cur.metadata.deal : undefined;
+    const stayingOnDeal = Boolean(lookupDeal(existingDeal) && plan === lookupDeal(existingDeal)?.plan);
+    const choice = planChangePrice({
+      dealCode: existingDeal,
+      targetPlan: plan,
+      interval,
+      standardPriceId: stayingOnDeal ? "" : env(`STRIPE_PRICE_${plan.toUpperCase()}${toYear ? "_ANNUAL" : ""}`),
+      promoSecret: Deno.env.get("STRIPE_PROMO_COUPON"),
+    });
+    const priceId = choice.priceId;
     const item = cur.items.data[0];
     const yearly = (p: Stripe.Price) => (p.unit_amount ?? 0) * (p.recurring?.interval === "year" ? 1 : 12);
     const next = await stripe.prices.retrieve(priceId);
     if (next.id === item.price.id) return json({ ok: true, mode: "same" });
-    const toYear = b.interval === "year";
     const change = prorationForPlanChange(cur.status, yearly(next) > yearly(item.price));
+    const dropLaunch = dropLaunchPromo(choice.keepDeal, interval);
     if (change === "none") {
       // Nothing has been paid. Switch the price now, do not invoice, and do not move the trial end.
       // always_invoice is never used here: a trial upgrade used to create a past_due invoice.
-      const promo = monthlyPromoCoupon(toYear ? "year" : "month", Deno.env.get("STRIPE_PROMO_COUPON"));
       if (typeof cur.trial_end === "number" && cur.trial_end * 1000 > Date.now()) {
-        await replaceTrialPlan(stripe, cur, priceId, toYear ? "year" : "month", promo);
+        await replaceTrialPlan(stripe, cur, priceId, interval, choice.promoCoupon);
+        const patch = dealMetadataPatch(choice.keepDeal, choice.dealCode, existingDeal);
+        if (patch) await stripe.subscriptions.update(id, { metadata: patch });
         return json({ ok: true, mode: "trial_plan_change", trial_end: cur.trial_end });
       }
       if (cur.schedule) {
         await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id);
         cur = await loadSub(stripe, id);
       }
-      const discounts = discountUpdate(cur, toYear);
       await stripe.subscriptions.update(id, {
         items: [{ id: cur.items.data[0].id, price: priceId }],
         proration_behavior: "none",
         cancel_at_period_end: false,
-        ...discounts,
+        ...discountUpdate(cur, dropLaunch),
+        ...dealMeta(typeof cur.metadata?.deal === "string" ? cur.metadata.deal : undefined, choice),
       });
       return json({ ok: true, mode: "trial_plan_change", trial_end: cur.trial_end ?? null });
     }
     // An earlier scheduled downgrade would block a direct change, so drop it first.
     if (cur.schedule) { await stripe.subscriptionSchedules.release(typeof cur.schedule === "string" ? cur.schedule : cur.schedule.id); cur = await loadSub(stripe, id); }
     const currentItem = cur.items.data[0];
+    const dealOnSub = typeof cur.metadata?.deal === "string" ? cur.metadata.deal : undefined;
     if (change === "always_invoice") {
       // Paid upgrade: switch now and charge the prorated difference for the rest of the period.
       await stripe.subscriptions.update(id, {
         items: [{ id: currentItem.id, price: priceId }],
         proration_behavior: "always_invoice",
         cancel_at_period_end: false,
-        ...discountUpdate(cur, toYear),
+        ...discountUpdate(cur, dropLaunch),
+        ...dealMeta(dealOnSub, choice),
       });
       return json({ ok: true, mode: "upgrade" });
     }
@@ -135,9 +155,11 @@ handler(async (req) => {
       end_behavior: "release",
       phases: [
         { items: [{ price: currentItem.price.id, quantity: 1 }], start_date: ph.start_date, end_date: ph.end_date, discounts: keptDiscounts(cur as SubWithDiscounts, onYearNow) },
-        { items: [{ price: priceId, quantity: 1 }], discounts: keptDiscounts(cur as SubWithDiscounts, toYear) },
+        { items: [{ price: priceId, quantity: 1 }], discounts: keptDiscounts(cur as SubWithDiscounts, dropLaunch) },
       ],
     });
+    const patch = dealMetadataPatch(choice.keepDeal, choice.dealCode, dealOnSub);
+    if (patch) await stripe.subscriptions.update(id, { metadata: patch });
     return json({ ok: true, mode: "downgrade", effective: ph.end_date });
   }
   throw new HttpError(400, "Unknown action");

@@ -3,6 +3,7 @@
 import Stripe from "https://esm.sh/stripe@16.12.0?target=denonext";
 import { admin, env, handler, HttpError, json } from "../_shared/util.ts";
 import { clientIp, rateLimit } from "../_shared/limit.ts";
+import { signupSessionFields } from "../_shared/deals.ts";
 
 handler(async (req) => {
   await rateLimit("signup-checkout", clientIp(req), 8, 60 * 60);
@@ -10,11 +11,11 @@ handler(async (req) => {
   const email = String(b.email ?? "").trim().toLowerCase();
   const name = String(b.name ?? "").trim().slice(0, 80);
   const business = String(b.business ?? "").trim().slice(0, 100);
-  const plan = String(b.plan ?? "essentials").toLowerCase();
+  const choice = signupSessionFields({ plan: b.plan, interval: b.interval, deal: b.deal });
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, "Enter a valid email address.");
   if (!name) throw new HttpError(400, "Enter your name.");
   if (!business) throw new HttpError(400, "Enter your business name.");
-  if (!["basic", "essentials", "enterprise"].includes(plan)) throw new HttpError(400, "Unknown plan");
+  if (!choice.accepted) throw new HttpError(400, "Unknown plan");
   // Stop early if this email already has a login, so nobody pays for an account that cannot be created.
   const { data: taken } = await admin().rpc("email_in_use", { p_email: email });
   if (taken === true) throw new HttpError(409, "We could not start signup for that email. If you already have an account, sign in.");
@@ -29,7 +30,7 @@ handler(async (req) => {
     redirect_on_completion: "never",
     payment_method_types: ["card"],
     billing_address_collection: "required",
-    metadata: { signup: "1", email, plan, interval: b.interval === "year" ? "year" : "month", name, business },
+    metadata: { signup: "1", email, plan: choice.plan, interval: choice.interval, name, business, ...(choice.deal ? { deal: choice.deal } : {}) },
   });
   return json({ client_secret: session.client_secret, publishable_key: env("STRIPE_PUBLISHABLE_KEY"), session_id: session.id });
 });
