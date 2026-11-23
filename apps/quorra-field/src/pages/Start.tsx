@@ -12,6 +12,7 @@ import BuyService from "../components/BuyService";
 import { isIosApp } from "../lib/iosPlan";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
+import { AgreeLine } from "../components/LegalNotice";
 
 /** Buy service: create the account, then go straight to Stripe to pay for the plan. */
 export default function Start() {
@@ -117,10 +118,11 @@ export default function Start() {
             <div className="row between"><span className="muted">Free trial</span><b>{TRIAL_DAYS} days</b></div>
             {interval !== "year" && <div className="row between"><span className="muted">Launch offer</span><b>50% off your first 3 months</b></div>}
             <div className="row between"><span className="muted">First charge</span><b>{new Date(Date.now() + TRIAL_DAYS * 86400_000).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}</b></div>
-            <div className="row between"><span className="muted">Then</span><b>{money(interval === "year" ? annualCents(plan) : plan.price_cents)} per {interval === "year" ? "year" : "month"}</b></div>
+            <div className="row between"><span className="muted">{interval === "year" ? "Then" : "After 3 months"}</span><b>{money(interval === "year" ? annualCents(plan) : plan.price_cents)} per {interval === "year" ? "year" : "month"}</b></div>
             <div className="row between" style={{ borderTop: "1px solid var(--line, #e5e7eb)", paddingTop: 8 }}><b>Due today</b><b style={{ color: "#16a34a" }}>$0.00</b></div>
           </div>
           <p className="small muted" style={{ margin: 0 }}>Your card is verified now, but nothing is charged until the trial ends. Cancel any time before then. Your account is created once the card is verified.</p>
+          <AgreeLine />
           {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
           {finishing ? <div className="notice">Card verified. Setting up your account...</div> : <EmbeddedStripe publishableKey={card.publishable_key} clientSecret={card.client_secret} onComplete={() => void cardDone()} />}
           {!finishing && <button type="button" className="btn block" onClick={() => setCard(null)}>Back</button>}
@@ -136,7 +138,9 @@ export default function Start() {
         <div className="auth-head">
           <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
           <h1>Create your account</h1>
-          <p className="muted">You are signing up for the <b>{plan.name}</b> plan, {interval === "year" ? `${money(annualCents(plan)).replace(".00", "")} per year (${ANNUAL_DISCOUNT}% off)` : `${money(plan.price_cents).replace(".00", "")} per month`} after your {TRIAL_DAYS}-day free trial. You add a card on the next step, and your account is created once it is verified. Nothing is charged until the trial ends. Cancel any time before then.</p>
+          <p className="muted">You are signing up for the <b>{plan.name}</b> plan. {interval === "year"
+            ? `After your ${TRIAL_DAYS}-day free trial, it is ${money(annualCents(plan)).replace(".00", "")} per year (${ANNUAL_DISCOUNT}% off).`
+            : `After your ${TRIAL_DAYS}-day free trial, the launch offer takes 50% off your first 3 months. The plan is then ${money(plan.price_cents).replace(".00", "")} per month.`} You add a card on the next step, and your account is created once it is verified. Nothing is charged until the trial ends. Cancel any time before then.</p>
         </div>
         {!hasSupabase && <div className="notice">Demo mode: no payment is taken.</div>}
         <Field label="Your name"><input className="input" autoComplete="name" value={yourName} onChange={(e) => setYourName(e.target.value)} placeholder="Jane Smith" required={hasSupabase} /></Field>
@@ -147,6 +151,7 @@ export default function Start() {
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         {info && <div className="notice">{info}</div>}
         <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : hasSupabase ? "Continue to card" : "Open the demo"}</button>
+        <AgreeLine />
         <button type="button" className="btn block" onClick={() => nav("/plans")}>Back to plans</button>
       </form>
     </div>

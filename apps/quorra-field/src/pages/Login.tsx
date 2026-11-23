@@ -11,6 +11,7 @@ import BuyService from "../components/BuyService";
 import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
 import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
+import { AgreeLine, LegalLinks } from "../components/LegalNotice";
 
 /** Sign in. Creating a login here is only possible through a team invite; new businesses buy a plan first. */
 export default function Login() {
@@ -117,6 +118,7 @@ export default function Login() {
         </Field>
         {err && <div className="error-banner" style={{ margin: 0 }}>{err}</div>}
         <button className="btn primary block" disabled={busy}>{busy ? "One moment..." : "Save password"}</button>
+        <LegalLinks />
       </form>
     </div>
   );
@@ -171,6 +173,7 @@ export default function Login() {
         ) : (
           <button type="button" className="btn block" onClick={() => nav("/plans")}>Buy service</button>
         )}
+        {mode === "up" ? <AgreeLine /> : <LegalLinks />}
       </form>
     </div>
   );

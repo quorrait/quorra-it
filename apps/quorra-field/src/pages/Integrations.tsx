@@ -11,6 +11,9 @@ import { TapToPayOnboarding } from "../components/TapToPayOnboarding";
 
 interface Item { id: string; name: string; what: string; color: string; mark: string; live: boolean; slug?: string; cat: string }
 
+/** Set to true to show integrations that are not connected yet. */
+const SHOW_COMING_SOON = false;
+
 const ITEMS: Item[] = [
   { id: "stripe", name: "Stripe", what: "Take card and Apple Pay payments. Money goes straight to your bank.", color: "#635bff", mark: "S", live: true, slug: "stripe", cat: "Payments" },
   { id: "qbo", name: "QuickBooks Online", what: "Send customers, invoices and payments to your books.", color: "#2ca01c", mark: "Qb", live: true, slug: "quickbooks", cat: "Accounting" },
@@ -79,7 +82,7 @@ export default function Integrations() {
   );
   if (open?.id === "cal") body = <CalendarSync />;
 
-  const live = ITEMS.filter((i) => i.live), soon = ITEMS.filter((i) => !i.live);
+  const live = ITEMS.filter((i) => i.live), soon = SHOW_COMING_SOON ? ITEMS.filter((i) => !i.live) : [];
   const card = (i: Item) => (
     <button key={i.id} className={`int-card${i.live ? "" : " soon"}`} disabled={!i.live} onClick={() => i.live && setOpen(i)}>
       <span className="int-cat">{i.cat}</span>
@@ -95,8 +98,10 @@ export default function Integrations() {
       <div className="page-head"><div><h1 className="page-title">Integrations</h1><p className="page-sub">Connect the apps you already use, so you enter things once.</p></div></div>
       <div className="int-section">Ready to connect</div>
       <div className="int-grid">{live.map(card)}</div>
-      <div className="int-section">Coming soon</div>
-      <div className="int-grid">{soon.map(card)}</div>
+      {soon.length > 0 && <>
+        <div className="int-section">Coming soon</div>
+        <div className="int-grid">{soon.map(card)}</div>
+      </>}
       <button className="btn block" style={{ minHeight: 48 }} onClick={() => setAsk(true)}>Request another integration</button>
       {open && body && <Sheet title={open.name} onClose={() => setOpen(null)}>{body}</Sheet>}
       {tap && <Sheet title="Tap to Pay on iPhone" onClose={() => setTap(false)}><TapToPayOnboarding stripeConnected={Boolean(business.stripe_connected)} address={business.address} canTakePayment={false} onStart={() => setTap(false)} /></Sheet>}

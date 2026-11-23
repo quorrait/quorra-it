@@ -15,7 +15,7 @@ import { useAuth, useData } from "../lib/app";
 import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components/ui";
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
-import { PUBLIC_PRIVACY_URL, PUBLIC_SITE_URL } from "../lib/publicUrl";
+import { PUBLIC_PRIVACY_URL, PUBLIC_SITE_URL, PUBLIC_TERMS_URL } from "../lib/publicUrl";
 import { hasSupabase, supabase } from "../lib/supabase";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import UpgradePrompt from "../components/UpgradePrompt";
@@ -189,7 +189,10 @@ function SettingsInner() {
       {tab === "account" && <div className="card stack">
         <div className="card-title" style={{ margin: 0 }}>Account</div>
         <div className="small muted">{APP_NAME} · signed in as {email}{store.mode === "demo" && " · demo mode"}</div>
-        <a className="small" href={PUBLIC_PRIVACY_URL} target="_blank" rel="noopener">Privacy policy</a>
+        <div className="row wrap" style={{ gap: 14 }}>
+          <a className="small" href={PUBLIC_TERMS_URL} target="_blank" rel="noopener">Terms</a>
+          <a className="small" href={PUBLIC_PRIVACY_URL} target="_blank" rel="noopener">Privacy policy</a>
+        </div>
         {hasSupabase && me.isOwner && <button className="btn block" onClick={async () => { const { data, error } = await supabase!.functions.invoke("send-test-email"); toast(error ? "Could not send. Deploy the send-test-email function." : data?.ok ? `Sample customer emails sent to ${data.to}` : data?.reason || "Could not send"); }}>Email me samples of customer emails</button>}
         <div className="row wrap">
           <button className="btn grow" onClick={signOut}>Sign out</button>

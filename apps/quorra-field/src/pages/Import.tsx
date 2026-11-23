@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { useData } from "../lib/app";
 import { downloadCsv, parseCsv } from "../lib/csv";
-import { autoMap, ENTITIES, templateCsv, type Entity } from "../lib/importers";
+import { autoMap, ENTITIES, jobberClientsToTable, templateCsv, type Entity } from "../lib/importers";
 import { Spinner, useToast } from "../components/ui";
 
 export default function Import() {
@@ -42,7 +42,8 @@ export default function Import() {
   function reset(e: Entity) { setEntity(e); setFile(null); setTable([]); setMap({}); setResult(null); if (fileRef.current) fileRef.current.value = ""; }
 
   async function onFile(f: File) {
-    const t = parseCsv(await f.text());
+    const parsed = parseCsv(await f.text());
+    const t = entity.key === "customers" ? (jobberClientsToTable(parsed) ?? parsed) : parsed;
     if (t.length < 2) return toast("That file has no data rows");
     setFile(f.name); setTable(t); setMap(autoMap(entity, t[0])); setResult(null);
   }
