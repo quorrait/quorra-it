@@ -59,7 +59,7 @@ const pick = <T extends string>(list: readonly T[], v: string, fallback: T): T =
 
 export const ENTITIES: Entity[] = [
   {
-    key: "customers", label: "Customers", hint: "Works with QuickBooks, Housecall Pro and FieldPulse customer exports.",
+    key: "customers", label: "Customers", hint: "Works with QuickBooks, Housecall Pro, FieldPulse, and Jobber client exports.",
     fields: [
       { key: "name", label: "Name", aliases: ["name", "customer", "display name", "full name", "company", "customer name"], required: true, example: "Jane Smith" },
       { key: "phone", label: "Phone", aliases: ["phone", "mobile", "phone numbers", "main phone", "cell"], example: "(916) 555-0100" },
@@ -199,3 +199,89 @@ export const autoMap = (entity: Entity, headers: string[]): Record<string, numbe
 };
 
 export const templateCsv = (e: Entity): string[][] => [e.fields.map((f) => f.aliases[0]), e.fields.map((f) => f.example)];
+
+/**
+ * Distinct headers on Jobber's client CSV export.
+ * Source: Jobber Help Center sample file jobber-clients-sample-file.csv
+ * (https://help.getjobber.com/help-center/files/41010131815447/jobber-clients-sample-file.csv),
+ * which matches the columns described on "Export client information".
+ */
+const JOBBER_CLIENT_MARKERS = ["client first name", "client last name", "client email"];
+
+const headerKey = (s: string) => s.replace(/^\uFEFF/, "").trim().toLowerCase();
+
+export function isJobberClientExport(headers: string[]): boolean {
+  const set = new Set(headers.map(headerKey));
+  return JOBBER_CLIENT_MARKERS.every((h) => set.has(h));
+}
+
+function jobberCell(headers: string[], cells: string[], name: string): string {
+  const key = name.toLowerCase();
+  const i = headers.findIndex((h) => headerKey(h) === key);
+  if (i < 0) return "";
+  return (cells[i] ?? "").replace(/\s+/g, " ").trim();
+}
+
+const yes = (s: string) => /^(true|yes|1)$/i.test(s);
+
+function jobberAddress(headers: string[], cells: string[], prefix: "Property" | "Billing"): string {
+  const street1 = jobberCell(headers, cells, `${prefix} Street 1`);
+  const street2 = jobberCell(headers, cells, `${prefix} Street 2`);
+  const city = jobberCell(headers, cells, `${prefix} City`);
+  const state = jobberCell(headers, cells, `${prefix} State/Province`);
+  const zip = jobberCell(headers, cells, `${prefix} Zip/Postal Code`);
+  const country = jobberCell(headers, cells, `${prefix} Country`);
+  const region = [state, zip].filter(Boolean).join(" ");
+  const place = [city, region].filter(Boolean).join(", ");
+  return [street1, street2, place, country].filter(Boolean).join(", ");
+}
+
+const JOBBER_PHONES = [
+  "Client Main Phone",
+  "Client Mobile Phone",
+  "Client SMS Enabled Phone Number",
+  "Client Work Phone",
+  "Client Home Phone",
+  "Client Other Phone",
+];
+
+/**
+ * Map one Jobber client-export row onto customer fields.
+ * Company clients use the company name, with the contact in parentheses when it differs.
+ * Property address is preferred, then billing. Fax is not used as a phone.
+ */
+export function mapJobberClientRow(headers: string[], cells: string[]): Record<string, string> {
+  const first = jobberCell(headers, cells, "Client First Name");
+  const last = jobberCell(headers, cells, "Client Last Name");
+  const full = jobberCell(headers, cells, "Client Full Name (Display Only)");
+  const company = jobberCell(headers, cells, "Client Company Name");
+  const person = [first, last].filter(Boolean).join(" ") || full;
+  const isCompany = yes(jobberCell(headers, cells, "Client Is Company?"));
+  const name = company && (isCompany || !person)
+    ? (person && person.toLowerCase() !== company.toLowerCase() ? `${company} (${person})` : company)
+    : (person || company);
+  const phone = JOBBER_PHONES.map((c) => jobberCell(headers, cells, c)).find(Boolean) ?? "";
+  const email = jobberCell(headers, cells, "Client Email").split(",").map((e) => e.trim()).find(Boolean) ?? "";
+  const address = jobberAddress(headers, cells, "Property") || jobberAddress(headers, cells, "Billing");
+  const notes: string[] = [];
+  if (yes(jobberCell(headers, cells, "Archived (True/False)"))) notes.push("Archived in Jobber.");
+  const internal = jobberCell(headers, cells, "Client Internal Notes");
+  if (internal) notes.push(internal);
+  if (company && person && !isCompany && person.toLowerCase() !== company.toLowerCase()) notes.push(`Company: ${company}`);
+  const source = jobberCell(headers, cells, "Lead Source");
+  if (source) notes.push(`Lead source: ${source}`);
+  const tags = jobberCell(headers, cells, "Tags");
+  if (tags) notes.push(`Tags: ${tags}`);
+  return { name, phone, email, address, notes: notes.join("\n") };
+}
+
+/** Rewrite a Jobber client export into the customer columns the importer already understands. */
+export function jobberClientsToTable(table: string[][]): string[][] | null {
+  if (!table.length || !isJobberClientExport(table[0])) return null;
+  const headers = table[0];
+  const rows = table.slice(1).filter((r) => r.some((c) => c.trim()));
+  return [["Name", "Phone", "Email", "Address", "Notes"], ...rows.map((r) => {
+    const m = mapJobberClientRow(headers, r);
+    return [m.name, m.phone, m.email, m.address, m.notes];
+  })];
+}
