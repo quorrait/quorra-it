@@ -44,6 +44,18 @@ workflows:
       - name: Build number and archive
         script: |
           cd ios/App
+          echo "=== iOS scheme diagnostic ==="
+          echo "pwd: $(pwd)"
+          ls -R App.xcodeproj/xcshareddata || echo "no App.xcodeproj/xcshareddata"
+          echo "--- workspace contents ---"
+          cat App.xcworkspace/contents.xcworkspacedata || echo "NO contents.xcworkspacedata"
+          xcodebuild -list -workspace App.xcworkspace || true
+          # Signing setup only rewrites project.pbxproj. Put App.xcscheme on the
+          # workspace itself, which is what xcodebuild -workspace reads.
+          node ../../scripts/prepare-native.mjs ios
+          echo "=== schemes after refresh ==="
+          ls -R App.xcodeproj/xcshareddata App.xcworkspace/xcshareddata || true
+          xcodebuild -list -workspace App.xcworkspace || true
           # Build 5 was the rejected binary. Never upload 5 or lower again.
           NEXT=6
           if LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID"); then

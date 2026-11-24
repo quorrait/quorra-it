@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { IOS_ACCOUNT_ATTENTION, iosAccountCopy, iosAccountState, isIOSNative, isIosBlockedSignupPath } from "../src/lib/platform.ts";
 import { iosTapToPayEntitled, tapToPayOffer } from "../src/lib/tapToPay.ts";
-import { mkdtempSync, readFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, nativeAppTargetId, patchInfoVersions, patchIosProject, sharedAppScheme, writeSharedAppScheme } from "../scripts/prepare-native.mjs";
+import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, ensureWorkspaceContents, installSharedAppScheme, nativeAppTargetId, patchInfoVersions, patchIosProject, sharedAppScheme } from "../scripts/prepare-native.mjs";
 
 test("isIOSNative is only the native iOS platform", () => {
   assert.equal(isIOSNative("ios"), true);
@@ -107,11 +107,32 @@ test("the shared App scheme names the App target and archives with Release", () 
   assert.match(scheme, /<ArchiveAction[\s\S]*buildConfiguration = "Release"/);
   const dir = mkdtempSync(join(tmpdir(), "qd-scheme-"));
   const project = join(dir, "App.xcodeproj");
-  const written = writeSharedAppScheme(project, NATIVE_TARGET);
-  assert.equal(written, join(project, "xcshareddata/xcschemes/App.xcscheme"));
-  const onDisk = readFileSync(written, "utf8");
-  assert.match(onDisk, /BlueprintIdentifier = "504EC3031FED79650016851F"/);
-  assert.match(onDisk, /<ArchiveAction[\s\S]*buildConfiguration = "Release"/);
+  mkdirSync(project, { recursive: true });
+  writeFileSync(join(project, "project.pbxproj"), NATIVE_TARGET);
+  const written = installSharedAppScheme(dir);
+  assert.deepEqual(written, [
+    join(dir, "App.xcodeproj/xcshareddata/xcschemes/App.xcscheme"),
+    join(dir, "App.xcworkspace/xcshareddata/xcschemes/App.xcscheme"),
+  ]);
+  for (const schemePath of written) {
+    const onDisk = readFileSync(schemePath, "utf8");
+    assert.match(onDisk, /BlueprintIdentifier = "504EC3031FED79650016851F"/);
+    assert.match(onDisk, /<ArchiveAction[\s\S]*buildConfiguration = "Release"/);
+  }
+  const contents = readFileSync(ensureWorkspaceContents(dir), "utf8");
+  assert.match(contents, /group:App\.xcodeproj/);
+  const withPods = mkdtempSync(join(tmpdir(), "qd-pods-"));
+  mkdirSync(join(withPods, "Pods/Pods.xcodeproj"), { recursive: true });
+  mkdirSync(join(withPods, "App.xcworkspace"), { recursive: true });
+  writeFileSync(join(withPods, "App.xcworkspace/contents.xcworkspacedata"), `<?xml version="1.0" encoding="UTF-8"?>
+<Workspace version = "1.0">
+   <FileRef location = "group:Pods/Pods.xcodeproj">
+   </FileRef>
+</Workspace>
+`);
+  const kept = readFileSync(ensureWorkspaceContents(withPods), "utf8");
+  assert.match(kept, /Pods\/Pods\.xcodeproj/);
+  assert.match(kept, /group:App\.xcodeproj/);
 });
 
 test("a literal bundle version below 6 is raised and the marketing version stays 1.0", () => {
