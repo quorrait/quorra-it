@@ -18,8 +18,8 @@ workflows:
       cocoapods: default
       # Uploaded Codemagic identities, applied by `xcode-project use-profiles`.
       # This does not run `app-store-connect fetch-signing-files --create`.
-      # Regenerate the App Store profile after Tap to Pay is on the App ID and
-      # replace the uploaded profile named quorra_dispatch_app_store before a signed build will succeed.
+      # Release entitlements omit Tap to Pay. Apple has granted that entitlement for
+      # development only, so the App Store profile must not include it.
       ios_signing:
         provisioning_profiles:
           - quorra_dispatch_app_store
@@ -44,11 +44,15 @@ workflows:
       - name: Build number and archive
         script: |
           cd ios/App
+          # Build 5 was the rejected binary. Never upload 5 or lower again.
+          NEXT=6
           if LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID"); then
-            agvtool new-version -all $((LATEST + 1))
-          else
-            agvtool new-version -all "$BUILD_NUMBER"
+            NEXT=$((LATEST + 1))
+          elif [ -n "${BUILD_NUMBER:-}" ]; then
+            NEXT="$BUILD_NUMBER"
           fi
+          if [ "$NEXT" -lt 6 ]; then NEXT=6; fi
+          agvtool new-version -all "$NEXT"
           xcode-project build-ipa \
             --workspace App.xcworkspace \
             --scheme App \

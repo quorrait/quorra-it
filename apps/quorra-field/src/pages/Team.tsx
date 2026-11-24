@@ -9,6 +9,7 @@ import { centsToStr, strToCents } from "../components/LineItems";
 import type { Invite, Role, TeamMember } from "../lib/types";
 import { createInvite, emailInvite, inviteUrl, listInvites, revokeAccess } from "../lib/team";
 import { planLabel, seatLimit } from "../lib/plans";
+import { isIOSNative } from "../lib/platform";
 import { hasSupabase } from "../lib/supabase";
 
 const COLORS = ["#f26b21", "#2563eb", "#16a34a", "#9333ea", "#db2777", "#0891b2", "#ca8a04"];
@@ -33,6 +34,7 @@ function InvitePanel({ m, invites, reload }: { m: TeamMember; invites: Invite[];
     const pending = invites.filter((i) => i.status === "pending" && i.team_member_id !== m.id).length;
     if (activeLogins + pending >= seats) {
       const next = planId === "basic" ? "Essentials" : planId === "essentials" ? "Enterprise" : "Custom";
+      if (isIOSNative()) return toast("This account cannot add another login. Contact your account administrator.");
       return toast(`Your ${planLabel(planId)} plan includes ${seats} ${seats === 1 ? "login" : "logins"}. Upgrade to ${next} under Billing to add more.`);
     }
     setBusy(true);

@@ -1,6 +1,7 @@
+import { Capacitor } from "@capacitor/core";
 import { StripeTerminal, TerminalConnectTypes, TerminalEventsEnum } from "@capacitor-community/stripe-terminal";
 import { demoMode, supabase } from "./supabase";
-import { tapToPayMessage } from "./tapToPay";
+import { iosTapToPayEntitled, tapToPayMessage } from "./tapToPay";
 
 async function callTerminal<T>(fn: string, body: object): Promise<T> {
   if (!supabase) throw new Error("Tap to Pay needs a live Stripe account. Use the QR code in the demo.");
@@ -28,6 +29,7 @@ export function requestTapToPayLocation(): Promise<void> {
 
 /** Discover the phone's Tap to Pay reader, take the invoice amount, then disconnect. */
 export async function collectTapToPay(invoiceId: string, onStatus?: (message: string) => void): Promise<void> {
+  if (Capacitor.getPlatform() === "ios" && !iosTapToPayEntitled()) throw new Error("This phone can't take Tap to Pay.");
   if (demoMode || !supabase) throw new Error("Tap to Pay needs a live Stripe account. Use the QR code in the demo.");
   const say = (m: string) => onStatus?.(m);
   say("Allow location if your phone asks.");

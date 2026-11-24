@@ -2,7 +2,75 @@
 // iOS is created on the build machine; Android is in the repo and can be overwritten by @capacitor/assets.
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { pathToFileURL } from "node:url";
 
+/** App Store build number. Build 5 was rejected; the next upload must be higher. */
+export const IOS_BUILD_NUMBER = 6;
+/** Marketing version stays 1.0. */
+export const IOS_MARKETING_VERSION = "1.0";
+
+/**
+ * Release / App Store entitlements. Apple granted Tap to Pay for development only,
+ * so this file must not include com.apple.developer.proximity-reader.payment.acceptance.
+ */
+export const RELEASE_ENTITLEMENTS = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>production</string>
+</dict>
+</plist>
+`;
+
+/** Debug entitlements. The development Tap to Pay entitlement can live here and be turned back on later. */
+export const DEBUG_ENTITLEMENTS = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>aps-environment</key>
+	<string>development</string>
+	<key>com.apple.developer.proximity-reader.payment.acceptance</key>
+	<true/>
+</dict>
+</plist>
+`;
+
+/** Point Debug at the development entitlements and Release at the App Store file, and keep the version above build 5. */
+export function patchIosProject(text) {
+  let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;");
+  next = next.replace(/CURRENT_PROJECT_VERSION = (\d+);/g, (_, n) => `CURRENT_PROJECT_VERSION = ${Math.max(Number(n), IOS_BUILD_NUMBER)};`);
+  next = next.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${IOS_MARKETING_VERSION};`);
+  next = next.replace(/PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;[\s\S]*?\n\t\t\t\};\n\t\t\tname = (Debug|Release);/g, (block, name) => {
+    const file = name === "Debug" ? "App/App.debug.entitlements" : "App/App.entitlements";
+    let updated = block;
+    if (updated.includes("CODE_SIGN_ENTITLEMENTS")) {
+      updated = updated.replace(/CODE_SIGN_ENTITLEMENTS = [^;]+;/, `CODE_SIGN_ENTITLEMENTS = ${file};`);
+    } else {
+      updated = updated.replace(
+        "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;",
+        `PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = ${file};`,
+      );
+    }
+    if (updated.includes("TARGETED_DEVICE_FAMILY")) {
+      updated = updated.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, 'TARGETED_DEVICE_FAMILY = "1,2";');
+    } else {
+      updated = updated.replace(/\n\t\t\t\};/, '\n\t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";\n\t\t\t};');
+    }
+    return updated;
+  });
+  return next;
+}
+
+/** Raise a literal CFBundleVersion above 5. Variable versions ($(CURRENT_PROJECT_VERSION)) are left for the build setting. */
+export function patchInfoVersions(xml) {
+  let next = xml.replace(/(<key>CFBundleVersion<\/key>\s*<string>)(\d+)(<\/string>)/, (_, open, n, close) => `${open}${Math.max(Number(n), IOS_BUILD_NUMBER)}${close}`);
+  next = next.replace(/(<key>CFBundleShortVersionString<\/key>\s*<string>)(?!\$\()[^<]*(<\/string>)/, `$1${IOS_MARKETING_VERSION}$2`);
+  return next;
+}
+
+const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) {
 const root = new URL("..", import.meta.url).pathname;
 const which = process.argv[2] ?? "all";
 const runIos = which === "all" || which === "ios";
@@ -95,40 +163,17 @@ if (runIos) {
           next = next.replace("</dict>\n</plist>", "\t<key>UIBackgroundModes</key>\n\t<array>\n\t\t<string>remote-notification</string>\n\t</array>\n</dict>\n</plist>");
         }
       }
-      return next;
+      return patchInfoVersions(next);
     });
     const entitlements = join(ios, "App/App/App.entitlements");
+    const debugEntitlements = join(ios, "App/App/App.debug.entitlements");
     mkdirSync(dirname(entitlements), { recursive: true });
-    writeFileSync(entitlements, `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-	<key>aps-environment</key>
-	<string>production</string>
-	<key>com.apple.developer.proximity-reader.payment.acceptance</key>
-	<true/>
-</dict>
-</plist>
-`);
+    // Release is what Codemagic's ios-release workflow archives. No Tap to Pay key.
+    writeFileSync(entitlements, RELEASE_ENTITLEMENTS);
+    writeFileSync(debugEntitlements, DEBUG_ENTITLEMENTS);
     console.log(`updated ${entitlements}`);
-    patch(join(ios, "App/App.xcodeproj/project.pbxproj"), (text) => {
-      let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;");
-      // The App target's Debug and Release configs both set this bundle id. Point each one at the entitlements file.
-      next = next.replace(/PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;[\s\S]*?\n\t\t\t\};/g, (block) => {
-        let updated = block;
-        if (!updated.includes("CODE_SIGN_ENTITLEMENTS")) {
-          updated = updated.replace(
-            "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;",
-            "PRODUCT_BUNDLE_IDENTIFIER = com.quorrait.dispatch;\n\t\t\t\tCODE_SIGN_ENTITLEMENTS = App/App.entitlements;",
-          );
-        }
-        if (updated.includes("TARGETED_DEVICE_FAMILY")) {
-          return updated.replace(/TARGETED_DEVICE_FAMILY = [^;]+;/, 'TARGETED_DEVICE_FAMILY = "1,2";');
-        }
-        return updated.replace(/\n\t\t\t\};$/, '\n\t\t\t\tTARGETED_DEVICE_FAMILY = "1,2";\n\t\t\t};');
-      });
-      return next;
-    });
+    console.log(`updated ${debugEntitlements}`);
+    patch(join(ios, "App/App.xcodeproj/project.pbxproj"), patchIosProject);
     patch(join(ios, "App/Podfile"), (text) => text.replace(/platform :ios, '[0-9.]+'/, "platform :ios, '15.0'"));
     const storyboard = join(ios, "App/App/Base.lproj/LaunchScreen.storyboard");
     if (existsSync(storyboard)) {
@@ -158,4 +203,5 @@ if (runAndroid) {
     </style>`;
     patch(styles, (xml) => xml.replace(/<style name="AppTheme\.NoActionBarLaunch"[\s\S]*?<\/style>/, launch.trim()));
   }
+}
 }

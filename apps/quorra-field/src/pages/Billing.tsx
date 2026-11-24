@@ -12,7 +12,7 @@ import { Field, Sheet, Spinner, useToast } from "../components/ui";
 import PlanCards from "../components/PlanCards";
 import { PLANS, downgradeLoginMessage, planByName, type PlanId } from "../lib/plans";
 import { isIosApp } from "../lib/iosPlan";
-import BuyService from "../components/BuyService";
+import { iosAccountCopy, iosAccountState } from "../lib/platform";
 
 interface Charge { id: string; date: string; description: string; amount_cents: number; status: string; receipt_url: string | null }
 const DEMO_CHARGES: Charge[] = [
@@ -61,8 +61,9 @@ export default function Billing() {
     const plan = params.get("plan");
     if (plan !== "basic" && plan !== "essentials" && plan !== "enterprise") return;
     openedPlan.current = true;
+    if (isIosApp()) return;
     if (hasPlan) setChangeOpen(true);
-    else if (!isIosApp()) void openEmbedded("checkout", plan, "month");
+    else void openEmbedded("checkout", plan, "month");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params, loading, isOwner, hasPlan]);
   const [upcoming, setUpcoming] = useState<{ amount_cents: number; date: string } | null>(null);
@@ -103,7 +104,7 @@ export default function Billing() {
   }
 
   async function openEmbedded(kind: "checkout" | "card", plan?: string, interval?: string, retried = false): Promise<void> {
-    if (kind === "checkout" && isIosApp()) return;
+    if (isIosApp()) return;
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? kind); setPayErr(null);
     try {
@@ -132,6 +133,7 @@ export default function Billing() {
   }
 
   async function go(fn: "billing-checkout" | "billing-portal", flow?: "cancel", plan?: string, interval?: string) {
+    if (isIosApp()) return;
     if (!hasSupabase || !supabase) return toast("Billing runs through Stripe on live accounts. This is the demo.");
     setBusy(plan ?? fn + (flow ?? ""));
     try {
@@ -149,6 +151,15 @@ export default function Billing() {
 
   if (!me.isOwner) return <div className="empty">Only the account owner can manage billing.</div>;
 
+  if (isIosApp()) {
+    return (
+      <div className="stack">
+        <div className="page-head"><div><h1 className="page-title">Billing</h1></div></div>
+        <p className="muted" style={{ margin: 0 }}>{iosAccountCopy(iosAccountState({ locked, status }))}</p>
+      </div>
+    );
+  }
+
   return (
     <div className="stack">
       <div className="page-head"><div><h1 className="page-title">Billing</h1><p className="page-sub">Your Quorra Dispatch plan.</p></div></div>
@@ -159,7 +170,7 @@ export default function Billing() {
           {!isIosApp() && <div style={{ marginTop: 8 }}><button className="btn sm" onClick={() => void openEmbedded("checkout", payErr.plan, payErr.interval)}>Try again</button></div>}
         </div>
       )}
-      {locked && <div className="error-banner" style={{ margin: 0 }}>{isIosApp() ? "Your plan is not active, so the rest of the app is locked." : "Your plan is not active, so the rest of the app is locked. Start your free trial below to continue."}</div>}
+      {locked && <div className="error-banner" style={{ margin: 0 }}>Your plan is not active, so the rest of the app is locked. Start your free trial below to continue.</div>}
 
       <div className="card stack">
         <div className="row between wrap">
@@ -205,12 +216,10 @@ export default function Billing() {
       )}
 
       {!active && !sub?.comped ? (
-        isIosApp() ? <BuyService /> : (
         <div className="stack">
           <div className="card-title" style={{ margin: 0 }}>Choose your plan</div>
           <PlanCards backTo="/billing" busy={busy} cta="Start" onChoose={(p, iv) => void openEmbedded("checkout", p.id, iv)} />
         </div>
-        )
       ) : !sub?.comped && (
         <div className="card stack">
           <div className="card-title" style={{ margin: 0 }}>Manage your plan</div>
@@ -220,7 +229,7 @@ export default function Billing() {
               <button className="btn primary" disabled={busy !== null} onClick={() => void change({ action: "resume" }, "Plan resumed. It will keep renewing.")}>Resume plan</button>
             ) : (
               <>
-                {isIosApp() ? <BuyService /> : <button className="btn" disabled={busy !== null} onClick={() => setChangeOpen(true)}>Upgrade or downgrade</button>}
+                <button className="btn" disabled={busy !== null} onClick={() => setChangeOpen(true)}>Upgrade or downgrade</button>
                 <button className="btn danger" disabled={busy !== null} onClick={() => setCancelOpen(true)}>Cancel plan</button>
               </>
             )}

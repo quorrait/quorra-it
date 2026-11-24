@@ -1,3 +1,5 @@
+import { isIOSNative } from "./platform";
+
 const FLAG = "qd-demo";
 const PREVIEW = "qd-plan-preview";
 
@@ -39,8 +41,9 @@ function appPath(path: string): string {
   return `${base}${path}`;
 }
 
-/** Leave the demo and open the real plan picker. Reloads so Supabase can be used again. */
+/** Leave the demo and open the real plan picker. Reloads so Supabase can be used again. The iOS app has no plan picker. */
 export function leaveDemoForTrial(): void {
+  if (isIOSNative()) { exitDemo(); return; }
   try { sessionStorage.removeItem(FLAG); } catch { /* ignore */ }
   if (import.meta.env.VITE_HASH_ROUTER) {
     location.hash = "#/plans";

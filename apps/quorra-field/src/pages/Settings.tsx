@@ -16,6 +16,7 @@ import { Field, Icon, Sheet, Spinner, useToast, useConfirm } from "../components
 import { leadFormUrl } from "../lib/publicLinks";
 import { APP_NAME } from "../lib/config";
 import { PUBLIC_PRIVACY_URL, PUBLIC_SITE_URL } from "../lib/publicUrl";
+import { isIOSNative } from "../lib/platform";
 import { hasSupabase, supabase } from "../lib/supabase";
 import DeleteCompanySheet from "../components/DeleteCompanySheet";
 import UpgradePrompt from "../components/UpgradePrompt";
@@ -28,7 +29,7 @@ export function More() {
   return (
     <div className="stack">
       <h1 className="page-title">More</h1>
-      {store.mode === "demo" && <a className="btn block" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
+      {store.mode === "demo" && !isIOSNative() && <a className="btn block" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
       <div className="card flush">
         <div className="list">
           {can("leads") && <Link to="/leads" className="list-item">{Icon.users}<div className="grow title">Leads</div>›</Link>}

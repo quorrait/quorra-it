@@ -12,6 +12,7 @@ import { createSupabaseStore, setStoreWritesBlocked } from "./supabaseStore";
 import { demoMode, hasSupabase, supabase } from "./supabase";
 import { demoPlanPreview } from "./demoMode";
 import { planAllows, planLabel, resolvePlanId, seatLimit, type GatedFeature, type PlanId } from "./plans";
+import { isIOSNative } from "./platform";
 import { billingPhase, type BillingPhase } from "./billingPhase";
 import { PUBLIC_APP_URL } from "./publicUrl";
 import { passwordError } from "./safeUrl";
@@ -395,7 +396,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       if (active) off.delete(teamMemberId);
       else off.add(teamMemberId);
       const next = 1 + team.filter((t) => t.role !== "Owner" && t.active !== false && !off.has(t.id)).length;
-      if (active && next > seatLimit(planId)) return `Your ${planLabel(planId)} plan allows ${seatLimit(planId)} logins. Deactivate another login first.`;
+      if (active && next > seatLimit(planId)) return isIOSNative() ? "This account cannot add another login. Contact your account administrator." : `Your ${planLabel(planId)} plan allows ${seatLimit(planId)} logins. Deactivate another login first.`;
       const list = [...off];
       try { localStorage.setItem("qd-demo-login-off", JSON.stringify(list)); } catch { /* ignore */ }
       setDemoOff(list);

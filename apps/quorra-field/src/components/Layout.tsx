@@ -11,6 +11,7 @@ import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { useData, useAuth } from "../lib/app";
 import { graceDaysLeft, reviewerEndsAt } from "../lib/billingPhase";
+import { IOS_ACCOUNT_ATTENTION, isIOSNative } from "../lib/platform";
 import type { Feature } from "../lib/access";
 import type { GatedFeature } from "../lib/plans";
 import type { ReactNode } from "react";
@@ -98,13 +99,13 @@ export default function Layout() {
                 {l.icon}
                 {l.label}
                 {l.to === "/leads" && newLeads > 0 && <span className="nav-badge">{newLeads}</span>}
-                {planLocked(l) && <span className="nav-lock" title="Upgrade">{Icon.lock}</span>}
+                {planLocked(l) && <span className="nav-lock" title={isIOSNative() ? "Unavailable" : "Upgrade"}>{Icon.lock}</span>}
               </NavLink>
             ))}
           </div>
         ))}
         {hubAdmin && <NavLink to="/hub" className={({ isActive }) => `side-link${isActive ? " active" : ""}`}>{Icon.gear}Hub</NavLink>}
-        {store.mode === "demo" && <a className="side-link" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
+        {store.mode === "demo" && !isIOSNative() && <a className="side-link" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="side-foot">
           <div style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>{me.name}</div>
           <div>{me.role}{me.email ? ` · ${me.email}` : ""}</div>
@@ -127,8 +128,9 @@ export default function Layout() {
           <NotificationBell />
         </header>
         <main className="main">
-          {phase === "grace" && <div className="error-banner">Payment failed. You have {graceDaysLeft(subscription?.past_due_since ?? null)} days of full access left, then 30 days to view and export, then the account is deleted. <Link to="/billing">Update billing</Link>.</div>}
-          {phase === "reviewer" && <div className="error-banner">You can view and export your data until {reviewerEndsAt(subscription?.past_due_since ?? null).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. Then the account and its data will be deleted. Pay to restore full access. <Link to="/billing">Update billing</Link> · <Link to="/export">Export</Link>.</div>}
+          {(phase === "grace" || phase === "reviewer") && isIOSNative() && <div className="error-banner">{IOS_ACCOUNT_ATTENTION}</div>}
+          {phase === "grace" && !isIOSNative() && <div className="error-banner">Payment failed. You have {graceDaysLeft(subscription?.past_due_since ?? null)} days of full access left, then 30 days to view and export, then the account is deleted. <Link to="/billing">Update billing</Link>.</div>}
+          {phase === "reviewer" && !isIOSNative() && <div className="error-banner">You can view and export your data until {reviewerEndsAt(subscription?.past_due_since ?? null).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}. Then the account and its data will be deleted. Pay to restore full access. <Link to="/billing">Update billing</Link> · <Link to="/export">Export</Link>.</div>}
           {error && <div className="error-banner">{error}</div>}
           <Outlet />
           <Tour />

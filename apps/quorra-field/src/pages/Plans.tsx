@@ -1,7 +1,6 @@
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import PlanCards from "../components/PlanCards";
-import BuyService from "../components/BuyService";
-import { isIosApp } from "../lib/iosPlan";
+import { isIOSNative } from "../lib/platform";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 
 /** Public page: what each plan includes. Picking one starts account creation. */
@@ -10,21 +9,7 @@ export default function Plans() {
   const [params] = useSearchParams();
   const focus = params.get("plan") ?? undefined;
   const initialInterval = params.get("interval") === "year" ? "year" as const : "month" as const;
-  if (isIosApp()) {
-    return (
-      <div className="pub">
-        <div className="pub-wrap">
-          <div className="pub-head">
-            <img src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt="Quorra Dispatch" />
-            <button className="btn" onClick={() => nav("/")}>Sign in</button>
-          </div>
-          <h1>Buy service</h1>
-          <p className="sub">Quorra Dispatch plans are sold on the website, not in the iOS app.</p>
-          <BuyService />
-        </div>
-      </div>
-    );
-  }
+  if (isIOSNative()) return <Navigate to="/" replace />;
   return (
     <div className="plans-screen">
       <div className="pub-wrap">

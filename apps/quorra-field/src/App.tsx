@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { applyStatusBar } from "./lib/native";
+import { IOS_ACCOUNT_ATTENTION, isIOSNative, isIosBlockedSignupPath } from "./lib/platform";
 import { AuthProvider, DataProvider, useAuth } from "./lib/app";
 import { exitDemo, leaveDemoForTrial } from "./lib/demoMode";
 import { demoMode } from "./lib/supabase";
@@ -46,6 +47,12 @@ function BillingPlansRedirect() {
   return <Navigate to={`/billing${search}`} replace />;
 }
 
+/** Native iOS has no business signup and no plan picker. Those links open sign-in. */
+function IosSignupGate({ path, children }: { path: string; children: JSX.Element }) {
+  if (isIOSNative() && isIosBlockedSignupPath(path)) return <Navigate to="/" replace />;
+  return children;
+}
+
 function Guard({ path, children }: { path: string; children: JSX.Element }) {
   const { can, loading } = useData();
   const f = ROUTE_FEATURE[path];
@@ -62,7 +69,7 @@ function PlanGate({ feature, children }: { feature: GatedFeature; children: JSX.
 function Locked({ children }: { children: JSX.Element }) {
   const { locked, me, loading } = useData();
   if (loading || !locked) return children;
-  if (!me.isOwner) return <div className="auth"><div className="auth-card stack"><h1>Plan not active</h1><p className="muted">Your company's Quorra Dispatch plan is not active. Ask the account owner to restart it under Billing.</p></div></div>;
+  if (!me.isOwner) return <div className="auth"><div className="auth-card stack"><h1>{isIOSNative() ? "Account" : "Plan not active"}</h1><p className="muted">{isIOSNative() ? IOS_ACCOUNT_ATTENTION : "Your company's Quorra Dispatch plan is not active. Ask the account owner to restart it under Billing."}</p></div></div>;
   return <LockedOwner>{children}</LockedOwner>;
 }
 
@@ -90,7 +97,7 @@ function AlreadySignedIn() {
 function DemoBanner() {
   return (
     <div className="demo-banner" role="status">
-      <button type="button" onClick={leaveDemoForTrial}>Demo — start free trial</button>
+      {!isIOSNative() && <button type="button" onClick={leaveDemoForTrial}>Demo — start free trial</button>}
       <button type="button" className="demo-exit" onClick={exitDemo}>Exit</button>
     </div>
   );
@@ -105,9 +112,10 @@ function Gate() {
   else if (!email) body = (
     <div className="pub">
     <Routes>
-      <Route path="plans" element={<Plans />} />
+      <Route path="plans" element={<IosSignupGate path="plans"><Plans /></IosSignupGate>} />
       <Route path="contact" element={<Contact />} />
-      <Route path="start" element={<Start />} />
+      <Route path="start" element={<IosSignupGate path="start"><Start /></IosSignupGate>} />
+      <Route path="signup" element={<Login />} />
       <Route path="join" element={<Login />} />
       <Route path="*" element={<Login />} />
     </Routes>
@@ -119,7 +127,8 @@ function Gate() {
       <Locked>
       <Routes>
         <Route path="contact" element={<Contact />} />
-        <Route path="start" element={<AlreadySignedIn />} />
+        <Route path="start" element={<IosSignupGate path="start"><AlreadySignedIn /></IosSignupGate>} />
+        <Route path="signup" element={<Navigate to="/" replace />} />
         <Route element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="calendar" element={<Calendar />} />
@@ -135,7 +144,7 @@ function Gate() {
           <Route path="templates" element={<Guard path="/templates"><Templates /></Guard>} />
           <Route path="import" element={<Guard path="/import"><Import /></Guard>} />
           <Route path="service-plans" element={<Guard path="/service-plans"><PlanGate feature="service_plans"><ServicePlans /></PlanGate></Guard>} />
-          <Route path="plans" element={<BillingPlansRedirect />} />
+          <Route path="plans" element={<IosSignupGate path="plans"><BillingPlansRedirect /></IosSignupGate>} />
           <Route path="purchase-orders" element={<Guard path="/purchase-orders"><PlanGate feature="purchase_orders"><PurchaseOrders /></PlanGate></Guard>} />
           <Route path="team" element={<Guard path="/team"><Team /></Guard>} />
           <Route path="timesheets" element={<Guard path="/timesheets"><PlanGate feature="timesheets"><Timesheets /></PlanGate></Guard>} />
