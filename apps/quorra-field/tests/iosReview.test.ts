@@ -5,7 +5,7 @@ import { iosTapToPayEntitled, tapToPayOffer } from "../src/lib/tapToPay.ts";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, ensureWorkspaceContents, installSharedAppScheme, nativeAppTargetId, patchInfoVersions, patchIosProject, sharedAppScheme } from "../scripts/prepare-native.mjs";
+import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_DEPLOYMENT_FLOOR, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, ensureWorkspaceContents, highestDeploymentTarget, installSharedAppScheme, nativeAppTargetId, patchInfoVersions, patchIosProject, patchPodfile, sharedAppScheme } from "../scripts/prepare-native.mjs";
 
 test("isIOSNative is only the native iOS platform", () => {
   assert.equal(isIOSNative("ios"), true);
@@ -75,6 +75,15 @@ const PBX = `
 \t\t\tname = Release;
 \t\t};
 `;
+
+test("the deployment target stays at 15.0 unless a podspec asks for more", () => {
+  const stripe = "s.ios.deployment_target  = '14.0'\n";
+  const core = "s.ios.deployment_target = '13.0'\n";
+  assert.equal(highestDeploymentTarget([stripe, core]), IOS_DEPLOYMENT_FLOOR);
+  assert.equal(highestDeploymentTarget([stripe, "s.ios.deployment_target = '16.0'"]), "16.0");
+  assert.equal(patchPodfile("platform :ios, '13.0'\n", "15.0"), "platform :ios, '15.0'\n");
+  assert.match(patchIosProject("IPHONEOS_DEPLOYMENT_TARGET = 13.0;\nIPHONEOS_DEPLOYMENT_TARGET = 13.0;\n", "15.0"), /IPHONEOS_DEPLOYMENT_TARGET = 15\.0;/g);
+});
 
 test("App Store entitlements omit Tap to Pay and Release does not sign with it", () => {
   assert.equal(RELEASE_ENTITLEMENTS.includes("proximity-reader"), false);

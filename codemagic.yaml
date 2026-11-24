@@ -37,6 +37,9 @@ workflows:
         script: |
           [ -d ios ] || npx cap add ios
           npx @capacitor/assets generate --ios || true
+          # StripeTerminal needs a higher platform than the Capacitor Podfile template.
+          # Patch that before either cap sync or pod install resolves specs.
+          node scripts/prepare-native.mjs ios
           npx cap sync ios
           cd ios/App
           # cap sync only warns and continues when `pod` is missing.
@@ -65,6 +68,7 @@ workflows:
             exit 1
           fi
           cd ../..
+          # pod install rewrites the workspace. Put the App scheme and Pods ref back.
           node scripts/prepare-native.mjs ios
       - name: Set up code signing
         script: xcode-project use-profiles

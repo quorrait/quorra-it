@@ -11,6 +11,61 @@ export const APP_TARGET_FALLBACK_ID = "504EC3031FED79650016851F";
 export const IOS_BUILD_NUMBER = 6;
 /** Marketing version stays 1.0. */
 export const IOS_MARKETING_VERSION = "1.0";
+/**
+ * Floor for the app. CapacitorCommunityStripeTerminal's podspec asks for 14.0,
+ * and StripeTerminal 4.1 needs that too. The Podfile template is 13.0, which is
+ * why pod install fails until this is raised first.
+ */
+export const IOS_DEPLOYMENT_FLOOR = "15.0";
+
+export function compareIosVersions(a, b) {
+  const pa = String(a).split(".").map((n) => Number(n) || 0);
+  const pb = String(b).split(".").map((n) => Number(n) || 0);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
+    if (d !== 0) return d > 0 ? 1 : -1;
+  }
+  return 0;
+}
+
+/** Highest podspec deployment target, never below the app floor. */
+export function highestDeploymentTarget(texts, floor = IOS_DEPLOYMENT_FLOOR) {
+  let best = floor;
+  for (const text of texts) {
+    const re = /s\.ios\.deployment_target\s*=\s*['"]([0-9.]+)['"]/g;
+    let match;
+    while ((match = re.exec(text))) {
+      if (compareIosVersions(match[1], best) > 0) best = match[1];
+    }
+  }
+  return best;
+}
+
+const PODSPECS = [
+  "@capacitor-community/stripe-terminal/CapacitorCommunityStripeTerminal.podspec",
+  "@capacitor/ios/Capacitor.podspec",
+  "@capacitor/push-notifications/CapacitorPushNotifications.podspec",
+  "@capacitor/browser/CapacitorBrowser.podspec",
+  "@capacitor/splash-screen/CapacitorSplashScreen.podspec",
+  "@capacitor/status-bar/CapacitorStatusBar.podspec",
+];
+
+export function podspecTexts(fieldRoot) {
+  const texts = [];
+  for (const rel of PODSPECS) {
+    const path = join(fieldRoot, "node_modules", rel);
+    if (existsSync(path)) texts.push(readFileSync(path, "utf8"));
+  }
+  return texts;
+}
+
+export function patchPodfile(text, deploymentTarget = IOS_DEPLOYMENT_FLOOR) {
+  if (/platform :ios, '[0-9.]+'/.test(text)) {
+    return text.replace(/platform :ios, '[0-9.]+'/g, `platform :ios, '${deploymentTarget}'`);
+  }
+  return `platform :ios, '${deploymentTarget}'\n${text}`;
+}
 
 /**
  * Release / App Store entitlements. Apple granted Tap to Pay for development only,
@@ -40,8 +95,8 @@ export const DEBUG_ENTITLEMENTS = `<?xml version="1.0" encoding="UTF-8"?>
 `;
 
 /** Point Debug at the development entitlements and Release at the App Store file, and keep the version above build 5. */
-export function patchIosProject(text) {
-  let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, "IPHONEOS_DEPLOYMENT_TARGET = 15.0;");
+export function patchIosProject(text, deploymentTarget = IOS_DEPLOYMENT_FLOOR) {
+  let next = text.replace(/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]+;/g, `IPHONEOS_DEPLOYMENT_TARGET = ${deploymentTarget};`);
   next = next.replace(/CURRENT_PROJECT_VERSION = (\d+);/g, (_, n) => `CURRENT_PROJECT_VERSION = ${Math.max(Number(n), IOS_BUILD_NUMBER)};`);
   next = next.replace(/MARKETING_VERSION = [^;]+;/g, `MARKETING_VERSION = ${IOS_MARKETING_VERSION};`);
   next = next.replace(/PRODUCT_BUNDLE_IDENTIFIER = com\.quorrait\.dispatch;[\s\S]*?\n\t\t\t\};\n\t\t\tname = (Debug|Release);/g, (block, name) => {
@@ -312,12 +367,14 @@ if (runIos) {
     writeFileSync(debugEntitlements, DEBUG_ENTITLEMENTS);
     console.log(`updated ${entitlements}`);
     console.log(`updated ${debugEntitlements}`);
+    const deploymentTarget = highestDeploymentTarget(podspecTexts(root));
+    console.log(`iOS deployment target ${deploymentTarget}`);
     const pbxprojPath = join(ios, "App/App.xcodeproj/project.pbxproj");
-    patch(pbxprojPath, patchIosProject);
+    patch(pbxprojPath, (text) => patchIosProject(text, deploymentTarget));
     if (existsSync(pbxprojPath)) {
       for (const schemePath of installSharedAppScheme(join(ios, "App"))) console.log(`updated ${schemePath}`);
     }
-    patch(join(ios, "App/Podfile"), (text) => text.replace(/platform :ios, '[0-9.]+'/, "platform :ios, '15.0'"));
+    patch(join(ios, "App/Podfile"), (text) => patchPodfile(text, deploymentTarget));
     const storyboard = join(ios, "App/App/Base.lproj/LaunchScreen.storyboard");
     if (existsSync(storyboard)) {
       writeFileSync(storyboard, LAUNCH);
