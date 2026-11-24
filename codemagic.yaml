@@ -38,6 +38,33 @@ workflows:
           [ -d ios ] || npx cap add ios
           npx @capacitor/assets generate --ios || true
           npx cap sync ios
+          cd ios/App
+          # cap sync only warns and continues when `pod` is missing.
+          if ! command -v pod >/dev/null 2>&1; then
+            echo "CocoaPods is not on PATH. Installing."
+            gem install cocoapods --no-document || brew install cocoapods
+            if ! command -v pod >/dev/null 2>&1; then
+              GEM_BIN="$(gem environment gemdir 2>/dev/null)/bin"
+              if [ -n "${GEM_BIN}" ] && [ -d "${GEM_BIN}" ]; then
+                export PATH="${GEM_BIN}:${PATH}"
+              fi
+              export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
+            fi
+          fi
+          if ! command -v pod >/dev/null 2>&1; then
+            echo "CocoaPods is still not on PATH after install."
+            exit 1
+          fi
+          pod --version
+          if ! pod install; then
+            echo "pod install failed. Retrying with --repo-update."
+            pod install --repo-update
+          fi
+          if [ ! -f "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig" ]; then
+            echo "pod install did not create Pods/Target Support Files/Pods-App"
+            exit 1
+          fi
+          cd ../..
           node scripts/prepare-native.mjs ios
       - name: Set up code signing
         script: xcode-project use-profiles
@@ -49,12 +76,33 @@ workflows:
           ls -R App.xcodeproj/xcshareddata || echo "no App.xcodeproj/xcshareddata"
           echo "--- workspace contents ---"
           cat App.xcworkspace/contents.xcworkspacedata || echo "NO contents.xcworkspacedata"
+          echo "--- Pods ---"
+          ls Pods | head || echo "Pods directory is missing"
+          echo "--- CODE_SIGN_ENTITLEMENTS ---"
+          grep "CODE_SIGN_ENTITLEMENTS" App.xcodeproj/project.pbxproj || true
+          echo "--- ArchiveAction ---"
+          grep -A1 "ArchiveAction" App.xcworkspace/xcshareddata/xcschemes/App.xcscheme || true
           xcodebuild -list -workspace App.xcworkspace || true
           # Signing setup only rewrites project.pbxproj. Put App.xcscheme on the
           # workspace itself, which is what xcodebuild -workspace reads.
           node ../../scripts/prepare-native.mjs ios
           echo "=== schemes after refresh ==="
           ls -R App.xcodeproj/xcshareddata App.xcworkspace/xcshareddata || true
+          echo "--- Pods ---"
+          ls Pods | head || echo "Pods directory is missing"
+          echo "--- Release CODE_SIGN_ENTITLEMENTS ---"
+          awk '
+            /\/\* Release \*\/ = \{/ {grab=1; buf=""}
+            grab {buf = buf $0 "\n"}
+            grab && /name = Release;/ {
+              if (buf ~ /CODE_SIGN_ENTITLEMENTS/) print buf
+              grab=0
+            }
+          ' App.xcodeproj/project.pbxproj | grep "CODE_SIGN_ENTITLEMENTS" || true
+          if [ ! -f "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig" ]; then
+            echo "Pods-App.release.xcconfig is missing. pod install did not run."
+            exit 1
+          fi
           xcodebuild -list -workspace App.xcworkspace || true
           # Build 5 was the rejected binary. Never upload 5 or lower again.
           NEXT=6
