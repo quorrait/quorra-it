@@ -133,6 +133,18 @@ test("the shared App scheme names the App target and archives with Release", () 
   const kept = readFileSync(ensureWorkspaceContents(withPods), "utf8");
   assert.match(kept, /Pods\/Pods\.xcodeproj/);
   assert.match(kept, /group:App\.xcodeproj/);
+  const appOnly = mkdtempSync(join(tmpdir(), "qd-app-only-"));
+  mkdirSync(join(appOnly, "Pods/Pods.xcodeproj"), { recursive: true });
+  mkdirSync(join(appOnly, "App.xcworkspace"), { recursive: true });
+  writeFileSync(join(appOnly, "App.xcworkspace/contents.xcworkspacedata"), `<?xml version="1.0" encoding="UTF-8"?>
+<Workspace version = "1.0">
+   <FileRef location = "group:App.xcodeproj">
+   </FileRef>
+</Workspace>
+`);
+  const withBoth = readFileSync(ensureWorkspaceContents(appOnly), "utf8");
+  assert.match(withBoth, /group:App\.xcodeproj/);
+  assert.match(withBoth, /Pods\/Pods\.xcodeproj/);
 });
 
 test("a literal bundle version below 6 is raised and the marketing version stays 1.0", () => {

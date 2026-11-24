@@ -159,28 +159,36 @@ export function installSharedAppScheme(appDir) {
   return paths;
 }
 
-/** CocoaPods normally writes this. An empty Capacitor workspace hides every project scheme. */
+/** CocoaPods normally writes this. Keep the App project and add Pods once pod install has created it. */
 export function ensureWorkspaceContents(appDir) {
   const contentsPath = join(appDir, "App.xcworkspace/contents.xcworkspacedata");
   mkdirSync(dirname(contentsPath), { recursive: true });
-  const current = existsSync(contentsPath) ? readFileSync(contentsPath, "utf8") : "";
-  if (current.includes("App.xcodeproj")) return contentsPath;
-  const refs = [`   <FileRef
+  let xml = existsSync(contentsPath) ? readFileSync(contentsPath, "utf8") : "";
+  const appRef = `   <FileRef
       location = "group:App.xcodeproj">
-   </FileRef>`];
-  if (existsSync(join(appDir, "Pods/Pods.xcodeproj"))) {
-    refs.push(`   <FileRef
+   </FileRef>`;
+  const podsRef = `   <FileRef
       location = "group:Pods/Pods.xcodeproj">
-   </FileRef>`);
-  }
-  const body = `${refs.join("\n")}\n`;
-  const xml = current.includes("</Workspace>")
-    ? current.replace("</Workspace>", `${body}</Workspace>`)
-    : `<?xml version="1.0" encoding="UTF-8"?>
+   </FileRef>`;
+  const podsExist = existsSync(join(appDir, "Pods/Pods.xcodeproj"));
+  if (!xml.includes("</Workspace>")) {
+    const refs = [appRef];
+    if (podsExist) refs.push(podsRef);
+    xml = `<?xml version="1.0" encoding="UTF-8"?>
 <Workspace
    version = "1.0">
-${body}</Workspace>
+${refs.join("\n")}
+</Workspace>
 `;
+    writeFileSync(contentsPath, xml);
+    return contentsPath;
+  }
+  if (!xml.includes("group:App.xcodeproj") && !xml.includes('location = "App.xcodeproj"')) {
+    xml = xml.replace("</Workspace>", `${appRef}\n</Workspace>`);
+  }
+  if (podsExist && !xml.includes("Pods/Pods.xcodeproj")) {
+    xml = xml.replace("</Workspace>", `${podsRef}\n</Workspace>`);
+  }
   writeFileSync(contentsPath, xml);
   return contentsPath;
 }
