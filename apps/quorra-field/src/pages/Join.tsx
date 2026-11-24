@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { acceptInvite, codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
+import { isIOSNative } from "../lib/platform";
 import { useAuth, useData } from "../lib/app";
 import { Spinner } from "../components/ui";
 
@@ -30,9 +31,9 @@ export default function Join() {
       <div className="auth-head">
         <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
         <h1>Join {other.business}</h1>
-        <p className="muted">This invite is for <b>{other.email}</b>, but you are signed in as <b>{auth.email}</b>. Sign out to create the account for {other.email}.</p>
+        <p className="muted">This invite is for <b>{other.email}</b>, but you are signed in as <b>{auth.email}</b>. {isIOSNative() ? `Sign out to join with ${other.email}.` : `Sign out to create the account for ${other.email}.`}</p>
       </div>
-      <button className="btn primary block" onClick={() => void auth.signOut()}>Sign out and create account</button>
+      <button className="btn primary block" onClick={() => void auth.signOut()}>{isIOSNative() ? "Sign out and join the team" : "Sign out and create account"}</button>
       <button className="btn block" onClick={() => nav("/", { replace: true })}>Stay signed in as {auth.email}</button>
     </div></div>
   );

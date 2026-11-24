@@ -3,10 +3,29 @@ import { parseUsAddress } from "./usAddress";
 
 export type TapToPayOffer = "hidden" | "ready";
 
-/** Web never offers Tap to Pay. The iOS and Android apps do. */
-export function tapToPayOffer(platform = Capacitor.getPlatform(), native = Capacitor.isNativePlatform()): TapToPayOffer {
+/**
+ * App Store builds do not include the Tap to Pay entitlement (development only).
+ * The button stays hidden unless a build sets VITE_IOS_TAP_TO_PAY=1 and signs with that entitlement.
+ */
+export function iosTapToPayEntitled(flag?: string): boolean {
+  const value = flag ?? readTapToPayFlag();
+  return value === "1";
+}
+
+function readTapToPayFlag(): string | undefined {
+  const env = (import.meta as { env?: { VITE_IOS_TAP_TO_PAY?: string } }).env;
+  return env?.VITE_IOS_TAP_TO_PAY;
+}
+
+/** Web never offers Tap to Pay. Android does. iOS does only when the entitlement is in the build. */
+export function tapToPayOffer(
+  platform = Capacitor.getPlatform(),
+  native = Capacitor.isNativePlatform(),
+  iosEntitled = iosTapToPayEntitled(),
+): TapToPayOffer {
   if (!native || platform === "web") return "hidden";
-  if (platform === "ios" || platform === "android") return "ready";
+  if (platform === "ios") return iosEntitled ? "ready" : "hidden";
+  if (platform === "android") return "ready";
   return "hidden";
 }
 

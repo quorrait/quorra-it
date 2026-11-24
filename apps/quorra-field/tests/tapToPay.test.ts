@@ -3,11 +3,12 @@ import { test } from "node:test";
 import { iosSupportsTapToPay, iosVersionFromUserAgent, tapToPayBlocker, tapToPayMessage, tapToPayOffer } from "../src/lib/tapToPay.ts";
 import { parseUsAddress } from "../src/lib/usAddress.ts";
 
-test("Tap to Pay is offered on the native iOS and Android apps", () => {
+test("Tap to Pay is offered on Android, and on iOS only when the entitlement is in the build", () => {
   assert.equal(tapToPayOffer("web", false), "hidden");
   assert.equal(tapToPayOffer("web", true), "hidden");
   assert.equal(tapToPayOffer("android", true), "ready");
-  assert.equal(tapToPayOffer("ios", true), "ready");
+  assert.equal(tapToPayOffer("ios", true), "hidden");
+  assert.equal(tapToPayOffer("ios", true, true), "ready");
   assert.equal(tapToPayOffer("android", false), "hidden");
   assert.equal(tapToPayOffer("ios", false), "hidden");
 });

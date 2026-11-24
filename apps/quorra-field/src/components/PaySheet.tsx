@@ -192,6 +192,7 @@ export function TakePaymentSheet({ invoice, customer, balance, onClose }: { invo
   }
 
   function openTap() {
+    if (offer !== "ready") return;
     const block = tapToPayBlocker({ stripeConnected: business.stripe_connected, address: business.address });
     if (block) { toast(block); return; }
     if (!tapToPayReviewed()) { setStep("ios"); return; }

@@ -6,8 +6,7 @@ import { useAuth } from "../lib/app";
 import { supabase } from "../lib/supabase";
 import { APP_NAME } from "../lib/config";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
-import { isIosApp } from "../lib/iosPlan";
-import BuyService from "../components/BuyService";
+import { isIOSNative } from "../lib/platform";
 import { Field, PasswordInput } from "../components/ui";
 import { codeFromHash, inviteInfo, rememberInvite } from "../lib/team";
 import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
@@ -123,7 +122,7 @@ export default function Login() {
   return (
     <div className="auth">
       <form className="auth-card stack" method="post" action="#" onSubmit={submit}>
-        {import.meta.env.BASE_URL !== "./" && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
+        {import.meta.env.BASE_URL !== "./" && !isIOSNative() && <a className="small muted" href={PUBLIC_SITE_URL}>‹ Back to website</a>}
         <div className="auth-head">
           {mode !== "up" ? (
             <img className="auth-wide" src={`${import.meta.env.BASE_URL}logo-wide-v2.png`} alt={APP_NAME} />
@@ -166,9 +165,7 @@ export default function Login() {
           <button type="button" className="btn block" onClick={() => setMode(mode === "in" ? "up" : "in")}>
             {mode === "in" ? "I need to create a login" : "I already have a login"}
           </button>
-        ) : isIosApp() ? (
-          <BuyService />
-        ) : (
+        ) : !isIOSNative() && (
           <button type="button" className="btn block" onClick={() => nav("/plans")}>Buy service</button>
         )}
       </form>

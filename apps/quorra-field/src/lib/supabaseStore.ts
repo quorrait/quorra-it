@@ -1,5 +1,6 @@
 import type { Business, CollectionName, Collections, Customer, Invoice, Job, New, Payment } from "./types";
 import type { Store } from "./store";
+import { IOS_ACCOUNT_ATTENTION, isIOSNative } from "./platform";
 import { supabase } from "./supabase";
 
 const sb = () => {
@@ -15,7 +16,7 @@ export function setStoreWritesBlocked(blocked: boolean) {
 }
 
 function guardWrite() {
-  if (writesBlocked) throw new Error("This account is view-only until billing is updated. You can still export your data.");
+  if (writesBlocked) throw new Error(isIOSNative() ? IOS_ACCOUNT_ATTENTION : "This account is view-only until billing is updated. You can still export your data.");
 }
 
 async function list<T>(table: string, orderBy: string, ascending = false): Promise<T[]> {

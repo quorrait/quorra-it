@@ -1,6 +1,6 @@
 import { errMsg } from "../lib/errors";
 import { useState, type FormEvent } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../lib/app";
 import { hasSupabase, supabase } from "../lib/supabase";
 import { PLANS, ANNUAL_DISCOUNT, annualCents } from "../lib/plans";
@@ -8,8 +8,7 @@ import { TRIAL_DAYS } from "../lib/plans";
 import { money } from "../lib/money";
 import { Field, PasswordInput } from "../components/ui";
 import EmbeddedStripe from "../components/EmbeddedStripe";
-import BuyService from "../components/BuyService";
-import { isIosApp } from "../lib/iosPlan";
+import { isIOSNative } from "../lib/platform";
 import { PUBLIC_SITE_URL } from "../lib/publicUrl";
 import { MIN_PASSWORD, passwordError } from "../lib/safeUrl";
 
@@ -70,21 +69,7 @@ export default function Start() {
     }
   }
 
-  if (isIosApp()) {
-    return (
-      <div className="auth">
-        <div className="auth-card stack">
-          <div className="auth-head">
-            <img className="auth-mark" src={`${import.meta.env.BASE_URL}logo-mark-v2.png`} alt="" />
-            <h1>Buy service</h1>
-            <p className="muted">Plans are sold on the website, not in the iOS app.</p>
-          </div>
-          <BuyService />
-          <button type="button" className="btn block" onClick={() => nav("/")}>Back to sign in</button>
-        </div>
-      </div>
-    );
-  }
+  if (isIOSNative()) return <Navigate to="/" replace />;
 
   if (awaiting) {
     return (

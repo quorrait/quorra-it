@@ -1,10 +1,20 @@
 import { Link } from "react-router-dom";
 import { FEATURE_PLAN, type GatedFeature } from "../lib/plans";
+import { IOS_ACCOUNT_ATTENTION, isIOSNative } from "../lib/platform";
 import { Icon } from "./ui";
 
 /** Locked feature. Names the plan that includes it and opens Billing with that plan selected. */
 export default function UpgradePrompt({ feature, title }: { feature: GatedFeature; title?: string }) {
   const plan = FEATURE_PLAN[feature];
+  if (isIOSNative()) {
+    return (
+      <div className="card stack upgrade-lock" data-testid="upgrade-prompt">
+        <div className="upgrade-lock-icon" aria-hidden>{Icon.lock}</div>
+        <h2 style={{ margin: 0 }}>{title ?? "Not available"}</h2>
+        <p className="muted" style={{ margin: 0 }}>{IOS_ACCOUNT_ATTENTION}</p>
+      </div>
+    );
+  }
   return (
     <div className="card stack upgrade-lock" data-testid="upgrade-prompt">
       <div className="upgrade-lock-icon" aria-hidden>{Icon.lock}</div>
