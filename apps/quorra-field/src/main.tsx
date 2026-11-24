@@ -1,6 +1,7 @@
 import { StrictMode, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, HashRouter } from "react-router-dom";
+import { browserPathFromHash } from "./lib/hashRoute";
 import { keepInputsVisible, prepareNativeShell } from "./lib/native";
 import { listenForPush } from "./lib/push";
 
@@ -15,6 +16,11 @@ function Root() {
   }
   const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
   return <BrowserRouter basename={base || undefined}><App /></BrowserRouter>;
+}
+
+if (!import.meta.env.VITE_HASH_ROUTER) {
+  const next = browserPathFromHash(window.location.hash, import.meta.env.BASE_URL || "/");
+  if (next) window.history.replaceState(null, "", next);
 }
 
 keepInputsVisible();

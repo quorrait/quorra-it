@@ -6,20 +6,15 @@ import { admin, appUrl, env } from "../_shared/util.ts";
 import { sendEmail } from "../_shared/notify.ts";
 import { emailHtml } from "../_shared/emailTemplate.ts";
 import { authUserIsMissing, isGoneAccountWrite, promoFixAfterRepeatTrial, promoFixPatch, REPEAT_TRIAL_PROMO_DETAIL, subscriptionDeletedIsDone } from "../_shared/promoRecovery.ts";
-import { monthlyPromoCoupon } from "../_shared/trialOffer.ts";
+import { launchPromoForSubscription, planNameForPrice } from "../_shared/deals.ts";
 import { ensureTrialPromoWithRetry, type PromoFix } from "../_shared/trialSchedule.ts";
 
 const stripe = new Stripe(env("STRIPE_SECRET_KEY"), { httpClient: Stripe.createFetchHttpClient() });
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
-// Plan name from the price id (STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE), so it is right even when the Stripe price has no nickname.
+// Plan name from the price id (deal prices, then STRIPE_PRICE_BASIC / _ESSENTIALS / _ENTERPRISE).
 function planName(price?: Stripe.Price | null): string {
-  for (const [key, name] of [["BASIC", "Basic"], ["ESSENTIALS", "Essentials"], ["ENTERPRISE", "Enterprise"]]) {
-    if (price?.id && (price.id === Deno.env.get(`STRIPE_PRICE_${key}`) || price.id === Deno.env.get(`STRIPE_PRICE_${key}_ANNUAL`))) return name;
-  }
-  const nick = (price?.nickname ?? "").toLowerCase();
-  if (nick === "basic" || nick === "essentials" || nick === "enterprise") return nick.charAt(0).toUpperCase() + nick.slice(1);
-  return "Basic";
+  return planNameForPrice(price?.id, { envPrice: (name) => Deno.env.get(name), nickname: price?.nickname });
 }
 
 async function save(sub: Stripe.Subscription, promoFix?: PromoFix | null) {
@@ -108,7 +103,7 @@ async function prepareSubscription(sub: Stripe.Subscription): Promise<{ subscrip
   try { sub = await stopRepeatTrial(sub); } catch (e) { console.error("repeat trial", e); }
   const price = sub.items.data[0]?.price;
   const interval = price?.recurring?.interval === "year" ? "year" : "month";
-  const applied = await ensureTrialPromoWithRetry(stripe, sub, monthlyPromoCoupon(interval, Deno.env.get("STRIPE_PROMO_COUPON")));
+  const applied = await ensureTrialPromoWithRetry(stripe, sub, launchPromoForSubscription(sub.metadata?.deal, interval, Deno.env.get("STRIPE_PROMO_COUPON")));
   sub = applied.subscription;
   try { await rememberTrial(sub); } catch (e) { console.error("trial ledger", e); }
   const fix = promoFixAfterRepeatTrial({
