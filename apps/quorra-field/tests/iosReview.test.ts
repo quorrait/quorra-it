@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { IOS_ACCOUNT_ATTENTION, iosAccountCopy, iosAccountState, isIOSNative, isIosBlockedSignupPath } from "../src/lib/platform.ts";
 import { iosTapToPayEntitled, tapToPayOffer } from "../src/lib/tapToPay.ts";
-import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, patchInfoVersions, patchIosProject } from "../scripts/prepare-native.mjs";
+import { mkdtempSync, readFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { DEBUG_ENTITLEMENTS, IOS_BUILD_NUMBER, IOS_MARKETING_VERSION, RELEASE_ENTITLEMENTS, nativeAppTargetId, patchInfoVersions, patchIosProject, sharedAppScheme, writeSharedAppScheme } from "../scripts/prepare-native.mjs";
 
 test("isIOSNative is only the native iOS platform", () => {
   assert.equal(isIOSNative("ios"), true);
@@ -86,6 +89,29 @@ test("App Store entitlements omit Tap to Pay and Release does not sign with it",
   assert.equal(IOS_MARKETING_VERSION, "1.0");
   assert.match(patched, /MARKETING_VERSION = 1\.0;/);
   assert.match(patched, /IPHONEOS_DEPLOYMENT_TARGET = 15\.0;/);
+});
+
+const NATIVE_TARGET = `504EC3031FED79650016851F /* App */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 504EC3161FED79650016851F /* Build configuration list for PBXNativeTarget "App" */;
+			name = App;
+			productName = App;
+		};`;
+
+test("the shared App scheme names the App target and archives with Release", () => {
+  assert.equal(nativeAppTargetId(NATIVE_TARGET), "504EC3031FED79650016851F");
+  const scheme = sharedAppScheme(nativeAppTargetId(NATIVE_TARGET));
+  assert.match(scheme, /BlueprintIdentifier = "504EC3031FED79650016851F"/);
+  assert.match(scheme, /BlueprintName = "App"/);
+  assert.match(scheme, /ReferencedContainer = "container:App\.xcodeproj"/);
+  assert.match(scheme, /<ArchiveAction[\s\S]*buildConfiguration = "Release"/);
+  const dir = mkdtempSync(join(tmpdir(), "qd-scheme-"));
+  const project = join(dir, "App.xcodeproj");
+  const written = writeSharedAppScheme(project, NATIVE_TARGET);
+  assert.equal(written, join(project, "xcshareddata/xcschemes/App.xcscheme"));
+  const onDisk = readFileSync(written, "utf8");
+  assert.match(onDisk, /BlueprintIdentifier = "504EC3031FED79650016851F"/);
+  assert.match(onDisk, /<ArchiveAction[\s\S]*buildConfiguration = "Release"/);
 });
 
 test("a literal bundle version below 6 is raised and the marketing version stays 1.0", () => {

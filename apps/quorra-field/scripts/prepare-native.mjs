@@ -4,6 +4,9 @@ import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+/** Capacitor's iOS template has no shared scheme. Xcode 26 does not invent one for xcodebuild -scheme. */
+export const APP_TARGET_FALLBACK_ID = "504EC3031FED79650016851F";
+
 /** App Store build number. Build 5 was rejected; the next upload must be higher. */
 export const IOS_BUILD_NUMBER = 6;
 /** Marketing version stays 1.0. */
@@ -60,6 +63,96 @@ export function patchIosProject(text) {
     return updated;
   });
   return next;
+}
+
+/** The App target id inside a project.pbxproj. Capacitor's template id is the fallback. */
+export function nativeAppTargetId(pbxproj) {
+  const match = pbxproj.match(/([A-F0-9]{24}) \/\* App \*\/ = \{\s*isa = PBXNativeTarget;/);
+  return match ? match[1] : APP_TARGET_FALLBACK_ID;
+}
+
+/** Shared scheme xcodebuild looks up by name. Archive uses the Release configuration. */
+export function sharedAppScheme(blueprintId) {
+  const id = /^[A-F0-9]{24}$/.test(blueprintId) ? blueprintId : APP_TARGET_FALLBACK_ID;
+  const ref = `BuildableIdentifier = "primary"
+               BlueprintIdentifier = "${id}"
+               BuildableName = "App.app"
+               BlueprintName = "App"
+               ReferencedContainer = "container:App.xcodeproj"`;
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<Scheme
+   LastUpgradeVersion = "2600"
+   version = "1.3">
+   <BuildAction
+      parallelizeBuildables = "YES"
+      buildImplicitDependencies = "YES">
+      <BuildActionEntries>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "YES"
+            buildForProfiling = "YES"
+            buildForArchiving = "YES"
+            buildForAnalyzing = "YES">
+            <BuildableReference
+               ${ref}>
+            </BuildableReference>
+         </BuildActionEntry>
+      </BuildActionEntries>
+   </BuildAction>
+   <TestAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      shouldUseLaunchSchemeArgsEnv = "YES">
+   </TestAction>
+   <LaunchAction
+      buildConfiguration = "Debug"
+      selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
+      selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      launchStyle = "0"
+      useCustomWorkingDirectory = "NO"
+      ignoresPersistentStateOnLaunch = "NO"
+      debugDocumentVersioning = "YES"
+      debugServiceExtension = "internal"
+      allowLocationSimulation = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            ${ref}>
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </LaunchAction>
+   <ProfileAction
+      buildConfiguration = "Release"
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      savedToolIdentifier = ""
+      useCustomWorkingDirectory = "NO"
+      debugDocumentVersioning = "YES">
+      <BuildableProductRunnable
+         runnableDebuggingMode = "0">
+         <BuildableReference
+            ${ref}>
+         </BuildableReference>
+      </BuildableProductRunnable>
+   </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
+   <ArchiveAction
+      buildConfiguration = "Release"
+      revealArchiveInOrganizer = "YES">
+   </ArchiveAction>
+</Scheme>
+`;
+}
+
+/** Write App.xcodeproj/xcshareddata/xcschemes/App.xcscheme so -scheme App resolves. */
+export function writeSharedAppScheme(xcodeprojDir, pbxproj) {
+  const schemeDir = join(xcodeprojDir, "xcshareddata/xcschemes");
+  mkdirSync(schemeDir, { recursive: true });
+  const schemePath = join(schemeDir, "App.xcscheme");
+  writeFileSync(schemePath, sharedAppScheme(nativeAppTargetId(pbxproj)));
+  return schemePath;
 }
 
 /** Raise a literal CFBundleVersion above 5. Variable versions ($(CURRENT_PROJECT_VERSION)) are left for the build setting. */
@@ -173,7 +266,12 @@ if (runIos) {
     writeFileSync(debugEntitlements, DEBUG_ENTITLEMENTS);
     console.log(`updated ${entitlements}`);
     console.log(`updated ${debugEntitlements}`);
-    patch(join(ios, "App/App.xcodeproj/project.pbxproj"), patchIosProject);
+    const pbxprojPath = join(ios, "App/App.xcodeproj/project.pbxproj");
+    patch(pbxprojPath, patchIosProject);
+    if (existsSync(pbxprojPath)) {
+      const schemePath = writeSharedAppScheme(join(ios, "App/App.xcodeproj"), readFileSync(pbxprojPath, "utf8"));
+      console.log(`updated ${schemePath}`);
+    }
     patch(join(ios, "App/Podfile"), (text) => text.replace(/platform :ios, '[0-9.]+'/, "platform :ios, '15.0'"));
     const storyboard = join(ios, "App/App/Base.lproj/LaunchScreen.storyboard");
     if (existsSync(storyboard)) {
