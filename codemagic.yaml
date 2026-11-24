@@ -39,13 +39,27 @@ workflows:
           npx @capacitor/assets generate --ios || true
           npx cap sync ios
           cd ios/App
-          # cap sync only warns and continues when `pod` is missing, which leaves
-          # the archive without Pods-App.release.xcconfig. Fail here instead.
+          # cap sync only warns and continues when `pod` is missing.
           if ! command -v pod >/dev/null 2>&1; then
-            echo "CocoaPods is not on PATH, so pod install did not run."
+            echo "CocoaPods is not on PATH. Installing."
+            gem install cocoapods --no-document || brew install cocoapods
+            if ! command -v pod >/dev/null 2>&1; then
+              GEM_BIN="$(gem environment gemdir 2>/dev/null)/bin"
+              if [ -n "${GEM_BIN}" ] && [ -d "${GEM_BIN}" ]; then
+                export PATH="${GEM_BIN}:${PATH}"
+              fi
+              export PATH="/opt/homebrew/bin:/usr/local/bin:${PATH}"
+            fi
+          fi
+          if ! command -v pod >/dev/null 2>&1; then
+            echo "CocoaPods is still not on PATH after install."
             exit 1
           fi
-          pod install
+          pod --version
+          if ! pod install; then
+            echo "pod install failed. Retrying with --repo-update."
+            pod install --repo-update
+          fi
           if [ ! -f "Pods/Target Support Files/Pods-App/Pods-App.release.xcconfig" ]; then
             echo "pod install did not create Pods/Target Support Files/Pods-App"
             exit 1
