@@ -74,15 +74,17 @@ export function nativeAppTargetId(pbxproj) {
 /** Shared scheme xcodebuild looks up by name. Archive uses the Release configuration. */
 export function sharedAppScheme(blueprintId) {
   const id = /^[A-F0-9]{24}$/.test(blueprintId) ? blueprintId : APP_TARGET_FALLBACK_ID;
-  const ref = `BuildableIdentifier = "primary"
+  const reference = `            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "${id}"
                BuildableName = "App.app"
                BlueprintName = "App"
-               ReferencedContainer = "container:App.xcodeproj"`;
+               ReferencedContainer = "container:App.xcodeproj">
+            </BuildableReference>`;
   return `<?xml version="1.0" encoding="UTF-8"?>
 <Scheme
-   LastUpgradeVersion = "2600"
-   version = "1.3">
+   LastUpgradeVersion = "1430"
+   version = "1.7">
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES">
@@ -93,9 +95,7 @@ export function sharedAppScheme(blueprintId) {
             buildForProfiling = "YES"
             buildForArchiving = "YES"
             buildForAnalyzing = "YES">
-            <BuildableReference
-               ${ref}>
-            </BuildableReference>
+${reference}
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
@@ -103,7 +103,8 @@ export function sharedAppScheme(blueprintId) {
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      shouldAutocreateTestPlan = "YES">
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
@@ -117,9 +118,7 @@ export function sharedAppScheme(blueprintId) {
       allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
-         <BuildableReference
-            ${ref}>
-         </BuildableReference>
+${reference}
       </BuildableProductRunnable>
    </LaunchAction>
    <ProfileAction
@@ -130,9 +129,7 @@ export function sharedAppScheme(blueprintId) {
       debugDocumentVersioning = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
-         <BuildableReference
-            ${ref}>
-         </BuildableReference>
+${reference}
       </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
@@ -146,13 +143,46 @@ export function sharedAppScheme(blueprintId) {
 `;
 }
 
-/** Write App.xcodeproj/xcshareddata/xcschemes/App.xcscheme so -scheme App resolves. */
-export function writeSharedAppScheme(xcodeprojDir, pbxproj) {
-  const schemeDir = join(xcodeprojDir, "xcshareddata/xcschemes");
-  mkdirSync(schemeDir, { recursive: true });
-  const schemePath = join(schemeDir, "App.xcscheme");
-  writeFileSync(schemePath, sharedAppScheme(nativeAppTargetId(pbxproj)));
-  return schemePath;
+/** Write the scheme on the project and on the workspace xcodebuild -workspace opens. */
+export function installSharedAppScheme(appDir) {
+  const pbxPath = join(appDir, "App.xcodeproj/project.pbxproj");
+  const xml = sharedAppScheme(nativeAppTargetId(existsSync(pbxPath) ? readFileSync(pbxPath, "utf8") : ""));
+  const paths = [
+    join(appDir, "App.xcodeproj/xcshareddata/xcschemes/App.xcscheme"),
+    join(appDir, "App.xcworkspace/xcshareddata/xcschemes/App.xcscheme"),
+  ];
+  for (const schemePath of paths) {
+    mkdirSync(dirname(schemePath), { recursive: true });
+    writeFileSync(schemePath, xml);
+  }
+  ensureWorkspaceContents(appDir);
+  return paths;
+}
+
+/** CocoaPods normally writes this. An empty Capacitor workspace hides every project scheme. */
+export function ensureWorkspaceContents(appDir) {
+  const contentsPath = join(appDir, "App.xcworkspace/contents.xcworkspacedata");
+  mkdirSync(dirname(contentsPath), { recursive: true });
+  const current = existsSync(contentsPath) ? readFileSync(contentsPath, "utf8") : "";
+  if (current.includes("App.xcodeproj")) return contentsPath;
+  const refs = [`   <FileRef
+      location = "group:App.xcodeproj">
+   </FileRef>`];
+  if (existsSync(join(appDir, "Pods/Pods.xcodeproj"))) {
+    refs.push(`   <FileRef
+      location = "group:Pods/Pods.xcodeproj">
+   </FileRef>`);
+  }
+  const body = `${refs.join("\n")}\n`;
+  const xml = current.includes("</Workspace>")
+    ? current.replace("</Workspace>", `${body}</Workspace>`)
+    : `<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+${body}</Workspace>
+`;
+  writeFileSync(contentsPath, xml);
+  return contentsPath;
 }
 
 /** Raise a literal CFBundleVersion above 5. Variable versions ($(CURRENT_PROJECT_VERSION)) are left for the build setting. */
@@ -162,8 +192,16 @@ export function patchInfoVersions(xml) {
   return next;
 }
 
-const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
-if (invokedDirectly) {
+function isDirectRun() {
+  const arg = process.argv[1] ?? "";
+  if (arg.endsWith("prepare-native.mjs")) return true;
+  try {
+    return Boolean(arg) && import.meta.url === pathToFileURL(arg).href;
+  } catch {
+    return false;
+  }
+}
+if (isDirectRun()) {
 const root = new URL("..", import.meta.url).pathname;
 const which = process.argv[2] ?? "all";
 const runIos = which === "all" || which === "ios";
@@ -269,8 +307,7 @@ if (runIos) {
     const pbxprojPath = join(ios, "App/App.xcodeproj/project.pbxproj");
     patch(pbxprojPath, patchIosProject);
     if (existsSync(pbxprojPath)) {
-      const schemePath = writeSharedAppScheme(join(ios, "App/App.xcodeproj"), readFileSync(pbxprojPath, "utf8"));
-      console.log(`updated ${schemePath}`);
+      for (const schemePath of installSharedAppScheme(join(ios, "App"))) console.log(`updated ${schemePath}`);
     }
     patch(join(ios, "App/Podfile"), (text) => text.replace(/platform :ios, '[0-9.]+'/, "platform :ios, '15.0'"));
     const storyboard = join(ios, "App/App/Base.lproj/LaunchScreen.storyboard");
